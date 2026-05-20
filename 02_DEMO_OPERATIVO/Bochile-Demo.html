@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0A1629">
+<title>WESEKA.IA · Demo Operativo · Inmobiliaria Bochile</title>
+<style>
+:root{
+  --bg:#0A1629; --bg-2:#0D1B2F; --bg-3:#0C1A2B; --bg-4:#0E1D31;
+  --gold:#B8894A; --gold-bright:#D4A85E; --gold-soft:rgba(184,137,74,0.12);
+  --cream:#F5EDD8; --cream-2:#E8E2D0;
+  --gray:#B8B2A3; --gray-2:#8A8470;
+  --border:rgba(184,137,74,0.18); --border-strong:rgba(184,137,74,0.4);
+  --green:#6BAA75; --red:#C97064; --blue:#7AA5C4;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--cream-2);font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+.serif{font-family:Georgia,"Times New Roman",serif}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+
+/* ======== TOP BAR ======== */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(10,22,41,0.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:0.16em;font-size:11.5px;text-transform:uppercase;color:var(--cream)}
+.brand-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.brand-sep{color:var(--gold);opacity:0.5}
+.brand-client{color:var(--gold-bright);font-style:italic;text-transform:none;letter-spacing:0;font-family:Georgia,serif;font-size:14px}
+.live{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border:1px solid rgba(107,170,117,0.4);border-radius:999px;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--green);font-weight:700}
+.live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.85)}}
+.user-meta{font-size:11px;color:var(--gray-2);letter-spacing:0.05em;text-align:right}
+.user-meta strong{color:var(--cream);display:block;font-weight:600;font-size:12px}
+
+/* ======== MODULE NAV ======== */
+.modnav{position:sticky;top:55px;z-index:99;background:var(--bg-2);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.modnav-inner{display:flex;gap:0;min-width:max-content;padding:0 12px}
+.modnav button{padding:14px 18px;font-size:12px;font-weight:600;letter-spacing:0.04em;color:var(--gray-2);border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;display:flex;align-items:center;gap:8px}
+.modnav button:hover{color:var(--cream-2)}
+.modnav button.active{color:var(--gold-bright);border-bottom-color:var(--gold)}
+.modnav .badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;font-size:10px;font-weight:700;border-radius:999px;background:var(--gold);color:var(--bg);letter-spacing:0}
+
+/* ======== MODULE FRAME ======== */
+.module{display:none;animation:fadeIn .4s ease}
+.module.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.mod-head{padding:36px 22px 20px;max-width:1280px;margin:0 auto}
+.mod-eyebrow{display:inline-block;font-size:10px;letter-spacing:0.28em;color:var(--gold);font-weight:700;text-transform:uppercase;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid var(--border-strong)}
+.mod-title{font-family:Georgia,serif;font-size:32px;font-weight:600;color:var(--cream);letter-spacing:-0.02em;line-height:1.1;margin-bottom:10px}
+.mod-title em{color:var(--gold-bright);font-style:italic}
+.mod-sub{font-size:14.5px;color:var(--gray);max-width:680px;line-height:1.65}
+.mod-body{padding:0 22px 60px;max-width:1280px;margin:0 auto}
+@media (min-width:760px){.mod-title{font-size:40px}}
+
+/* ======== HOME / RESUMEN ======== */
+.hero-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:40px}
+.tile{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:22px;position:relative;overflow:hidden;transition:border-color .25s,transform .25s}
+.tile:hover{border-color:var(--border-strong);transform:translateY(-2px)}
+.tile-lbl{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gray-2);font-weight:600;margin-bottom:10px}
+.tile-val{font-family:Georgia,serif;font-size:34px;font-weight:600;color:var(--gold-bright);line-height:1;letter-spacing:-0.02em;margin-bottom:8px}
+.tile-delta{font-size:12px;color:var(--green);font-weight:600}
+.tile-delta.neg{color:var(--red)}
+.tile-spark{position:absolute;right:14px;bottom:14px;opacity:0.5}
+
+.home-flow{background:var(--bg-3);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:30px}
+.home-flow h3{font-family:Georgia,serif;font-size:20px;color:var(--cream);font-weight:600;margin-bottom:6px}
+.home-flow p{font-size:13.5px;color:var(--gray);margin-bottom:20px}
+.flow-steps{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px}
+.flow-step{flex:0 0 200px;background:var(--bg-4);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative}
+.flow-step::after{content:"→";position:absolute;right:-13px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:18px;font-weight:700;z-index:2}
+.flow-step:last-child::after{display:none}
+.flow-step .n{font-family:Georgia,serif;font-size:11px;color:var(--gold);letter-spacing:0.2em;font-weight:700;margin-bottom:6px}
+.flow-step .t{font-size:13px;font-weight:700;color:var(--cream);margin-bottom:6px;line-height:1.3}
+.flow-step .d{font-size:11.5px;color:var(--gray);line-height:1.5}
+.flow-step .who{margin-top:10px;display:inline-block;font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;padding:3px 8px;border-radius:4px}
+.who.ia{background:rgba(184,137,74,0.18);color:var(--gold-bright)}
+.who.humano{background:rgba(122,165,196,0.18);color:var(--blue)}
+
+.home-cta-row{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:30px}
+@media(min-width:720px){.home-cta-row{grid-template-columns:repeat(3,1fr)}}
+.home-cta{background:linear-gradient(135deg,var(--bg-4),var(--bg-3));border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all .25s;text-align:left}
+.home-cta:hover{border-color:var(--gold);transform:translateY(-2px)}
+.home-cta .ico{font-family:Georgia,serif;font-size:22px;color:var(--gold-bright);margin-bottom:8px;font-style:italic}
+.home-cta .ti{font-size:14px;font-weight:700;color:var(--cream);margin-bottom:4px}
+.home-cta .ds{font-size:12px;color:var(--gray);line-height:1.5}
+
+.savings-card{background:linear-gradient(135deg,rgba(184,137,74,0.08),transparent);border:1px solid var(--border-strong);border-radius:14px;padding:30px;display:grid;grid-template-columns:1fr;gap:20px;align-items:center}
+@media(min-width:720px){.savings-card{grid-template-columns:auto 1fr}}
+.savings-num{font-family:Georgia,serif;font-size:72px;color:var(--gold-bright);font-weight:600;line-height:1;letter-spacing:-0.04em;font-style:italic;text-align:center}
+.savings-num small{font-size:30px;font-style:normal}
+.savings-info h4{font-family:Georgia,serif;font-size:20px;color:var(--cream);font-weight:600;margin-bottom:8px}
+.savings-info p{font-size:13.5px;color:var(--gray);line-height:1.7}
+.savings-info p strong{color:var(--cream-2)}
+.savings-bars{margin-top:16px;display:flex;gap:18px;flex-wrap:wrap}
+.savings-bar{flex:1;min-width:140px}
+.savings-bar .lbl{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray-2);margin-bottom:6px;display:flex;justify-content:space-between}
+.savings-bar .lbl b{color:var(--gold-bright);font-weight:700}
+.savings-bar .track{height:6px;background:rgba(184,137,74,0.12);border-radius:999px;overflow:hidden}
+.savings-bar .fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));border-radius:999px;transition:width 1.2s ease}
+
+/* ======== WEB PUBLICA ======== */
+.web-hero{background:linear-gradient(135deg,#0E1D31,#0A1629);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px;position:relative}
+.web-hero-bg{height:200px;background:linear-gradient(135deg,#1a3a5c 0%,#0e2440 50%,#0A1629 100%);position:relative;overflow:hidden}
+.web-hero-bg::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle at 20% 50%,rgba(184,137,74,0.18),transparent 50%),radial-gradient(circle at 80% 30%,rgba(122,165,196,0.12),transparent 50%)}
+.web-hero-bg::after{content:"";position:absolute;inset:0;background-image:linear-gradient(transparent 0%,rgba(10,22,41,0.7) 100%)}
+.web-hero-content{padding:24px;position:relative;z-index:2;margin-top:-60px}
+.web-hero h2{font-family:Georgia,serif;font-size:26px;color:var(--cream);font-weight:600;letter-spacing:-0.01em;line-height:1.2;margin-bottom:8px}
+.web-hero h2 em{color:var(--gold-bright);font-style:italic}
+.web-hero p{font-size:14px;color:var(--gray);max-width:520px}
+@media(min-width:720px){.web-hero h2{font-size:34px}.web-hero-bg{height:240px}}
+
+.search-bar{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:24px;display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:720px){.search-bar{grid-template-columns:1.5fr 1fr 1fr 1fr auto}}
+.search-bar input,.search-bar select{background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--cream-2);font-size:13px}
+.search-bar input::placeholder{color:var(--gray-2)}
+.search-bar input:focus,.search-bar select:focus{outline:none;border-color:var(--gold)}
+.btn-search{background:var(--gold);color:var(--bg);font-weight:700;padding:11px 22px;border-radius:8px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase}
+.btn-search:hover{background:var(--gold-bright)}
+
+.props-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:30px}
+.prop-card{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .25s,transform .25s}
+.prop-card:hover{border-color:var(--gold);transform:translateY(-3px)}
+.prop-img{height:200px;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:14px}
+.prop-img.p1{background:linear-gradient(135deg,#3a5d7a,#1a3a5c)}
+.prop-img.p2{background:linear-gradient(135deg,#5a7a3d,#2a4520)}
+.prop-img.p3{background:linear-gradient(135deg,#7a5d3a,#452a1a)}
+.prop-img.p4{background:linear-gradient(135deg,#5a3a7a,#2a1a45)}
+.prop-img.p5{background:linear-gradient(135deg,#7a3a5a,#451a2a)}
+.prop-img.p6{background:linear-gradient(135deg,#3a7a7a,#1a4545)}
+.prop-img-pattern{position:absolute;inset:0;background-image:linear-gradient(135deg,transparent 40%,rgba(245,237,216,0.08) 40%,rgba(245,237,216,0.08) 50%,transparent 50%,transparent 90%,rgba(245,237,216,0.05) 90%);opacity:0.6}
+.prop-img-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(10,22,41,0.85) 100%)}
+.prop-tag{position:absolute;top:12px;left:12px;background:rgba(10,22,41,0.85);backdrop-filter:blur(6px);padding:5px 11px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-bright);border:1px solid var(--border)}
+.prop-tour-badge{position:absolute;top:12px;right:12px;background:var(--gold);color:var(--bg);padding:5px 10px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:0.1em;display:flex;align-items:center;gap:5px}
+.prop-tour-badge::before{content:"●";animation:pulse 1.4s infinite}
+.prop-img-loc{position:relative;z-index:2;color:var(--cream);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-weight:600}
+.prop-info{padding:18px}
+.prop-price{font-family:Georgia,serif;font-size:22px;color:var(--gold-bright);font-weight:600;letter-spacing:-0.01em;margin-bottom:4px}
+.prop-price small{font-size:13px;color:var(--gray);font-weight:400}
+.prop-title{font-size:14px;font-weight:700;color:var(--cream);margin-bottom:6px;line-height:1.35}
+.prop-addr{font-size:12px;color:var(--gray);margin-bottom:12px}
+.prop-feats{display:flex;gap:14px;font-size:11px;color:var(--gray);padding-top:12px;border-top:1px solid var(--border)}
+.prop-feats span{display:inline-flex;align-items:center;gap:5px}
+.prop-feats b{color:var(--cream);font-weight:700}
+
+/* ======== TOUR 360 ======== */
+.tour-frame{background:var(--bg-2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px}
+.tour-stage{height:380px;position:relative;background:radial-gradient(ellipse at center,#1a3550 0%,#0e1d31 60%,#0A1629 100%);overflow:hidden;cursor:grab}
+.tour-stage:active{cursor:grabbing}
+.tour-floor{position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(180deg,transparent,rgba(184,137,74,0.06) 30%,rgba(184,137,74,0.12) 100%);transform:perspective(800px) rotateX(60deg);transform-origin:bottom}
+.tour-walls{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.tour-room{width:80%;height:60%;border:2px solid rgba(184,137,74,0.25);border-radius:12px;position:relative;background:linear-gradient(180deg,rgba(184,137,74,0.04),transparent);box-shadow:inset 0 0 60px rgba(184,137,74,0.06)}
+.tour-window{position:absolute;background:linear-gradient(180deg,#7AA5C4,#3a5d7a);border-radius:6px;border:2px solid rgba(184,137,74,0.4);box-shadow:0 0 30px rgba(122,165,196,0.3)}
+.tour-window.w1{top:18%;left:12%;width:18%;height:32%}
+.tour-window.w2{top:18%;right:12%;width:18%;height:32%}
+.tour-furniture{position:absolute;background:rgba(184,137,74,0.18);border:1px solid rgba(184,137,74,0.35);border-radius:6px}
+.tour-furn1{bottom:20%;left:25%;width:30%;height:18%}
+.tour-furn2{bottom:30%;right:20%;width:18%;height:14%}
+.hotspot{position:absolute;width:34px;height:34px;border-radius:50%;background:rgba(184,137,74,0.25);border:2px solid var(--gold-bright);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:float 2.4s ease-in-out infinite;backdrop-filter:blur(4px)}
+.hotspot::before{content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid var(--gold);opacity:0;animation:ripple 2.4s ease-out infinite}
+.hotspot::after{content:"+";font-size:20px;color:var(--gold-bright);font-weight:700;line-height:1}
+.hotspot.h1{top:30%;left:30%}
+.hotspot.h2{top:55%;right:35%;animation-delay:.6s}
+.hotspot.h3{bottom:18%;left:55%;animation-delay:1.2s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes ripple{0%{opacity:0.8;transform:scale(1)}100%{opacity:0;transform:scale(1.8)}}
+
+.tour-controls{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;background:rgba(10,22,41,0.85);backdrop-filter:blur(8px);border:1px solid var(--border);padding:8px;border-radius:999px}
+.tour-ctrl{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-3);border:1px solid var(--border);color:var(--gold-bright);font-size:14px;font-weight:700;transition:all .2s}
+.tour-ctrl:hover{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.tour-room-tag{position:absolute;top:16px;left:16px;background:rgba(10,22,41,0.85);backdrop-filter:blur(8px);border:1px solid var(--border);padding:8px 14px;border-radius:8px;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold-bright);font-weight:700}
+.tour-quality{position:absolute;top:16px;right:16px;background:rgba(10,22,41,0.85);backdrop-filter:blur(8px);border:1px solid rgba(107,170,117,0.4);padding:5px 10px;border-radius:6px;font-size:10px;color:var(--green);letter-spacing:0.12em;text-transform:uppercase;font-weight:700;display:flex;align-items:center;gap:6px}
+.tour-quality::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+.tour-info{padding:22px;display:grid;grid-template-columns:1fr;gap:20px}
+@media(min-width:760px){.tour-info{grid-template-columns:1.4fr 1fr}}
+.tour-info h3{font-family:Georgia,serif;font-size:24px;color:var(--cream);font-weight:600;margin-bottom:6px;letter-spacing:-0.01em}
+.tour-info .price{font-family:Georgia,serif;font-size:20px;color:var(--gold-bright);font-weight:600;margin-bottom:14px}
+.tour-info .desc{font-size:13.5px;color:var(--gray);line-height:1.7;margin-bottom:16px}
+.tour-rooms{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tour-room-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--cream-2);font-weight:600;letter-spacing:0.04em;background:var(--bg-3);transition:all .2s}
+.tour-room-btn:hover,.tour-room-btn.active{border-color:var(--gold);background:rgba(184,137,74,0.1);color:var(--gold-bright)}
+.tour-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.tour-meta-item{padding:10px 12px;background:var(--bg-3);border:1px solid var(--border);border-radius:8px}
+.tour-meta-item .l{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray-2);font-weight:600;margin-bottom:3px}
+.tour-meta-item .v{font-size:13px;color:var(--cream);font-weight:700}
+.tour-actions{display:flex;flex-direction:column;gap:8px}
+.tour-act{padding:12px 16px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-align:center;border:1px solid var(--border)}
+.tour-act.primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.tour-act.primary:hover{background:var(--gold-bright)}
+.tour-act.ghost{color:var(--cream)}
+.tour-act.ghost:hover{border-color:var(--gold)}
+
+.floor-plan{background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:18px}
+.floor-plan h4{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:14px}
+.fp-svg{width:100%;height:auto;display:block;background:rgba(184,137,74,0.04);border-radius:6px}
+
+/* ======== CRM ======== */
+.crm-toolbar{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:20px}
+@media(min-width:720px){.crm-toolbar{grid-template-columns:1fr auto auto auto}}
+.crm-search{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:11px 14px;color:var(--cream-2);font-size:13px}
+.crm-btn{padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--border);color:var(--cream-2);background:var(--bg-2);letter-spacing:0.04em}
+.crm-btn.primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.crm-btn:hover{border-color:var(--gold)}
+
+.crm-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:14px;-webkit-overflow-scrolling:touch}
+.crm-col{flex:0 0 280px;background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.crm-col-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.crm-col-name{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);font-weight:700;display:flex;align-items:center;gap:8px}
+.crm-col-name::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.crm-col-name.s2::before{background:var(--blue)}
+.crm-col-name.s3::before{background:var(--gold-bright)}
+.crm-col-name.s4::before{background:#C9A86A}
+.crm-col-name.s5::before{background:var(--green)}
+.crm-col-name.s6::before{background:#9C8B6E}
+.crm-col-count{font-size:11px;color:var(--gray-2);font-weight:600;background:var(--bg-3);padding:3px 8px;border-radius:4px}
+.crm-card{background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;cursor:grab;transition:border-color .2s}
+.crm-card:hover{border-color:var(--gold)}
+.crm-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px}
+.crm-card-name{font-size:13px;font-weight:700;color:var(--cream);line-height:1.3}
+.crm-score{flex:0 0 auto;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.04em}
+.crm-score.high{background:rgba(107,170,117,0.18);color:var(--green)}
+.crm-score.med{background:rgba(212,168,94,0.18);color:var(--gold-bright)}
+.crm-score.low{background:rgba(201,112,100,0.18);color:var(--red)}
+.crm-card-meta{font-size:11px;color:var(--gray);line-height:1.5;margin-bottom:8px}
+.crm-card-tags{display:flex;gap:5px;flex-wrap:wrap}
+.crm-tag{font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:3px;background:rgba(184,137,74,0.12);color:var(--gold-bright);letter-spacing:0.04em;text-transform:uppercase;border:1px solid var(--border)}
+.crm-tag.ia{background:rgba(184,137,74,0.18);color:var(--gold-bright);border-color:rgba(184,137,74,0.4)}
+.crm-card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--gray-2)}
+.crm-card-footer .owner{display:inline-flex;align-items:center;gap:5px}
+.crm-card-footer .av{width:18px;height:18px;border-radius:50%;background:var(--gold);color:var(--bg);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:0}
+.crm-card-footer .av.ia{background:linear-gradient(135deg,var(--gold),var(--gold-bright))}
+
+/* ======== DASHBOARD ======== */
+.dash-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:24px}
+@media(min-width:720px){.dash-grid{grid-template-columns:repeat(4,1fr)}}
+.dash-kpi{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden}
+.dash-kpi-lbl{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gray-2);font-weight:600;margin-bottom:8px}
+.dash-kpi-val{font-family:Georgia,serif;font-size:28px;color:var(--gold-bright);font-weight:600;line-height:1;letter-spacing:-0.02em;margin-bottom:6px}
+.dash-kpi-sub{font-size:11px;color:var(--gray);display:flex;justify-content:space-between;align-items:center}
+.dash-kpi-sub .delta{font-weight:700}
+.delta.up{color:var(--green)}
+.delta.down{color:var(--red)}
+.dash-kpi-mini{position:absolute;right:14px;top:14px;font-size:10px;color:var(--gold);opacity:0.5}
+
+.dash-row{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:24px}
+@media(min-width:900px){.dash-row{grid-template-columns:1.6fr 1fr}}
+.dash-card{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.dash-card h3{font-family:Georgia,serif;font-size:17px;color:var(--cream);font-weight:600;margin-bottom:4px}
+.dash-card .csub{font-size:12px;color:var(--gray-2);margin-bottom:18px}
+.chart-svg{width:100%;height:230px;display:block}
+.chart-grid line{stroke:rgba(184,137,74,0.08);stroke-width:1}
+.chart-axis text{fill:var(--gray-2);font-size:10px;font-family:inherit}
+.chart-bar{fill:var(--gold);transition:fill .2s}
+.chart-bar:hover{fill:var(--gold-bright)}
+.chart-line{fill:none;stroke:var(--gold-bright);stroke-width:2}
+.chart-fill{fill:url(#chartGrad)}
+.chart-dot{fill:var(--gold-bright);stroke:var(--bg-2);stroke-width:2}
+
+.rank-list{display:flex;flex-direction:column;gap:10px}
+.rank-item{display:flex;align-items:center;gap:12px;padding:11px 12px;background:var(--bg-3);border:1px solid var(--border);border-radius:8px}
+.rank-pos{font-family:Georgia,serif;font-size:18px;color:var(--gold-bright);font-weight:600;font-style:italic;width:24px;text-align:center;flex:0 0 auto}
+.rank-av{width:32px;height:32px;border-radius:50%;background:var(--gold);color:var(--bg);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.rank-info{flex:1;min-width:0}
+.rank-name{font-size:13px;font-weight:700;color:var(--cream);margin-bottom:2px}
+.rank-meta{font-size:11px;color:var(--gray)}
+.rank-val{font-family:Georgia,serif;font-size:15px;color:var(--gold-bright);font-weight:600;flex:0 0 auto}
+
+.heatmap-block{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px}
+.hm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:14px}
+.hm-cell{padding:14px 12px;border-radius:8px;border:1px solid var(--border);position:relative;overflow:hidden}
+.hm-cell .nm{font-size:11px;font-weight:700;color:var(--cream);margin-bottom:4px}
+.hm-cell .vl{font-family:Georgia,serif;font-size:18px;color:var(--gold-bright);font-weight:600;line-height:1}
+.hm-cell .sm{font-size:10px;color:var(--gray-2);margin-top:4px}
+.hm-h5{background:linear-gradient(135deg,rgba(184,137,74,0.32),rgba(184,137,74,0.16))}
+.hm-h4{background:linear-gradient(135deg,rgba(184,137,74,0.22),rgba(184,137,74,0.1))}
+.hm-h3{background:linear-gradient(135deg,rgba(184,137,74,0.14),rgba(184,137,74,0.06))}
+.hm-h2{background:linear-gradient(135deg,rgba(184,137,74,0.08),rgba(184,137,74,0.03))}
+.hm-h1{background:rgba(184,137,74,0.04)}
+
+/* ======== AI VENDEDORA ======== */
+.ai-frame{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:24px}
+@media(min-width:1000px){.ai-frame{grid-template-columns:1.4fr 1fr}}
+
+.ai-chat{background:var(--bg-2);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:560px}
+.ai-chat-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg-3)}
+.ai-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-bright));display:flex;align-items:center;justify-content:center;color:var(--bg);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:18px;flex:0 0 auto;position:relative}
+.ai-av::after{content:"";position:absolute;bottom:0;right:0;width:11px;height:11px;background:var(--green);border-radius:50%;border:2px solid var(--bg-3)}
+.ai-chat-name{flex:1;min-width:0}
+.ai-chat-name .n{font-size:14px;font-weight:700;color:var(--cream);margin-bottom:1px}
+.ai-chat-name .s{font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px}
+.ai-chat-name .s::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--green)}
+.ai-chat-meta{font-size:10px;color:var(--gray-2);text-align:right;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+.ai-chat-msgs{flex:1;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;max-height:480px}
+.msg{display:flex;gap:10px;align-items:flex-end;max-width:88%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg-bub{padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.55}
+.msg.ia .msg-bub{background:var(--bg-3);color:var(--cream-2);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg.user .msg-bub{background:linear-gradient(135deg,var(--gold),var(--gold-bright));color:var(--bg);border-bottom-right-radius:4px;font-weight:500}
+.msg-time{font-size:9.5px;color:var(--gray-2);margin-top:4px;text-align:left;letter-spacing:0.04em}
+.msg.user .msg-time{text-align:right}
+.msg-av{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.msg.ia .msg-av{background:linear-gradient(135deg,var(--gold),var(--gold-bright));color:var(--bg);font-family:Georgia,serif;font-style:italic}
+.msg.user .msg-av{background:var(--bg-3);color:var(--cream);border:1px solid var(--border)}
+.msg-card{background:var(--bg-2);border:1px solid var(--gold);border-radius:8px;overflow:hidden;margin-top:6px;max-width:280px}
+.msg-card-img{height:90px;background:linear-gradient(135deg,#5a7a3d,#2a4520);position:relative}
+.msg-card-img::after{content:"360°";position:absolute;top:8px;right:8px;background:var(--gold);color:var(--bg);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px}
+.msg-card-info{padding:10px 12px}
+.msg-card-info .pr{font-family:Georgia,serif;font-size:14px;color:var(--gold-bright);font-weight:600}
+.msg-card-info .ti{font-size:11.5px;color:var(--cream);font-weight:600;margin-top:2px}
+.msg-card-info .lc{font-size:10px;color:var(--gray);margin-top:2px}
+.ai-typing{display:flex;gap:4px;padding:11px 14px;background:var(--bg-3);border:1px solid var(--border);border-radius:14px;border-bottom-left-radius:4px;width:fit-content}
+.ai-typing span{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:typing 1.4s infinite}
+.ai-typing span:nth-child(2){animation-delay:.2s}
+.ai-typing span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+.ai-chat-input{padding:14px;border-top:1px solid var(--border);background:var(--bg-3);display:flex;gap:10px}
+.ai-chat-input input{flex:1;background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--cream-2);font-size:13px}
+.ai-chat-input input:focus{outline:none;border-color:var(--gold)}
+.ai-send{padding:0 18px;background:var(--gold);color:var(--bg);border-radius:10px;font-weight:700;font-size:12px;letter-spacing:0.06em}
+
+.ai-brain{background:var(--bg-2);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.ai-brain-head{padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg-3)}
+.ai-brain-head .e{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:3px}
+.ai-brain-head .t{font-family:Georgia,serif;font-size:16px;color:var(--cream);font-weight:600}
+.ai-brain-body{flex:1;padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;max-height:480px}
+.brain-block{background:var(--bg-3);border-left:2px solid var(--gold);border-radius:0 8px 8px 0;padding:12px 14px}
+.brain-block .lb{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold-bright);font-weight:700;margin-bottom:6px}
+.brain-block .ct{font-size:12.5px;color:var(--cream-2);line-height:1.6}
+.brain-block .ct b{color:var(--cream)}
+.brain-block .ct em{color:var(--gold-bright);font-style:normal;font-weight:600}
+.brain-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.brain-action{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--gray);padding:8px 10px;background:rgba(184,137,74,0.04);border-radius:6px;border:1px solid var(--border)}
+.brain-action .ic{width:18px;height:18px;border-radius:50%;background:var(--gold);color:var(--bg);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.brain-action .ic.ok{background:var(--green)}
+.brain-action .tx{flex:1}
+.brain-action .tx b{color:var(--cream)}
+
+.brain-score{margin-top:6px}
+.brain-score .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gray);margin-bottom:4px}
+.brain-score .row b{color:var(--cream-2);font-weight:600}
+.score-bar{height:6px;background:rgba(184,137,74,0.12);border-radius:999px;overflow:hidden;margin-top:4px}
+.score-bar .fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright));border-radius:999px}
+
+/* ======== ALQUILERES ======== */
+.alq-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px}
+.alq-stat{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.alq-stat .lb{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray-2);font-weight:600;margin-bottom:6px}
+.alq-stat .vl{font-family:Georgia,serif;font-size:22px;color:var(--gold-bright);font-weight:600;line-height:1}
+.alq-stat .sm{font-size:11px;color:var(--gray);margin-top:4px}
+
+.alq-table{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px}
+.alq-table-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.alq-table-head h3{font-family:Georgia,serif;font-size:17px;color:var(--cream);font-weight:600}
+.alq-tabs{display:flex;gap:4px}
+.alq-tab{padding:7px 12px;font-size:11px;font-weight:600;letter-spacing:0.04em;border-radius:6px;color:var(--gray);border:1px solid transparent}
+.alq-tab.active{background:var(--bg-3);color:var(--gold-bright);border-color:var(--border)}
+.alq-rows{overflow-x:auto}
+.alq-row{display:grid;grid-template-columns:minmax(180px,2fr) minmax(140px,1.2fr) minmax(110px,1fr) minmax(90px,0.8fr) minmax(140px,1.4fr) minmax(120px,1fr);gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);align-items:center;min-width:840px}
+.alq-row:last-child{border-bottom:none}
+.alq-row.head{background:var(--bg-3);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray-2);font-weight:700}
+.alq-prop .nm{font-size:13px;font-weight:700;color:var(--cream);margin-bottom:2px}
+.alq-prop .ad{font-size:11px;color:var(--gray)}
+.alq-tenant .nm{font-size:13px;color:var(--cream-2);font-weight:600;margin-bottom:2px}
+.alq-tenant .ph{font-size:11px;color:var(--gray)}
+.alq-amount{font-family:Georgia,serif;font-size:14px;color:var(--gold-bright);font-weight:600}
+.alq-amount small{font-size:10px;color:var(--gray-2);font-weight:400;display:block;margin-top:2px}
+.alq-due{font-size:12px;color:var(--cream-2)}
+.alq-status{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:5px 10px;border-radius:4px;display:inline-block}
+.alq-st-ok{background:rgba(107,170,117,0.18);color:var(--green);border:1px solid rgba(107,170,117,0.3)}
+.alq-st-warn{background:rgba(212,168,94,0.18);color:var(--gold-bright);border:1px solid rgba(212,168,94,0.3)}
+.alq-st-late{background:rgba(201,112,100,0.18);color:var(--red);border:1px solid rgba(201,112,100,0.3)}
+.alq-action{font-size:11px;color:var(--gray);line-height:1.4}
+.alq-action b{color:var(--cream-2)}
+.alq-action .ia{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(184,137,74,0.18);color:var(--gold-bright);letter-spacing:0.06em;margin-right:5px}
+
+.alq-feed{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:20px}
+.alq-feed h3{font-family:Georgia,serif;font-size:17px;color:var(--cream);font-weight:600;margin-bottom:4px}
+.alq-feed .sub{font-size:12px;color:var(--gray-2);margin-bottom:16px}
+.feed-list{display:flex;flex-direction:column;gap:10px}
+.feed-item{display:flex;gap:12px;padding:12px;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;align-items:flex-start}
+.feed-ic{flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-bright));color:var(--bg);font-size:12px;font-weight:700;font-family:Georgia,serif;font-style:italic;display:flex;align-items:center;justify-content:center}
+.feed-ic.ok{background:rgba(107,170,117,0.18);color:var(--green)}
+.feed-ic.warn{background:rgba(212,168,94,0.18);color:var(--gold-bright)}
+.feed-info{flex:1}
+.feed-tx{font-size:13px;color:var(--cream-2);line-height:1.55;margin-bottom:4px}
+.feed-tx b{color:var(--cream);font-weight:700}
+.feed-time{font-size:11px;color:var(--gray-2)}
+
+/* ======== FOOTER ======== */
+.foot{padding:30px 22px;text-align:center;border-top:1px solid var(--border);background:var(--bg-2);margin-top:30px}
+.foot .lg{font-family:Georgia,serif;font-size:18px;color:var(--gold-bright);font-style:italic;font-weight:600;margin-bottom:6px}
+.foot .ds{font-size:11px;color:var(--gray-2);letter-spacing:0.12em;text-transform:uppercase}
+
+/* Utility */
+.spacer{height:24px}
+.text-center{text-align:center}
+
+/* ======== SPLASH SCREEN ======== */
+#splash{position:fixed;inset:0;z-index:1000;background:#0A1629;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s cubic-bezier(.4,0,.2,1),visibility .8s}
+#splash.gone{opacity:0;visibility:hidden;pointer-events:none}
+.splash-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(184,137,74,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(184,137,74,0.06) 1px,transparent 1px);background-size:60px 60px;opacity:0;animation:gridFade 2.4s ease forwards}
+@keyframes gridFade{0%{opacity:0}40%{opacity:1}100%{opacity:0.4}}
+.splash-content{position:relative;z-index:2;text-align:center;animation:splashIn 1.8s cubic-bezier(.17,.85,.42,1) both}
+@keyframes splashIn{0%{opacity:0;transform:translateY(20px) scale(.95)}40%{opacity:1}100%{opacity:1;transform:translateY(0) scale(1)}}
+.splash-mark{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+.splash-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);animation:pulse 1.6s infinite}
+.splash-eyebrow{font-size:11px;letter-spacing:0.32em;color:var(--gold);font-weight:700;text-transform:uppercase}
+.splash-title{font-family:Georgia,serif;font-size:36px;color:var(--cream);font-weight:600;letter-spacing:-0.02em;margin-bottom:10px;line-height:1.1}
+.splash-title em{color:var(--gold-bright);font-style:italic}
+.splash-sub{font-size:13px;color:var(--gray);max-width:380px;margin:0 auto;line-height:1.6}
+.splash-line{height:1px;width:120px;margin:22px auto;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:lineGrow 1.4s ease both}
+@keyframes lineGrow{from{width:0}to{width:120px}}
+.splash-loader{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:24px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold-bright);font-weight:700}
+.splash-bar{width:140px;height:2px;background:rgba(184,137,74,0.15);border-radius:999px;overflow:hidden;position:relative}
+.splash-bar::before{content:"";position:absolute;left:0;top:0;height:100%;width:30%;background:linear-gradient(90deg,transparent,var(--gold-bright),transparent);animation:loadBar 1.4s ease infinite}
+@keyframes loadBar{0%{left:-30%}100%{left:100%}}
+@media(min-width:600px){.splash-title{font-size:48px}}
+
+/* ======== ENTRANCE ANIMATIONS ======== */
+.tile,.dash-kpi,.crm-col,.flow-step,.feed-item,.alq-stat{animation:fadeUp .55s cubic-bezier(.17,.85,.42,1) both}
+.tile:nth-child(2),.dash-kpi:nth-child(2),.flow-step:nth-child(2){animation-delay:.05s}
+.tile:nth-child(3),.dash-kpi:nth-child(3),.flow-step:nth-child(3){animation-delay:.1s}
+.tile:nth-child(4),.dash-kpi:nth-child(4),.flow-step:nth-child(4){animation-delay:.15s}
+.flow-step:nth-child(5){animation-delay:.2s}
+.flow-step:nth-child(6){animation-delay:.25s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ======== ENHANCED INTERACTIONS ======== */
+.prop-card,.crm-card,.alq-row,.feed-item,.tour-room-btn,.flow-step,.tile,.dash-kpi{transition:all .25s cubic-bezier(.4,0,.2,1)}
+.modnav button{transition:color .2s,border-color .2s,background .2s}
+.modnav button:not(.active):hover{background:rgba(184,137,74,0.04)}
+::selection{background:var(--gold);color:var(--bg)}
+
+/* Scrollbar styling */
+.crm-board::-webkit-scrollbar,.alq-rows::-webkit-scrollbar,.ai-chat-msgs::-webkit-scrollbar,.ai-brain-body::-webkit-scrollbar,.modnav::-webkit-scrollbar,.flow-steps::-webkit-scrollbar{height:6px;width:6px}
+.crm-board::-webkit-scrollbar-thumb,.alq-rows::-webkit-scrollbar-thumb,.ai-chat-msgs::-webkit-scrollbar-thumb,.ai-brain-body::-webkit-scrollbar-thumb,.modnav::-webkit-scrollbar-thumb,.flow-steps::-webkit-scrollbar-thumb{background:rgba(184,137,74,0.25);border-radius:999px}
+.crm-board::-webkit-scrollbar-track,.alq-rows::-webkit-scrollbar-track,.ai-chat-msgs::-webkit-scrollbar-track,.ai-brain-body::-webkit-scrollbar-track{background:transparent}
+
+/* Focus states */
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px;border-radius:6px}
+
+/* Print friendly (in case they print the demo) */
+@media print{
+  .topbar,.modnav,#toast,#splash{display:none}
+  .module{display:block !important;page-break-after:always}
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-grid"></div>
+  <div class="splash-content">
+    <div class="splash-mark">
+      <span class="splash-dot"></span>
+      <span class="splash-eyebrow">WESEKA · IA</span>
+    </div>
+    <div class="splash-title">Inmobiliaria Bochile<br><em>Operations Demo</em></div>
+    <div class="splash-line"></div>
+    <div class="splash-sub">Infraestructura completa de ventas con IA · Bahía Blanca</div>
+    <div class="splash-loader">
+      <span>Inicializando</span>
+      <span class="splash-bar"></span>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-dot"></span>
+    WESEKA.IA
+    <span class="brand-sep">·</span>
+    <span class="brand-client">Inmobiliaria Bochile</span>
+  </div>
+  <div class="live">EN VIVO</div>
+  <div class="user-meta">
+    <strong>Bahía Blanca · Operations</strong>
+    <span id="liveClock">Actualizado en tiempo real</span>
+  </div>
+</header>
+
+<!-- MODULE NAV -->
+<nav class="modnav">
+  <div class="modnav-inner">
+    <button data-mod="home" class="active">Resumen</button>
+    <button data-mod="web">Web Pública <span class="badge">142</span></button>
+    <button data-mod="tour">Tours 360°</button>
+    <button data-mod="crm">CRM <span class="badge">38</span></button>
+    <button data-mod="dashboard">Dashboard</button>
+    <button data-mod="ai">IA Vendedora <span class="badge">7</span></button>
+    <button data-mod="rentals">Alquileres</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============ MODULE: HOME / RESUMEN ============ -->
+<section class="module active" data-mod="home">
+  <div class="mod-head">
+    <span class="mod-eyebrow">Operations · Hoy 29 abr 2026</span>
+    <h1 class="mod-title">Buen día, equipo Bochile. <em>Esto es lo que pasó mientras dormían.</em></h1>
+    <p class="mod-sub">La IA atendió 23 consultas, calificó 11 leads, agendó 4 visitas y cobró 7 alquileres — todo entre las 22:00 y las 8:00. Ustedes solo tienen que cerrar.</p>
+  </div>
+
+  <div class="mod-body">
+
+    <!-- KPI TILES -->
+    <div class="hero-tiles">
+      <div class="tile">
+        <div class="tile-lbl">Leads esta semana</div>
+        <div class="tile-val" data-count="142">142</div>
+        <div class="tile-delta">↑ 38% vs semana anterior</div>
+      </div>
+      <div class="tile">
+        <div class="tile-lbl">Visitas hoy</div>
+        <div class="tile-val" data-count="12">12</div>
+        <div class="tile-delta">4 agendadas por la IA anoche</div>
+      </div>
+      <div class="tile">
+        <div class="tile-lbl">Conversión lead → visita</div>
+        <div class="tile-val">34<small style="font-size:18px">%</small></div>
+        <div class="tile-delta">↑ 12pts post-IA</div>
+      </div>
+      <div class="tile">
+        <div class="tile-lbl">Comisiones del mes</div>
+        <div class="tile-val">$48,7<small style="font-size:18px">M</small></div>
+        <div class="tile-delta">8 operaciones cerradas</div>
+      </div>
+    </div>
+
+    <!-- FLOW DIAGRAM -->
+    <div class="home-flow">
+      <h3>Cómo trabaja la infraestructura — end to end</h3>
+      <p>Cada lead que entra recorre este camino. La IA hace 80% del recorrido. Ustedes intervienen solo en los puntos donde hay que cerrar.</p>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="n">01 · Captación</div>
+          <div class="t">Lead entra por WhatsApp, web o ZonaProp</div>
+          <div class="d">Formularios, anuncios, Meta Ads, referidos. Todo cae en el mismo embudo.</div>
+          <div class="who ia">IA</div>
+        </div>
+        <div class="flow-step">
+          <div class="n">02 · Calificación</div>
+          <div class="t">IA conversa, entiende el dolor y filtra</div>
+          <div class="d">Presupuesto, zona, urgencia, financiación. Score 0-100.</div>
+          <div class="who ia">IA</div>
+        </div>
+        <div class="flow-step">
+          <div class="n">03 · Match</div>
+          <div class="t">Busca propiedad ideal en el catálogo</div>
+          <div class="d">Combina criterios, manda 2-3 opciones con tour 360°.</div>
+          <div class="who ia">IA</div>
+        </div>
+        <div class="flow-step">
+          <div class="n">04 · Visita</div>
+          <div class="t">Agenda en el calendario del vendedor</div>
+          <div class="d">Confirma con ambos, recordatorios automáticos.</div>
+          <div class="who ia">IA</div>
+        </div>
+        <div class="flow-step">
+          <div class="n">05 · Cierre</div>
+          <div class="t">Vendedor humano cierra cara a cara</div>
+          <div class="d">La IA ya pasó al lead caliente, con todo el contexto.</div>
+          <div class="who humano">VENDEDOR</div>
+        </div>
+        <div class="flow-step">
+          <div class="n">06 · Post-venta</div>
+          <div class="t">IA gestiona escritura, mudanza, seguros</div>
+          <div class="d">Recordatorios, papeles, encuestas NPS, referidos.</div>
+          <div class="who ia">IA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK ACCESS -->
+    <div class="home-cta-row">
+      <button class="home-cta" data-goto="ai">
+        <div class="ico">→</div>
+        <div class="ti">Ver la IA conversando</div>
+        <div class="ds">Chat en vivo + lo que está pensando y haciendo en otros módulos.</div>
+      </button>
+      <button class="home-cta" data-goto="crm">
+        <div class="ico">→</div>
+        <div class="ti">Pipeline del CRM</div>
+        <div class="ds">38 leads activos en 6 etapas. Sabés exactamente quién está por cerrar.</div>
+      </button>
+      <button class="home-cta" data-goto="tour">
+        <div class="ico">→</div>
+        <div class="ti">Probar el Tour 360°</div>
+        <div class="ds">Departamento en Palihue. Cliente lo recorre desde el sillón.</div>
+      </button>
+    </div>
+
+    <!-- SAVINGS -->
+    <div class="savings-card">
+      <div class="savings-num">80<small>%</small></div>
+      <div class="savings-info">
+        <h4>Tiempo humano ahorrado este mes</h4>
+        <p><strong>167 horas</strong> que el equipo Bochile ya no gasta respondiendo "¿está disponible?", agendando visitas, recordando vencimientos, persiguiendo cobros o armando carpetas. Esas horas se traducen en cierres reales.</p>
+        <div class="savings-bars">
+          <div class="savings-bar">
+            <div class="lbl">Atención de consultas <b>92%</b></div>
+            <div class="track"><div class="fill" style="width:92%"></div></div>
+          </div>
+          <div class="savings-bar">
+            <div class="lbl">Agendamiento de visitas <b>88%</b></div>
+            <div class="track"><div class="fill" style="width:88%"></div></div>
+          </div>
+          <div class="savings-bar">
+            <div class="lbl">Cobranza alquileres <b>96%</b></div>
+            <div class="track"><div class="fill" style="width:96%"></div></div>
+          </div>
+          <div class="savings-bar">
+            <div class="lbl">Negociación / Cierre <b>15%</b></div>
+            <div class="track"><div class="fill" style="width:15%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODULE: WEB PUBLICA ============ -->
+<section class="module" data-mod="web">
+  <div class="mod-head">
+    <span class="mod-eyebrow">Web Pública · bochile.com.ar</span>
+    <h1 class="mod-title">El catálogo que <em>vende solo</em>.</h1>
+    <p class="mod-sub">142 visitas activas en este momento. Cada propiedad con tour 360°, planos interactivos y un botón de "hablar con la IA" que captura el lead al instante.</p>
+  </div>
+  <div class="mod-body">
+
+    <div class="web-hero">
+      <div class="web-hero-bg"></div>
+      <div class="web-hero-content">
+        <h2>Encontrá tu casa en <em>Bahía Blanca</em></h2>
+        <p>Más de 240 propiedades en venta y alquiler. Recorrelas en 360° desde donde estés.</p>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" placeholder="Barrio, dirección, referencia...">
+      <select>
+        <option>Operación: Todas</option>
+        <option>Venta</option>
+        <option>Alquiler</option>
+        <option>Alquiler temporario</option>
+      </select>
+      <select>
+        <option>Tipo: Todos</option>
+        <option>Departamento</option>
+        <option>Casa</option>
+        <option>PH</option>
+        <option>Local / Oficina</option>
+        <option>Lote / Terreno</option>
+      </select>
+      <select>
+        <option>Ambientes: Todos</option>
+        <option>1 ambiente</option>
+        <option>2 ambientes</option>
+        <option>3 ambientes</option>
+        <option>4+ ambientes</option>
+      </select>
+      <button class="btn-search">Buscar</button>
+    </div>
+
+    <div class="props-grid">
+
+      <div class="prop-card" data-goto-tour="1">
+        <div class="prop-img p1">
+          <div class="prop-img-pattern"></div>
+          <div class="prop-img-overlay"></div>
+          <div class="prop-tag">Venta · Departamento</div>
+          <div class="prop-tour-badge">Tour 360°</div>
+          <div class="prop-img-loc">Centro · Frente Plaza Rivadavia</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-price">USD 142.000 <small>· o $189.500.000</small></div>
+          <div class="prop-title">2 ambientes a estrenar con balcón</div>
+          <div class="prop-addr">O'Higgins 234 · Piso 7°</div>
+          <div class="prop-feats">
+            <span><b>52</b> m²</span>
+            <span><b>2</b> amb</span>
+            <span><b>1</b> baño</span>
+            <span><b>SUM</b> · Cochera</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-card" data-goto-tour="2">
+        <div class="prop-img p2">
+          <div class="prop-img-pattern"></div>
+          <div class="prop-img-overlay"></div>
+          <div class="prop-tag">Venta · Casa</div>
+          <div class="prop-tour-badge">Tour 360°</div>
+          <div class="prop-img-loc">Palihue · Cuadra arbolada</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-price">USD 285.000</div>
+          <div class="prop-title">Casa 4 ambientes con quincho y jardín</div>
+          <div class="prop-addr">Brown 1842 · Palihue</div>
+          <div class="prop-feats">
+            <span><b>240</b> m²</span>
+            <span><b>4</b> amb</span>
+            <span><b>3</b> baños</span>
+            <span><b>Pileta</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-card" data-goto-tour="3">
+        <div class="prop-img p3">
+          <div class="prop-img-pattern"></div>
+          <div class="prop-img-overlay"></div>
+          <div class="prop-tag">Alquiler · Departamento</div>
+          <div class="prop-tour-badge">Tour 360°</div>
+          <div class="prop-img-loc">Universitario · Cerca UNS</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-price">$680.000 <small>/ mes</small></div>
+          <div class="prop-title">Monoambiente moderno en torre nueva</div>
+          <div class="prop-addr">Alem 1456 · Piso 4°</div>
+          <div class="prop-feats">
+            <span><b>38</b> m²</span>
+            <span><b>1</b> amb</span>
+            <span><b>1</b> baño</span>
+            <span><b>Amoblado</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-card" data-goto-tour="4">
+        <div class="prop-img p4">
+          <div class="prop-img-pattern"></div>
+          <div class="prop-img-overlay"></div>
+          <div class="prop-tag">Venta · PH</div>
+          <div class="prop-tour-badge">Tour 360°</div>
+          <div class="prop-img-loc">Villa Mitre · Recién reciclado</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-price">USD 98.000</div>
+          <div class="prop-title">PH 3 ambientes con patio propio</div>
+          <div class="prop-addr">Sarmiento 542 · Villa Mitre</div>
+          <div class="prop-feats">
+            <span><b>78</b> m²</span>
+            <span><b>3</b> amb</span>
+            <span><b>1</b> baño</span>
+            <span><b>Patio</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-card" data-goto-tour="5">
+        <div class="prop-img p5">
+          <div class="prop-img-pattern"></div>
+          <div class="prop-img-overlay"></div>
+          <div class="prop-tag">Venta · Casa</div>
+          <div class="prop-tour-badge">Tour 360°</div>
+          <div class="prop-img-loc">Villa Belgrano · Country</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-price">USD 320.000</div>
+          <div class="prop-title">Casa de diseño con pileta y parque</div>
+          <div class="prop-addr">Ruta 33 km 7 · Country Belgrano</div>
+          <div class="prop-feats">
+            <span><b>320</b> m²</span>
+            <span><b>5</b> amb</span>
+            <span><b>4</b> baños</span>
+            <span><b>900m² lote</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="prop-card" data-goto-tour="6">
+        <div class="prop-img p6">
+          <div class="prop-img-pattern"></div>
+          <div class="prop-img-overlay"></div>
+          <div class="prop-tag">Venta · Lote</div>
+          <div class="prop-tour-badge">Tour 360°</div>
+          <div class="prop-img-loc">Patagonia · Zona en crecimiento</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-price">USD 42.000</div>
+          <div class="prop-title">Lote 12x30 apto duplex en zona consolidada</div>
+          <div class="prop-addr">Castelli 3210 · Patagonia</div>
+          <div class="prop-feats">
+            <span><b>360</b> m²</span>
+            <span><b>Servicios</b></span>
+            <span><b>FOT 1.2</b></span>
+            <span><b>Esquina</b></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODULE: TOUR 360 ============ -->
+<section class="module" data-mod="tour">
+  <div class="mod-head">
+    <span class="mod-eyebrow">Tour Inmersivo · Propiedad #PH-0042</span>
+    <h1 class="mod-title">El cliente <em>ya está adentro</em>.</h1>
+    <p class="mod-sub">Casa en Palihue · Brown 1842. El comprador la recorre desde el sillón, ve los ambientes, mide con el plano interactivo, y si le gusta, la IA agenda la visita real en el mismo botón.</p>
+  </div>
+
+  <div class="mod-body">
+
+    <div class="tour-frame">
+      <div class="tour-stage" id="tourStage">
+        <div class="tour-floor"></div>
+        <div class="tour-walls">
+          <div class="tour-room">
+            <div class="tour-window w1"></div>
+            <div class="tour-window w2"></div>
+            <div class="tour-furniture tour-furn1"></div>
+            <div class="tour-furniture tour-furn2"></div>
+            <button class="hotspot h1" title="Ver cocina"></button>
+            <button class="hotspot h2" title="Ver dormitorio"></button>
+            <button class="hotspot h3" title="Ver baño"></button>
+          </div>
+        </div>
+        <div class="tour-room-tag" id="tourRoomTag">Living comedor</div>
+        <div class="tour-quality">4K · 60fps</div>
+        <div class="tour-controls">
+          <button class="tour-ctrl" title="Rotar izquierda">‹</button>
+          <button class="tour-ctrl" title="Zoom out">−</button>
+          <button class="tour-ctrl" title="Centrar">◉</button>
+          <button class="tour-ctrl" title="Zoom in">+</button>
+          <button class="tour-ctrl" title="Rotar derecha">›</button>
+          <button class="tour-ctrl" title="Pantalla completa">⛶</button>
+        </div>
+      </div>
+
+      <div class="tour-info">
+        <div>
+          <h3>Casa 4 ambientes con quincho y jardín</h3>
+          <div class="price">USD 285.000 <span style="color:var(--gray);font-family:inherit;font-size:13px">· Palihue · Brown 1842</span></div>
+          <p class="desc">Casa de 240 m² cubiertos sobre lote de 450 m² en una de las cuadras más arboladas de Palihue. Living comedor con doble altura, cocina integrada equipada, 3 dormitorios (1 en suite con vestidor), quincho cerrado con parrilla, pileta climatizada y galería con vista al parque.</p>
+
+          <div class="tour-rooms">
+            <button class="tour-room-btn active" data-room="Living comedor">Living</button>
+            <button class="tour-room-btn" data-room="Cocina integrada">Cocina</button>
+            <button class="tour-room-btn" data-room="Dormitorio principal">Dormitorio principal</button>
+            <button class="tour-room-btn" data-room="Baño en suite">Baño</button>
+            <button class="tour-room-btn" data-room="Quincho">Quincho</button>
+            <button class="tour-room-btn" data-room="Jardín y pileta">Jardín</button>
+          </div>
+
+          <div class="tour-meta">
+            <div class="tour-meta-item">
+              <div class="l">Superficie cubierta</div>
+              <div class="v">240 m²</div>
+            </div>
+            <div class="tour-meta-item">
+              <div class="l">Lote</div>
+              <div class="v">450 m²</div>
+            </div>
+            <div class="tour-meta-item">
+              <div class="l">Antigüedad</div>
+              <div class="v">8 años</div>
+            </div>
+            <div class="tour-meta-item">
+              <div class="l">Expensas</div>
+              <div class="v">No tiene</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="floor-plan">
+            <h4>Plano interactivo · planta baja</h4>
+            <svg class="fp-svg" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(184,137,74,0.06)" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="320" height="220" fill="url(#grid)"/>
+              <!-- Outer walls -->
+              <rect x="20" y="20" width="280" height="180" fill="none" stroke="#B8894A" stroke-width="2.5"/>
+              <!-- Living -->
+              <rect x="22" y="22" width="160" height="100" fill="rgba(184,137,74,0.08)"/>
+              <text x="102" y="75" text-anchor="middle" fill="#F5EDD8" font-size="9" font-weight="700">LIVING</text>
+              <text x="102" y="88" text-anchor="middle" fill="#B8894A" font-size="7">42 m²</text>
+              <!-- Kitchen -->
+              <rect x="184" y="22" width="114" height="100" fill="rgba(122,165,196,0.08)"/>
+              <text x="241" y="75" text-anchor="middle" fill="#F5EDD8" font-size="9" font-weight="700">COCINA</text>
+              <text x="241" y="88" text-anchor="middle" fill="#B8894A" font-size="7">22 m²</text>
+              <!-- Bedroom 1 (master) -->
+              <rect x="22" y="124" width="120" height="76" fill="rgba(184,137,74,0.06)"/>
+              <text x="82" y="160" text-anchor="middle" fill="#F5EDD8" font-size="9" font-weight="700">DORM PPAL</text>
+              <text x="82" y="173" text-anchor="middle" fill="#B8894A" font-size="7">28 m² · suite</text>
+              <!-- Bathroom -->
+              <rect x="144" y="124" width="50" height="40" fill="rgba(107,170,117,0.08)"/>
+              <text x="169" y="148" text-anchor="middle" fill="#F5EDD8" font-size="8" font-weight="700">BAÑO</text>
+              <!-- Bedroom 2 -->
+              <rect x="144" y="166" width="50" height="34" fill="rgba(184,137,74,0.05)"/>
+              <text x="169" y="186" text-anchor="middle" fill="#F5EDD8" font-size="7" font-weight="700">DORM 2</text>
+              <!-- Bedroom 3 -->
+              <rect x="196" y="124" width="102" height="76" fill="rgba(184,137,74,0.05)"/>
+              <text x="247" y="160" text-anchor="middle" fill="#F5EDD8" font-size="9" font-weight="700">DORM 3</text>
+              <text x="247" y="173" text-anchor="middle" fill="#B8894A" font-size="7">14 m²</text>
+              <!-- Doors -->
+              <line x1="142" y1="60" x2="184" y2="60" stroke="#0A1629" stroke-width="2.5"/>
+              <line x1="142" y1="148" x2="142" y2="166" stroke="#0A1629" stroke-width="2.5"/>
+              <!-- Position indicator -->
+              <circle cx="102" cy="60" r="6" fill="#D4A85E" opacity="0.9">
+                <animate attributeName="r" values="6;9;6" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" repeatCount="indefinite"/>
+              </circle>
+              <text x="102" y="48" text-anchor="middle" fill="#D4A85E" font-size="7" font-weight="700">USTED ESTÁ AQUÍ</text>
+            </svg>
+            <div style="font-size:10.5px;color:var(--gray-2);margin-top:10px;text-align:center;letter-spacing:0.06em">CLICK EN UN AMBIENTE PARA TELEPORTARSE</div>
+          </div>
+
+          <div class="tour-actions" style="margin-top:14px">
+            <button class="tour-act primary" data-goto="ai">Hablar con la IA sobre esta propiedad</button>
+            <button class="tour-act ghost">Agendar visita presencial</button>
+            <button class="tour-act ghost">Descargar ficha PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODULE: CRM ============ -->
+<section class="module" data-mod="crm">
+  <div class="mod-head">
+    <span class="mod-eyebrow">CRM · Pipeline en vivo</span>
+    <h1 class="mod-title">38 leads, <em>cada uno con su próximo paso definido</em>.</h1>
+    <p class="mod-sub">La IA puntúa cada lead 0-100 según probabilidad de cierre. Las tarjetas se mueven solas a medida que la conversación avanza. Ustedes ven exactamente dónde intervenir.</p>
+  </div>
+
+  <div class="mod-body">
+
+    <div class="crm-toolbar">
+      <input class="crm-search" type="text" placeholder="Buscar lead, propiedad, vendedor...">
+      <button class="crm-btn">Filtros</button>
+      <button class="crm-btn">Vendedor: Todos</button>
+      <button class="crm-btn primary">+ Nuevo lead</button>
+    </div>
+
+    <div class="crm-board">
+
+      <!-- COL 1: NUEVO -->
+      <div class="crm-col">
+        <div class="crm-col-head">
+          <div class="crm-col-name">Nuevo</div>
+          <div class="crm-col-count">7</div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Lucas Fernández</div>
+            <div class="crm-score med">68</div>
+          </div>
+          <div class="crm-card-meta">Casa 3 amb · Palihue · USD 250-300k</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">WhatsApp</span>
+            <span class="crm-tag">Comprador</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av ia">IA</span>Calificando</span>
+            <span>hace 4m</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Sofía Martínez</div>
+            <div class="crm-score low">42</div>
+          </div>
+          <div class="crm-card-meta">Alquiler dpto 2 amb · Centro</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">ZonaProp</span>
+            <span class="crm-tag">Sin urgencia</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av ia">IA</span>Pidiendo info</span>
+            <span>hace 12m</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Marcos Genovese</div>
+            <div class="crm-score high">88</div>
+          </div>
+          <div class="crm-card-meta">Casa Country · Villa Belgrano · cash</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag ia">PRIORIDAD</span>
+            <span class="crm-tag">Referido</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av ia">IA</span>Llamando ahora</span>
+            <span>hace 2m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 2: CALIFICADO IA -->
+      <div class="crm-col">
+        <div class="crm-col-head">
+          <div class="crm-col-name s2">Calificado IA</div>
+          <div class="crm-col-count">9</div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Verónica Rial</div>
+            <div class="crm-score high">82</div>
+          </div>
+          <div class="crm-card-meta">Dpto 2 amb · Universitario · USD 130k</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">Cash + crédito</span>
+            <span class="crm-tag">Decisión 30d</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">JM</span>J. Méndez</span>
+            <span>hace 1h</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Pablo y Laura Schiavi</div>
+            <div class="crm-score high">91</div>
+          </div>
+          <div class="crm-card-meta">Casa familiar 4 amb · Palihue</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">Vende su dpto</span>
+            <span class="crm-tag ia">CALIENTE</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">CB</span>C. Bochile</span>
+            <span>hace 3h</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Diego Albarracín</div>
+            <div class="crm-score med">71</div>
+          </div>
+          <div class="crm-card-meta">Lote inversión · Patagonia</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">Inversor</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">JM</span>J. Méndez</span>
+            <span>ayer</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 3: VISITA AGENDADA -->
+      <div class="crm-col">
+        <div class="crm-col-head">
+          <div class="crm-col-name s3">Visita agendada</div>
+          <div class="crm-col-count">8</div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Familia Beltrán</div>
+            <div class="crm-score high">85</div>
+          </div>
+          <div class="crm-card-meta">Casa Brown 1842 · Palihue</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag ia">HOY 16:30</span>
+            <span class="crm-tag">2da visita</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">CB</span>C. Bochile</span>
+            <span>en 4h</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Andrea Coria</div>
+            <div class="crm-score med">73</div>
+          </div>
+          <div class="crm-card-meta">Dpto O'Higgins 234 · Centro</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">MAÑANA 10h</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">VS</span>V. Soto</span>
+            <span>en 22h</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Roberto Pizzo</div>
+            <div class="crm-score high">79</div>
+          </div>
+          <div class="crm-card-meta">PH Sarmiento 542 · Villa Mitre</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">JUE 18h</span>
+            <span class="crm-tag">Confirmado</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">JM</span>J. Méndez</span>
+            <span>en 2d</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 4: NEGOCIACION -->
+      <div class="crm-col">
+        <div class="crm-col-head">
+          <div class="crm-col-name s4">Negociación</div>
+          <div class="crm-col-count">6</div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Ortiz / Vendedor</div>
+            <div class="crm-score high">87</div>
+          </div>
+          <div class="crm-card-meta">Casa Palihue · USD 270k oferta</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag ia">CONTRAOFERTA</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">CB</span>C. Bochile</span>
+            <span>hace 30m</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Mariana Liébana</div>
+            <div class="crm-score high">90</div>
+          </div>
+          <div class="crm-card-meta">Dpto Villa Don Bosco · USD 95k</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">Reserva firmada</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">VS</span>V. Soto</span>
+            <span>hoy</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 5: CIERRE -->
+      <div class="crm-col">
+        <div class="crm-col-head">
+          <div class="crm-col-name s5">Cierre</div>
+          <div class="crm-col-count">4</div>
+        </div>
+        <div class="crm-card" style="border-color:rgba(107,170,117,0.4)">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Operación #2026-038</div>
+            <div class="crm-score high">100</div>
+          </div>
+          <div class="crm-card-meta">Casa Country Belgrano · USD 320k</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag" style="background:rgba(107,170,117,0.18);color:var(--green)">FIRMA HOY 17h</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">CB</span>C. Bochile</span>
+            <span>en 5h</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Operación #2026-039</div>
+            <div class="crm-score high">95</div>
+          </div>
+          <div class="crm-card-meta">Lote Patagonia · USD 42k</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag">Esperando escritura</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av">JM</span>J. Méndez</span>
+            <span>vie</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- COL 6: POST-VENTA -->
+      <div class="crm-col">
+        <div class="crm-col-head">
+          <div class="crm-col-name s6">Post-venta</div>
+          <div class="crm-col-count">4</div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Familia Cabrera</div>
+            <div class="crm-score med">—</div>
+          </div>
+          <div class="crm-card-meta">Mudanza · Casa Universitario</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag ia">IA gestionando</span>
+            <span class="crm-tag">NPS pendiente</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av ia">IA</span>Encuesta + referidos</span>
+            <span>3 días</span>
+          </div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-top">
+            <div class="crm-card-name">Ezequiel Pérez</div>
+            <div class="crm-score med">—</div>
+          </div>
+          <div class="crm-card-meta">Seguro de hogar pendiente</div>
+          <div class="crm-card-tags">
+            <span class="crm-tag ia">IA cotizando</span>
+          </div>
+          <div class="crm-card-footer">
+            <span class="owner"><span class="av ia">IA</span>3 cotizaciones</span>
+            <span>hoy</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:24px;padding:18px;background:var(--bg-3);border:1px solid var(--border);border-radius:10px;font-size:12.5px;color:var(--gray);line-height:1.7">
+      <strong style="color:var(--cream)">Tip de la IA:</strong> Marcos Genovese (lead nuevo, score 88, referido, paga cash) coincide con la propiedad de Country Belgrano que la familia Beltrán está mirando hoy. Si Beltrán no avanza, Marcos podría cerrar en 7 días. <em style="color:var(--gold-bright);font-style:normal">¿Querés que prepare el match?</em>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODULE: DASHBOARD ============ -->
+<section class="module" data-mod="dashboard">
+  <div class="mod-head">
+    <span class="mod-eyebrow">Dashboard ejecutivo · Abril 2026</span>
+    <h1 class="mod-title">El negocio <em>en una pantalla</em>.</h1>
+    <p class="mod-sub">Todo lo que pasó, lo que está pasando y lo que va a pasar — actualizado al segundo.</p>
+  </div>
+
+  <div class="mod-body">
+
+    <!-- KPIs -->
+    <div class="dash-grid">
+      <div class="dash-kpi">
+        <div class="dash-kpi-mini">MES</div>
+        <div class="dash-kpi-lbl">Operaciones cerradas</div>
+        <div class="dash-kpi-val" data-count="8">8</div>
+        <div class="dash-kpi-sub"><span>vs 5 abril 2025</span><span class="delta up">+60%</span></div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-mini">MES</div>
+        <div class="dash-kpi-lbl">Comisiones generadas</div>
+        <div class="dash-kpi-val">$48,7M</div>
+        <div class="dash-kpi-sub"><span>Promedio op: $6,1M</span><span class="delta up">+44%</span></div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-mini">SEM</div>
+        <div class="dash-kpi-lbl">Tour 360° abiertos</div>
+        <div class="dash-kpi-val" data-count="487">487</div>
+        <div class="dash-kpi-sub"><span>Tiempo prom: 4'12"</span><span class="delta up">+128%</span></div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-mini">MES</div>
+        <div class="dash-kpi-lbl">Horas humanas ahorradas</div>
+        <div class="dash-kpi-val" data-count="167">167</div>
+        <div class="dash-kpi-sub"><span>Equivale a 1 vendedor extra</span><span class="delta up">80%</span></div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="dash-row">
+      <div class="dash-card">
+        <h3>Embudo de conversión · últimos 30 días</h3>
+        <div class="csub">Cómo viajan los leads de la entrada al cierre</div>
+        <svg class="chart-svg" viewBox="0 0 600 230" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#D4A85E" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#D4A85E" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+          <g class="chart-grid">
+            <line x1="40" y1="30" x2="580" y2="30"/>
+            <line x1="40" y1="80" x2="580" y2="80"/>
+            <line x1="40" y1="130" x2="580" y2="130"/>
+            <line x1="40" y1="180" x2="580" y2="180"/>
+          </g>
+          <g class="chart-axis">
+            <text x="32" y="34" text-anchor="end">600</text>
+            <text x="32" y="84" text-anchor="end">450</text>
+            <text x="32" y="134" text-anchor="end">300</text>
+            <text x="32" y="184" text-anchor="end">150</text>
+          </g>
+          <!-- Bars: Leads / Calificados / Visitas / Negociación / Cierre -->
+          <g>
+            <rect class="chart-bar" x="80" y="30" width="78" height="160" rx="3" opacity="0.95"/>
+            <rect class="chart-bar" x="180" y="60" width="78" height="130" rx="3" opacity="0.85"/>
+            <rect class="chart-bar" x="280" y="105" width="78" height="85" rx="3" opacity="0.75"/>
+            <rect class="chart-bar" x="380" y="145" width="78" height="45" rx="3" opacity="0.65"/>
+            <rect class="chart-bar" x="480" y="170" width="78" height="20" rx="3" opacity="0.55" fill="#D4A85E"/>
+          </g>
+          <g class="chart-axis">
+            <text x="119" y="208" text-anchor="middle" fill="#F5EDD8" font-weight="700" font-size="11">487</text>
+            <text x="119" y="222" text-anchor="middle">Leads</text>
+            <text x="219" y="208" text-anchor="middle" fill="#F5EDD8" font-weight="700" font-size="11">312</text>
+            <text x="219" y="222" text-anchor="middle">Calificados</text>
+            <text x="319" y="208" text-anchor="middle" fill="#F5EDD8" font-weight="700" font-size="11">164</text>
+            <text x="319" y="222" text-anchor="middle">Visitas</text>
+            <text x="419" y="208" text-anchor="middle" fill="#F5EDD8" font-weight="700" font-size="11">42</text>
+            <text x="419" y="222" text-anchor="middle">Negociación</text>
+            <text x="519" y="208" text-anchor="middle" fill="#F5EDD8" font-weight="700" font-size="11">8</text>
+            <text x="519" y="222" text-anchor="middle">Cierre</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="dash-card">
+        <h3>Top vendedores · abril</h3>
+        <div class="csub">Ranking por comisiones netas</div>
+        <div class="rank-list">
+          <div class="rank-item">
+            <div class="rank-pos">I</div>
+            <div class="rank-av">CB</div>
+            <div class="rank-info">
+              <div class="rank-name">Carlos Bochile</div>
+              <div class="rank-meta">3 cierres · 18 visitas</div>
+            </div>
+            <div class="rank-val">$22,4M</div>
+          </div>
+          <div class="rank-item">
+            <div class="rank-pos">II</div>
+            <div class="rank-av">JM</div>
+            <div class="rank-info">
+              <div class="rank-name">Julieta Méndez</div>
+              <div class="rank-meta">3 cierres · 14 visitas</div>
+            </div>
+            <div class="rank-val">$15,8M</div>
+          </div>
+          <div class="rank-item">
+            <div class="rank-pos">III</div>
+            <div class="rank-av">VS</div>
+            <div class="rank-info">
+              <div class="rank-name">Valentín Soto</div>
+              <div class="rank-meta">2 cierres · 11 visitas</div>
+            </div>
+            <div class="rank-val">$10,5M</div>
+          </div>
+          <div class="rank-item" style="border-color:rgba(184,137,74,0.4)">
+            <div class="rank-pos" style="font-style:normal">IA</div>
+            <div class="rank-av" style="background:linear-gradient(135deg,var(--gold),var(--gold-bright))">★</div>
+            <div class="rank-info">
+              <div class="rank-name">Asistente IA Bochile</div>
+              <div class="rank-meta">Generó 73% de los leads</div>
+            </div>
+            <div class="rank-val">∞</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heatmap by neighborhood -->
+    <div class="heatmap-block">
+      <h3 style="font-family:Georgia,serif;font-size:17px;color:var(--cream);font-weight:600">Demanda por barrio · Bahía Blanca</h3>
+      <div style="font-size:12px;color:var(--gray-2);margin-top:4px">Mapa de calor de búsquedas y consultas — actualizado en vivo</div>
+      <div class="hm-grid">
+        <div class="hm-cell hm-h5">
+          <div class="nm">Palihue</div>
+          <div class="vl">142</div>
+          <div class="sm">consultas / mes · ↑ 22%</div>
+        </div>
+        <div class="hm-cell hm-h5">
+          <div class="nm">Centro</div>
+          <div class="vl">128</div>
+          <div class="sm">consultas / mes · ↑ 14%</div>
+        </div>
+        <div class="hm-cell hm-h4">
+          <div class="nm">Universitario</div>
+          <div class="vl">96</div>
+          <div class="sm">consultas / mes · ↑ 31%</div>
+        </div>
+        <div class="hm-cell hm-h4">
+          <div class="nm">Villa Mitre</div>
+          <div class="vl">78</div>
+          <div class="sm">consultas / mes · ↑ 18%</div>
+        </div>
+        <div class="hm-cell hm-h3">
+          <div class="nm">Patagonia</div>
+          <div class="vl">54</div>
+          <div class="sm">consultas / mes · ↑ 42%</div>
+        </div>
+        <div class="hm-cell hm-h3">
+          <div class="nm">Villa Belgrano</div>
+          <div class="vl">48</div>
+          <div class="sm">consultas / mes · ↑ 9%</div>
+        </div>
+        <div class="hm-cell hm-h2">
+          <div class="nm">Tiro Federal</div>
+          <div class="vl">32</div>
+          <div class="sm">consultas / mes</div>
+        </div>
+        <div class="hm-cell hm-h2">
+          <div class="nm">Villa Don Bosco</div>
+          <div class="vl">29</div>
+          <div class="sm">consultas / mes</div>
+        </div>
+        <div class="hm-cell hm-h1">
+          <div class="nm">Almafuerte</div>
+          <div class="vl">18</div>
+          <div class="sm">consultas / mes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tendency line -->
+    <div class="dash-card" style="margin-bottom:0">
+      <h3>Comisiones · últimos 6 meses</h3>
+      <div class="csub">Tendencia desde que arrancó WESEKA.IA en noviembre 2025</div>
+      <svg class="chart-svg" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="chartGrad2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#D4A85E" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#D4A85E" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <g class="chart-grid">
+          <line x1="50" y1="30" x2="580" y2="30"/>
+          <line x1="50" y1="75" x2="580" y2="75"/>
+          <line x1="50" y1="120" x2="580" y2="120"/>
+          <line x1="50" y1="165" x2="580" y2="165"/>
+        </g>
+        <g class="chart-axis">
+          <text x="44" y="34" text-anchor="end">$60M</text>
+          <text x="44" y="79" text-anchor="end">$45M</text>
+          <text x="44" y="124" text-anchor="end">$30M</text>
+          <text x="44" y="169" text-anchor="end">$15M</text>
+        </g>
+        <!-- Pre-WESEKA marker -->
+        <line x1="180" y1="30" x2="180" y2="180" stroke="rgba(184,137,74,0.3)" stroke-dasharray="4 4"/>
+        <text x="186" y="42" fill="#B8894A" font-size="9" font-weight="700">↓ WESEKA.IA</text>
+        <!-- Path -->
+        <path d="M 80 158 L 145 142 L 210 130 L 275 102 L 340 78 L 405 56 L 470 42 L 535 32 L 535 180 L 80 180 Z"
+              fill="url(#chartGrad2)"/>
+        <path d="M 80 158 L 145 142 L 210 130 L 275 102 L 340 78 L 405 56 L 470 42 L 535 32"
+              fill="none" stroke="#D4A85E" stroke-width="2.5"/>
+        <g>
+          <circle cx="80" cy="158" r="4" class="chart-dot"/>
+          <circle cx="145" cy="142" r="4" class="chart-dot"/>
+          <circle cx="210" cy="130" r="4" class="chart-dot"/>
+          <circle cx="275" cy="102" r="4" class="chart-dot"/>
+          <circle cx="340" cy="78" r="4" class="chart-dot"/>
+          <circle cx="405" cy="56" r="4" class="chart-dot"/>
+          <circle cx="470" cy="42" r="4" class="chart-dot"/>
+          <circle cx="535" cy="32" r="5" fill="#D4A85E" stroke="#0A1629" stroke-width="2">
+            <animate attributeName="r" values="5;8;5" dur="1.6s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+        <g class="chart-axis">
+          <text x="80" y="200" text-anchor="middle">Sep</text>
+          <text x="145" y="200" text-anchor="middle">Oct</text>
+          <text x="210" y="200" text-anchor="middle">Nov</text>
+          <text x="275" y="200" text-anchor="middle">Dic</text>
+          <text x="340" y="200" text-anchor="middle">Ene</text>
+          <text x="405" y="200" text-anchor="middle">Feb</text>
+          <text x="470" y="200" text-anchor="middle">Mar</text>
+          <text x="535" y="200" text-anchor="middle" fill="#D4A85E" font-weight="700">Abr</text>
+        </g>
+      </svg>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODULE: IA VENDEDORA ============ -->
+<section class="module" data-mod="ai">
+  <div class="mod-head">
+    <span class="mod-eyebrow">IA Vendedora · Asistente Bochile</span>
+    <h1 class="mod-title">No es un chatbot. <em>Es una vendedora que nunca duerme.</em></h1>
+    <p class="mod-sub">Conversa por WhatsApp, web y ZonaProp con el mismo cerebro. Conoce tus 240 propiedades, sabe quién está negociando qué, y tiene los calendarios de los 4 vendedores en tiempo real.</p>
+  </div>
+
+  <div class="mod-body">
+
+    <div class="ai-frame">
+
+      <!-- CHAT -->
+      <div class="ai-chat">
+        <div class="ai-chat-head">
+          <div class="ai-av">B</div>
+          <div class="ai-chat-name">
+            <div class="n">Lucas Fernández · WhatsApp</div>
+            <div class="s">conversación activa · score 88</div>
+          </div>
+          <div class="ai-chat-meta">+54 9 291<br>442-3398</div>
+        </div>
+
+        <div class="ai-chat-msgs" id="chatMsgs">
+          <div class="msg user">
+            <div class="msg-av">L</div>
+            <div>
+              <div class="msg-bub">Hola! Vi un aviso de una casa en Palihue, ¿está disponible?</div>
+              <div class="msg-time">10:42</div>
+            </div>
+          </div>
+
+          <div class="msg ia">
+            <div class="msg-av">B</div>
+            <div>
+              <div class="msg-bub">¡Hola Lucas! Soy Camila, asistente de Inmobiliaria Bochile 👋<br>Sí, tengo varias casas disponibles en Palihue ahora mismo. Para mostrarte lo que mejor te encaja, contame: ¿es para vivir o como inversión?</div>
+              <div class="msg-time">10:42</div>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="msg-av">L</div>
+            <div>
+              <div class="msg-bub">Para vivir, somos pareja con 2 nenes (4 y 7 años)</div>
+              <div class="msg-time">10:43</div>
+            </div>
+          </div>
+
+          <div class="msg ia">
+            <div class="msg-av">B</div>
+            <div>
+              <div class="msg-bub">Perfecto, ¡familia con peques entonces! Te tengo dos opciones que coinciden bastante. ¿Cuál es el rango de presupuesto en el que se mueven y cómo lo van a financiar (cash, crédito, parte y parte)?</div>
+              <div class="msg-time">10:43</div>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="msg-av">L</div>
+            <div>
+              <div class="msg-bub">Hasta USD 300k. Vendo el dpto que tengo en centro y el resto crédito</div>
+              <div class="msg-time">10:44</div>
+            </div>
+          </div>
+
+          <div class="msg ia">
+            <div class="msg-av">B</div>
+            <div>
+              <div class="msg-bub">Buenísimo. Mirá esta — la veo ideal para ustedes:</div>
+              <div class="msg-card">
+                <div class="msg-card-img"></div>
+                <div class="msg-card-info">
+                  <div class="pr">USD 285.000</div>
+                  <div class="ti">Casa 4 amb · Palihue</div>
+                  <div class="lc">Brown 1842 · 240m² · pileta + quincho</div>
+                </div>
+              </div>
+              <div class="msg-bub" style="margin-top:6px">Quincho cerrado, pileta climatizada, escuela San Roque a 4 cuadras (perfecta para los nenes). ¿Querés recorrerla en tour 360° ahora? Te paso el link y la vemos juntos.</div>
+              <div class="msg-time">10:44</div>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="msg-av">L</div>
+            <div>
+              <div class="msg-bub">Sí dale. ¿Y si me gusta puedo verla en persona el sábado?</div>
+              <div class="msg-time">10:46</div>
+            </div>
+          </div>
+
+          <div class="msg ia">
+            <div class="msg-av">B</div>
+            <div>
+              <div class="msg-bub">Total. Te dejo el tour 👉 bochile.com.ar/palihue-1842<br><br>Para el sábado te puedo agendar con Carlos Bochile, que es quien la conoce mejor. Tengo dos horarios libres: <strong style="color:var(--gold-bright)">10:30 hs</strong> o <strong style="color:var(--gold-bright)">15:00 hs</strong>. ¿Cuál te queda mejor?</div>
+              <div class="msg-time">10:46</div>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="msg-av">L</div>
+            <div>
+              <div class="msg-bub">10:30 perfecto</div>
+              <div class="msg-time">10:47</div>
+            </div>
+          </div>
+
+          <div class="msg ia">
+            <div class="msg-av">B</div>
+            <div>
+              <div class="msg-bub">Listo Lucas, agendado ✅<br><strong>Sábado 2 de mayo · 10:30 hs · Brown 1842</strong><br><br>Te llega un recordatorio el viernes y la dirección con un mapa el sábado a las 10. Si necesitás cancelar o mover, escribime nomás.<br><br>¡Nos vemos el sábado!</div>
+              <div class="msg-time">10:47</div>
+            </div>
+          </div>
+
+          <div class="ai-typing"><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="ai-chat-input">
+          <input type="text" placeholder="Escribir mensaje (en demo)" disabled>
+          <button class="ai-send">Enviar</button>
+        </div>
+      </div>
+
+      <!-- BRAIN -->
+      <div class="ai-brain">
+        <div class="ai-brain-head">
+          <div class="e">Cerebro de la IA · en vivo</div>
+          <div class="t">Lo que está pensando ahora</div>
+        </div>
+        <div class="ai-brain-body">
+
+          <div class="brain-block">
+            <div class="lb">Score del lead</div>
+            <div class="ct"><b>88 / 100</b> — caliente</div>
+            <div class="brain-score">
+              <div class="row"><span>Presupuesto match</span><b>95%</b></div>
+              <div class="score-bar"><div class="fill" style="width:95%"></div></div>
+              <div class="row" style="margin-top:8px"><span>Urgencia detectada</span><b>78%</b></div>
+              <div class="score-bar"><div class="fill" style="width:78%"></div></div>
+              <div class="row" style="margin-top:8px"><span>Capacidad de pago</span><b>92%</b></div>
+              <div class="score-bar"><div class="fill" style="width:92%"></div></div>
+            </div>
+          </div>
+
+          <div class="brain-block">
+            <div class="lb">Lo que entendí del lead</div>
+            <div class="ct">Pareja, <b>2 hijos chicos</b>. Quieren <b>casa familiar</b> en Palihue. Presupuesto <em>USD 300k</em>. Va a vender un departamento en Centro y financiar el resto con crédito hipotecario.</div>
+          </div>
+
+          <div class="brain-block">
+            <div class="lb">Acciones que ya tomé</div>
+            <div class="brain-actions">
+              <div class="brain-action">
+                <span class="ic ok">✓</span>
+                <span class="tx">Creé ficha en <b>CRM</b> (etapa: Calificado IA)</span>
+              </div>
+              <div class="brain-action">
+                <span class="ic ok">✓</span>
+                <span class="tx">Match con propiedad <b>Brown 1842</b></span>
+              </div>
+              <div class="brain-action">
+                <span class="ic ok">✓</span>
+                <span class="tx">Envié <b>tour 360°</b> personalizado</span>
+              </div>
+              <div class="brain-action">
+                <span class="ic ok">✓</span>
+                <span class="tx">Agendé visita en agenda de <b>C. Bochile</b> · sáb 2 may 10:30</span>
+              </div>
+              <div class="brain-action">
+                <span class="ic ok">✓</span>
+                <span class="tx">Programé recordatorios <b>vie + sáb 10h</b></span>
+              </div>
+              <div class="brain-action">
+                <span class="ic">→</span>
+                <span class="tx">Notifiqué a <b>C. Bochile</b> con dossier del lead</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="brain-block">
+            <div class="lb">Sugerencia para Carlos</div>
+            <div class="ct">Lucas tiene un dpto en Centro para vender. <em>Le ofrecemos hacer la doble operación</em> y le tasamos el suyo durante la visita. Subiría el ticket de comisiones y le simplifica la decisión.</div>
+          </div>
+
+          <div class="brain-block">
+            <div class="lb">Próximo paso automático</div>
+            <div class="ct">Vie 2 may 09:00 — recordatorio + foto de fachada. Si no responde, llamo. Si confirma, mando ubicación con mapa Google.</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:18px;padding:18px;background:rgba(184,137,74,0.05);border:1px solid var(--border-strong);border-radius:10px;display:grid;grid-template-columns:1fr;gap:12px">
+      <div style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);font-weight:700">Conectada a:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <span class="crm-tag ia">WhatsApp Business</span>
+        <span class="crm-tag ia">ZonaProp</span>
+        <span class="crm-tag ia">Web Bochile</span>
+        <span class="crm-tag ia">Google Calendar (4 vendedores)</span>
+        <span class="crm-tag ia">Catálogo · 240 props</span>
+        <span class="crm-tag ia">CRM Bochile</span>
+        <span class="crm-tag ia">Mercado Pago / Cobranza</span>
+        <span class="crm-tag ia">Banco / Simulador crédito</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ MODULE: ALQUILERES ============ -->
+<section class="module" data-mod="rentals">
+  <div class="mod-head">
+    <span class="mod-eyebrow">Administración · Alquileres</span>
+    <h1 class="mod-title">86 contratos. <em>3 horas humanas al mes.</em></h1>
+    <p class="mod-sub">La IA cobra, recuerda, manda recibos, atiende reclamos, coordina mantenimiento y solo escala al equipo lo que requiere decisión humana.</p>
+  </div>
+
+  <div class="mod-body">
+
+    <div class="alq-summary">
+      <div class="alq-stat">
+        <div class="lb">Contratos activos</div>
+        <div class="vl">86</div>
+        <div class="sm">+4 este mes</div>
+      </div>
+      <div class="alq-stat">
+        <div class="lb">Cobrado en abril</div>
+        <div class="vl">$54,2M</div>
+        <div class="sm">98% al día</div>
+      </div>
+      <div class="alq-stat">
+        <div class="lb">Pendientes hoy</div>
+        <div class="vl">3</div>
+        <div class="sm">IA gestionando</div>
+      </div>
+      <div class="alq-stat">
+        <div class="lb">Reclamos abiertos</div>
+        <div class="vl">2</div>
+        <div class="sm">1 escalado</div>
+      </div>
+      <div class="alq-stat">
+        <div class="lb">Ajustes este mes</div>
+        <div class="vl">12</div>
+        <div class="sm">Por IPC · automáticos</div>
+      </div>
+      <div class="alq-stat">
+        <div class="lb">Tiempo humano usado</div>
+        <div class="vl">3,2h</div>
+        <div class="sm">vs ~28h sin IA</div>
+      </div>
+    </div>
+
+    <div class="alq-table">
+      <div class="alq-table-head">
+        <h3>Contratos · estado actual</h3>
+        <div class="alq-tabs">
+          <button class="alq-tab active">Todos</button>
+          <button class="alq-tab">Al día</button>
+          <button class="alq-tab">Próximos a vencer</button>
+          <button class="alq-tab">Atrasados</button>
+        </div>
+      </div>
+      <div class="alq-rows">
+        <div class="alq-row head">
+          <div>PROPIEDAD</div>
+          <div>INQUILINO</div>
+          <div>ALQUILER</div>
+          <div>VENCE</div>
+          <div>ESTADO / ÚLTIMA ACCIÓN</div>
+          <div>RESPONSABLE</div>
+        </div>
+
+        <div class="alq-row">
+          <div class="alq-prop">
+            <div class="nm">Dpto O'Higgins 234 · 7°B</div>
+            <div class="ad">Centro · 52m²</div>
+          </div>
+          <div class="alq-tenant">
+            <div class="nm">Romina Calandri</div>
+            <div class="ph">+54 291 442-1180</div>
+          </div>
+          <div class="alq-amount">$680.000 <small>Pesos · contrato 24m</small></div>
+          <div class="alq-due">Día 5</div>
+          <div class="alq-action">
+            <span class="alq-status alq-st-ok">PAGADO</span>
+            <div style="margin-top:4px"><span class="ia">IA</span>recibo enviado · 04 may 09:12</div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-2)">Auto-IA</div>
+        </div>
+
+        <div class="alq-row">
+          <div class="alq-prop">
+            <div class="nm">Casa Donado 1245</div>
+            <div class="ad">Universitario · 110m²</div>
+          </div>
+          <div class="alq-tenant">
+            <div class="nm">Gastón Iribarne</div>
+            <div class="ph">+54 291 514-7822</div>
+          </div>
+          <div class="alq-amount">$920.000</div>
+          <div class="alq-due">Día 10</div>
+          <div class="alq-action">
+            <span class="alq-status alq-st-warn">EN 5 DÍAS</span>
+            <div style="margin-top:4px"><span class="ia">IA</span>recordatorio enviado hoy</div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-2)">Auto-IA</div>
+        </div>
+
+        <div class="alq-row">
+          <div class="alq-prop">
+            <div class="nm">Dpto Alem 1456 · 4°D</div>
+            <div class="ad">Universitario · 38m²</div>
+          </div>
+          <div class="alq-tenant">
+            <div class="nm">Florencia Bértola</div>
+            <div class="ph">+54 291 446-2210</div>
+          </div>
+          <div class="alq-amount">$580.000</div>
+          <div class="alq-due">Día 1</div>
+          <div class="alq-action">
+            <span class="alq-status alq-st-late">3 DÍAS DE ATRASO</span>
+            <div style="margin-top:4px"><span class="ia">IA</span>3 mensajes · llamó 1 vez · respondió "esta sem"</div>
+          </div>
+          <div style="font-size:11px;color:var(--gold-bright)">Escalada → CB</div>
+        </div>
+
+        <div class="alq-row">
+          <div class="alq-prop">
+            <div class="nm">PH Sarmiento 542</div>
+            <div class="ad">Villa Mitre · 78m²</div>
+          </div>
+          <div class="alq-tenant">
+            <div class="nm">Mariano Pellegrini</div>
+            <div class="ph">+54 291 552-3309</div>
+          </div>
+          <div class="alq-amount">$740.000 <small>↑ ajuste IPC abril</small></div>
+          <div class="alq-due">Día 3</div>
+          <div class="alq-action">
+            <span class="alq-status alq-st-ok">PAGADO</span>
+            <div style="margin-top:4px"><span class="ia">IA</span>aplicó ajuste IPC + 7,2% · recibo OK</div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-2)">Auto-IA</div>
+        </div>
+
+        <div class="alq-row">
+          <div class="alq-prop">
+            <div class="nm">Casa Estomba 832</div>
+            <div class="ad">Villa Don Bosco · 150m²</div>
+          </div>
+          <div class="alq-tenant">
+            <div class="nm">Familia Larrañaga</div>
+            <div class="ph">+54 291 405-7741</div>
+          </div>
+          <div class="alq-amount">$1.180.000</div>
+          <div class="alq-due">Día 8</div>
+          <div class="alq-action">
+            <span class="alq-status alq-st-ok">PAGADO</span>
+            <div style="margin-top:4px"><span class="ia">IA</span>+ reclamo pérdida termotanque resuelto</div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-2)">Auto-IA</div>
+        </div>
+
+        <div class="alq-row">
+          <div class="alq-prop">
+            <div class="nm">Dpto Drago 1078 · 3°A</div>
+            <div class="ad">Centro · 65m²</div>
+          </div>
+          <div class="alq-tenant">
+            <div class="nm">Lucía Pelle</div>
+            <div class="ph">+54 291 471-2008</div>
+          </div>
+          <div class="alq-amount">$820.000</div>
+          <div class="alq-due">Día 15</div>
+          <div class="alq-action">
+            <span class="alq-status alq-st-warn">VENCE 30 JUN</span>
+            <div style="margin-top:4px"><span class="ia">IA</span>negocia renovación · prop +5,5% real</div>
+          </div>
+          <div style="font-size:11px;color:var(--gray-2)">Auto-IA</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="alq-feed">
+      <h3>Lo que hizo la IA en alquileres en las últimas 24h</h3>
+      <div class="sub">Feed automático · escalado a humano solo cuando es necesario</div>
+      <div class="feed-list">
+
+        <div class="feed-item">
+          <div class="feed-ic ok">✓</div>
+          <div class="feed-info">
+            <div class="feed-tx">Cobró <b>7 alquileres</b> automáticamente vía Mercado Pago · monto total <b>$5.840.000</b>. Generó y envió 7 recibos por mail + WhatsApp.</div>
+            <div class="feed-time">entre 00:01 y 09:30 hoy</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-ic ok">✓</div>
+          <div class="feed-info">
+            <div class="feed-tx">Aplicó <b>ajustes por IPC</b> a 12 contratos del mes de abril. Notificó a inquilinos con 30 días de anticipación según ley.</div>
+            <div class="feed-time">2 días atrás</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-ic">⚙</div>
+          <div class="feed-info">
+            <div class="feed-tx">Atendió reclamo de <b>Familia Larrañaga</b> (pérdida termotanque). Coordinó plomero, autorizó hasta $80k, plomero fue, problema resuelto. <b>Tiempo total: 2h.</b></div>
+            <div class="feed-time">ayer 14:20 → 16:30</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-ic warn">!</div>
+          <div class="feed-info">
+            <div class="feed-tx">Escaló a <b>Carlos Bochile</b>: Florencia Bértola (Alem 1456) lleva 3 días sin pagar. La IA ya envió 3 mensajes y la llamó. Necesita decisión humana.</div>
+            <div class="feed-time">hoy 11:00</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-ic ok">✓</div>
+          <div class="feed-info">
+            <div class="feed-tx">Cotizó <b>3 seguros de hogar</b> para Ezequiel Pérez (cliente nuevo, post-venta). Comparativa lista en su carpeta.</div>
+            <div class="feed-time">hoy 08:14</div>
+          </div>
+        </div>
+
+        <div class="feed-item">
+          <div class="feed-ic ok">✓</div>
+          <div class="feed-info">
+            <div class="feed-tx">Renovó automáticamente el contrato de <b>Roberto Salinas</b> (Brown 1620): el inquilino aceptó la propuesta de la IA (+4,8% sobre IPC). Generó nuevo contrato listo para firma digital.</div>
+            <div class="feed-time">ayer 19:42</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============ FOOTER ============ -->
+<footer class="foot">
+  <div class="lg">WESEKA.IA</div>
+  <div class="ds">Demo Operativo · Inmobiliaria Bochile · Bahía Blanca · 2026</div>
+</footer>
+
+</main>
+
+<!-- LIVE NOTIFICATION TOAST -->
+<div id="toast" style="position:fixed;bottom:24px;right:24px;left:24px;max-width:340px;margin-left:auto;background:var(--bg-2);border:1px solid var(--gold);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 12px 36px rgba(0,0,0,0.5);transform:translateY(160%);transition:transform .4s cubic-bezier(.17,.85,.42,1);z-index:200">
+  <div id="toastIc" style="flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-bright));color:var(--bg);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center">B</div>
+  <div style="flex:1;min-width:0">
+    <div id="toastTitle" style="font-size:12px;font-weight:700;color:var(--cream);margin-bottom:2px">Nueva acción de la IA</div>
+    <div id="toastBody" style="font-size:11.5px;color:var(--gray);line-height:1.5">Cargando...</div>
+  </div>
+</div>
+
+<script>
+// =============== SPLASH REMOVAL ===============
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    const s = document.getElementById('splash');
+    if(s) s.classList.add('gone');
+  }, 1600);
+});
+
+// =============== MODULE SWITCHING ===============
+const modBtns = document.querySelectorAll('.modnav button[data-mod]');
+const modPanels = document.querySelectorAll('.module[data-mod]');
+
+function switchTo(modName){
+  modBtns.forEach(b=>b.classList.toggle('active', b.dataset.mod===modName));
+  modPanels.forEach(p=>p.classList.toggle('active', p.dataset.mod===modName));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(modName==='ai') setTimeout(scrollChatBottom, 150);
+  if(modName==='home') animateCounters();
+  if(modName==='dashboard') animateCounters();
+}
+
+modBtns.forEach(b=>b.addEventListener('click',()=>switchTo(b.dataset.mod)));
+document.querySelectorAll('[data-goto]').forEach(b=>{
+  b.addEventListener('click',()=>switchTo(b.dataset.goto));
+});
+
+// Property cards → Tour
+document.querySelectorAll('[data-goto-tour]').forEach(c=>{
+  c.addEventListener('click',()=>switchTo('tour'));
+});
+
+// =============== LIVE CLOCK ===============
+function updateClock(){
+  const d = new Date();
+  const t = d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const c = document.getElementById('liveClock');
+  if(c) c.textContent = 'En vivo · ' + t;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// =============== ANIMATED COUNTERS ===============
+function animateCounters(){
+  document.querySelectorAll('[data-count]').forEach(el=>{
+    if(el.dataset.animated==='1') return;
+    el.dataset.animated='1';
+    const target = parseInt(el.dataset.count, 10);
+    const dur = 1200;
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now-start)/dur);
+      const eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(target*eased).toLocaleString('es-AR');
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+animateCounters();
+
+// =============== TOUR ROOM SWITCHING ===============
+const roomTag = document.getElementById('tourRoomTag');
+const roomBtns = document.querySelectorAll('.tour-room-btn');
+roomBtns.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    roomBtns.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(roomTag){
+      roomTag.style.opacity='0';
+      setTimeout(()=>{
+        roomTag.textContent = btn.dataset.room;
+        roomTag.style.opacity='1';
+      },180);
+    }
+    // Visual feedback - slight rotation of the room
+    const stage = document.getElementById('tourStage');
+    if(stage){
+      stage.style.transform='scale(0.98)';
+      setTimeout(()=>{stage.style.transform='scale(1)';},220);
+    }
+  });
+});
+
+// Tour ctrl rotation feedback
+document.querySelectorAll('.tour-ctrl').forEach(c=>{
+  c.addEventListener('click',()=>{
+    const w = document.querySelector('.tour-room');
+    if(!w) return;
+    const r = (parseFloat(w.dataset.rot||0));
+    const newR = c.title.includes('izquierda') ? r-8 : c.title.includes('derecha') ? r+8 : 0;
+    w.dataset.rot = newR;
+    w.style.transition='transform .35s ease';
+    w.style.transform = `rotateY(${newR}deg)`;
+  });
+});
+
+// =============== CHAT AUTO-SCROLL ===============
+const chatMsgs = document.getElementById('chatMsgs');
+function scrollChatBottom(){
+  if(chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+}
+scrollChatBottom();
+
+// =============== ALQUILERES TABS ===============
+document.querySelectorAll('.alq-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.alq-tab').forEach(b=>b.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+
+// =============== LIVE NOTIFICATIONS (simulated) ===============
+const toast = document.getElementById('toast');
+const toastTitle = document.getElementById('toastTitle');
+const toastBody = document.getElementById('toastBody');
+
+const notifs = [
+  {t:'Lead nuevo · WhatsApp', b:'Marcos Genovese consulta por casa Country. Cash. Score IA: 88. <strong style="color:var(--gold-bright)">Revisar CRM →</strong>'},
+  {t:'Visita confirmada', b:'Familia Beltrán confirmó visita hoy 16:30 · Brown 1842. La IA mandó la dirección con mapa.'},
+  {t:'Cobro automático ✓', b:'$680.000 cobrados a Romina Calandri (O\'Higgins 234). Recibo enviado por mail + WhatsApp.'},
+  {t:'IA cerró tour 360°', b:'Lucas Fernández recorrió la propiedad de Palihue durante 8\'24". Pidió visita el sábado.'},
+  {t:'Match detectado', b:'Andrea Coria (lead) coincide 94% con dpto Centro recién listado. La IA ya le mandó la propuesta.'},
+  {t:'Renovación cerrada', b:'Roberto Salinas firmó renovación contrato Brown 1620 con +4,8% real sobre IPC. Sin intervención humana.'},
+  {t:'Reclamo resuelto ✓', b:'Plomero atendió pérdida en Estomba 832. La IA autorizó $80k y coordinó todo en 2h.'}
+];
+let nIdx = 0;
+function showToast(){
+  const n = notifs[nIdx % notifs.length];
+  nIdx++;
+  toastTitle.textContent = n.t;
+  toastBody.innerHTML = n.b;
+  toast.style.transform='translateY(0)';
+  setTimeout(()=>{toast.style.transform='translateY(160%)';}, 5500);
+}
+// First toast after 3s, then every 8s
+setTimeout(showToast, 3000);
+setInterval(showToast, 8500);
+
+// =============== KPI MICRO-FLUCTUATION (live feel) ===============
+const flickerCounters = document.querySelectorAll('.tile-val[data-count]');
+setInterval(()=>{
+  flickerCounters.forEach((el,i)=>{
+    if(Math.random() > 0.65){
+      const cur = parseInt(el.textContent.replace(/\D/g,''))||0;
+      el.textContent = (cur + 1).toLocaleString('es-AR');
+      el.style.color = '#F5EDD8';
+      setTimeout(()=>{el.style.color='';}, 600);
+    }
+  });
+}, 6000);
+
+// =============== HOTSPOT INTERACTIONS ===============
+document.querySelectorAll('.hotspot').forEach((h,i)=>{
+  h.addEventListener('click',()=>{
+    const rooms = ['Cocina integrada','Dormitorio principal','Baño en suite'];
+    const targetRooms = ['Cocina','Dormitorio principal','Baño'];
+    const btn = document.querySelector(`.tour-room-btn[data-room="${rooms[i]}"]`);
+    if(btn) btn.click();
+  });
+});
+
+// =============== CRM CARD CLICK ===============
+document.querySelectorAll('.crm-card').forEach(c=>{
+  c.addEventListener('click',()=>{
+    c.style.transform='scale(0.97)';
+    setTimeout(()=>{c.style.transform='';}, 200);
+  });
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1481 @@
+{
+  "name": "Bochile - Chatbot Multi-Agente CORE (v4 Twilio)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bochile-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "n-1",
+      "name": "Webhook Twilio",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        400
+      ],
+      "webhookId": "bochile-twilio-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst from_raw = body.From || body.from || '';\nconst profile = body.ProfileName || body.profileName || 'Desconocido';\nconst text_body = body.Body || body.body || '';\nconst num_media = parseInt(body.NumMedia || body.numMedia || '0', 10);\nconst media_url = body.MediaUrl0 || body.mediaUrl0 || '';\nconst media_type = body.MediaContentType0 || body.mediaContentType0 || '';\n\nconst from = from_raw.replace('whatsapp:', '');\n\nlet msg_type = 'text';\nlet mensaje_original = text_body;\nif (num_media > 0 && media_url) {\n  if (media_type.startsWith('audio/')) msg_type = 'audio';\n  else if (media_type.startsWith('image/')) msg_type = 'image';\n  else { msg_type = 'document'; mensaje_original = text_body || '[adjunto recibido]'; }\n}\n\nif (!from || (!text_body && !media_url)) {\n  return [{ json: { skip: true, reason: 'payload_invalido' } }];\n}\n\nconst digits_only = from.replace(/\\D/g, '');\n\nreturn [{ json: {\n  telefono: from,\n  telefono_twilio: from,\n  nombre: profile,\n  mensaje_original: mensaje_original,\n  msg_type: msg_type,\n  media_url: media_url,\n  media_type: media_type,\n  canal: 'whatsapp_twilio',\n  lead_id: 'L-' + digits_only.slice(-10),\n  msg_id: 'M-' + Date.now(),\n  timestamp_iso: new Date().toISOString(),\n  skip: false\n}}];"
+      },
+      "id": "n-2",
+      "name": "Parsear Mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msg_type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msg_type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msg_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "imagen"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "otro"
+        }
+      },
+      "id": "n-3",
+      "name": "Switch Tipo Mensaje",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "n-4a",
+      "name": "Audio - Download Twilio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "d6HsIalxJkkphlFP",
+          "name": "Twilio Basic Auth (Bochile)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "es"
+        }
+      },
+      "id": "n-5a",
+      "name": "Audio - Whisper",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        880,
+        208
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0cXejbqqXHamFUYX",
+          "name": "OpenAI WESEKA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "mensaje",
+              "value": "=[AUDIO TRANSCRIPTO] {{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "n-6a",
+      "name": "Audio - Set Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "n-4b",
+      "name": "Imagen - Download Twilio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        352
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "d6HsIalxJkkphlFP",
+          "name": "Twilio Basic Auth (Bochile)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "text": "Sos un asistente de Inmobiliaria Bochile (Bahia Blanca). Describi BREVEMENTE (1-2 lineas) la foto: si es propiedad (casa/dpto/lote), describi caracteristicas visibles (ambientes, estilo). Si es documento o plano, mencionalo. Si NO es inmobiliario, decilo. NO inventes direcciones ni precios.",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "n-5b",
+      "name": "Imagen - Vision",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        880,
+        384
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0cXejbqqXHamFUYX",
+          "name": "OpenAI WESEKA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "mensaje",
+              "value": "=[IMAGEN RECIBIDA] {{ $json.content || $json.text || $json.response }}{{ $('Parsear Mensaje').item.json.mensaje_original ? ' | Caption: ' + $('Parsear Mensaje').item.json.mensaje_original : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "n-6b",
+      "name": "Imagen - Set Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "mensaje",
+              "value": "={{ $json.mensaje_original }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "n-4c",
+      "name": "Texto - Set Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "n-7",
+      "name": "Merge Caminos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1328,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UGNAXqPUX0udDRPi",
+          "cachedResultName": "bochile_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "keyValue": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "n-8",
+      "name": "Buscar Lead Existente",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        -112
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UGNAXqPUX0udDRPi",
+          "cachedResultName": "bochile_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "keyValue": "={{ $(\"Merge Caminos\").item.json.lead_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $(\"Merge Caminos\").item.json.lead_id }}",
+            "nombre": "={{ $(\"Merge Caminos\").item.json.nombre }}",
+            "telefono": "={{ $(\"Merge Caminos\").item.json.telefono }}",
+            "canal": "={{ $(\"Merge Caminos\").item.json.canal }}",
+            "etapa": "Nuevo",
+            "actualizado_en": "={{ $(\"Merge Caminos\").item.json.timestamp_iso }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-9",
+      "name": "Upsert Lead CRM",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        32
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "B5WIk9wqVUH8Z0t8",
+          "cachedResultName": "bochile_conversaciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "msg_id": "={{ $(\"Merge Caminos\").item.json.msg_id }}",
+            "lead_id": "={{ $(\"Merge Caminos\").item.json.lead_id }}",
+            "telefono": "={{ $(\"Merge Caminos\").item.json.telefono }}",
+            "canal": "={{ $(\"Merge Caminos\").item.json.canal }}",
+            "direccion": "in",
+            "mensaje": "={{ $json.mensaje }}",
+            "intencion_detectada": "={{ $(\"Merge Caminos\").item.json.msg_type }}",
+            "agente_que_respondio": "pending",
+            "requiere_humano": "={{ false }}",
+            "timestamp": "={{ $(\"Merge Caminos\").item.json.timestamp_iso }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-10",
+      "name": "Log Mensaje Entrante",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1776,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $(\"Merge Caminos\").item.json.mensaje }}",
+        "options": {
+          "systemMessage": "Sos CAMILA POMERICH, vendedora real de Inmobiliaria Bochile (Bahia Blanca, desde 1970). Tu zona principal: Palihue, Villa Belgrano, Country. Hablas por WhatsApp con clientes como vendedora humana argentina (vos, tono calido directo). Hoy es martes 12/05/2026.\n\nIMPORTANTE: vos SOS la vendedora real. No derivas a otra persona. Cuando coordinas una visita es para vos misma. Hablas siempre en primera persona (\"te paso a buscar\", \"nos vemos en\", \"te llevo a ver\").\n\nOBJETIVO: CALIFICAR -> MATCHEAR -> AGENDAR VISITA. No sos un chat informativo: cerras visitas. La visita la hacés VOS.\n\n============== SUB-AGENTES (TOOLS INTERNOS - invisibles al cliente) ==============\n1. SubAgente Calificador: score 0-100 + datos. Llamar apenas tengas presupuesto + zona + tipo.\n2. SubAgente Matcher: cruza con catalogo. Llamar SOLO con operacion+tipo+zona+presupuesto.\n3. SubAgente Administrativo: escribe CRM + manda brief interno a TU PROPIO numero (recordatorio para preparar la visita). El cliente nunca lo ve.\n\n============== TRIGGERS OBLIGATORIOS ==============\nSi el cliente dice cualquiera de estas frases (o similar) -> escalar INMEDIATO a SubAgente Administrativo con orden AGENDAR:\n- \"A disposicion\", \"me acomodo\", \"cuando puedo ir/verla\"\n- \"agendame\", \"agendamela\", \"dale visita\"\n- \"si quiero ir\", \"me viene bien [dia/hora]\"\n- \"espero confirmacion\", \"sigo esperando\"\n\nPROHIBIDO responder \"te confirmo despues\", \"te aviso pronto\", \"estoy coordinando\" sin haber invocado al Admin en ese mismo turno.\n\n============== FLUJO DE VISITA ==============\n1. Cliente muestra interes -> proponele 2 OPCIONES CONCRETAS de dia/hora (martes-sabado, 10:00-12:00 o 16:00-18:00, NUNCA lunes).\n   Ej: \"Te paso 2 opciones para que te lleve yo a verla: martes 13 a las 11h o jueves 15 a las 17h. Cual te queda mejor?\"\n2. Cliente confirma una opcion -> LLAMAS SubAgente Administrativo con orden:\n   \"AGENDAR. lead_id=<L-XXX>, prop_id=<P-XXX>, cliente_nombre=<nombre>, telefono=<+54...>, direccion=<de la prop>, fecha=YYYY-MM-DD, hora=HH:MM, score=<XX>, presupuesto=<USD/ARS XXX>, zona=<XXX>, tour=<url>, observaciones=<resumen lead>\"\n3. Admin agenda, manda brief a tu numero (recordatorio), actualiza CRM. Devuelve OK.\n4. Confirmas al cliente EN PRIMERA PERSONA: \"Listo! Te confirmo: el <dia> <hora> te paso a buscar / nos vemos en <direccion>. Cualquier cambio avisame. Yo soy Camila :)\"\n\n============== REGLAS DE ORO ==============\n- HABLAS SIEMPRE EN PRIMERA PERSONA. NUNCA digas \"te visita Camila\" o \"te derivo con\". VOS sos Camila.\n- Si NO sabes fecha+hora concreta -> nunca digas \"agendado\". Proponé vos 2 opciones.\n- NUNCA inventes propiedades. Solo el Matcher las trae.\n- NUNCA prometas \"te confirmo despues\" sin agendar. Si falta info, pregunta YA.\n- Cliente dice \"no lunes\" -> registralo y proponé martes en adelante.\n- Audio/imagen: responde natural. No digas \"vi tu audio\".\n- Tema legal/escrituras/tasacion -> marcar requiere_humano=true (Admin pone nota en CRM, no agendas).\n- Cliente furioso: NO discutas, dejas constancia para humano.\n- Respuestas CORTAS (max 4 lineas WhatsApp). Una pregunta clara por vez. Sin markdown.\n- Si el cliente pregunta \"con quien hablo\" -> \"Soy Camila, vendedora de Bochile. Tengo zona Palihue / Villa Belgrano / Country.\"\n\n============== CONTEXTO MULTIMODAL ==============\nSi el mensaje empieza con \"[AUDIO TRANSCRIPTO]\" o \"[IMAGEN]\", el cliente mando voz o foto. Respondele NATURAL.\nFoto de propiedad de la competencia -> agradecele y preguntale que busca.\nFoto de propiedad Bochile -> confirma y avanza.",
+          "maxIterations": 15
+        }
+      },
+      "id": "n-11",
+      "name": "Vendedor CORE",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2192,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "n-12",
+      "name": "GPT Vendedor CORE",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1776,
+        672
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0cXejbqqXHamFUYX",
+          "name": "OpenAI WESEKA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $(\"Merge Caminos\").item.json.telefono }}",
+        "contextWindowLength": 20
+      },
+      "id": "n-13",
+      "name": "Memoria Conversacion",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1952,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "CALIFICADOR. Score 0-100 + datos. Llamar apenas tengas contexto basico.",
+        "text": "={{ $fromAI(\"conversacion\", \"Resumen conversacion\", \"string\") }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "CALIFICADOR Bochile. Analiza conversacion, devolve JSON parser.\n\nSCORING:\n- 0-40 FRIO: pregunta vaga, \"solo mirando\".\n- 41-70 TIBIO: intencion clara, faltan datos.\n- 71-100 CALIENTE: presupuesto+urgencia+zona+tipo+forma_pago definidos.\n\nVALIDOS:\n- zona: Palihue|Centro|Universitario|Villa Mitre|Villa Belgrano|Patagonia|Tiro Federal|Villa Don Bosco|Almafuerte|Country\n- operacion: venta|alquiler|alquiler_temporario\n- tipo: casa|departamento|ph|lote|local|oficina\n- moneda: USD|ARS\n- urgencia: alta|media|baja\n- forma_pago: cash|credito|mixto|vende_otra\n- listo_para_visita: true SOLO si score>=70 Y zona Y presupuesto Y tipo\n\nFalta dato: null o \"\". NO inventes. Devolve EXCLUSIVAMENTE el JSON del parser."
+        }
+      },
+      "id": "n-14",
+      "name": "SubAgente Calificador",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        2224,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "n-15",
+      "name": "GPT Calificador",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2208,
+        784
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0cXejbqqXHamFUYX",
+          "name": "OpenAI WESEKA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"score\":85,\"etapa\":\"Calificado IA\",\"operacion\":\"venta\",\"tipo\":\"casa\",\"zona\":\"Palihue\",\"ambientes\":4,\"presupuesto_min\":250000,\"presupuesto_max\":300000,\"moneda\":\"USD\",\"forma_pago\":\"mixto\",\"urgencia\":\"alta\",\"razon\":\"...\",\"listo_para_visita\":true,\"requiere_humano\":false}"
+      },
+      "id": "n-16",
+      "name": "Parser Calificador",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2384,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "MATCHER. Cruza criterios con catalogo. Hasta 3 props o SIN_STOCK. Llamar SOLO con operacion+tipo+zona+presupuesto.",
+        "text": "={{ $fromAI(\"criterios\", \"JSON criterios\", \"string\") }}",
+        "options": {
+          "systemMessage": "MATCHER Bochile.\n\n1. Llama 'Leer Catalogo Propiedades' con operacion del criterio.\n2. Filtra: operacion exacta, tipo (tolera casa~ph), zona (exacta o lindera), moneda exacta, presupuesto cabe en max (10% over = 'estirado'), ambientes +/-1.\n3. Ordena mejor a peor. Hasta 3.\n\nFORMATO:\nP-XXX | Titulo | Direccion, Zona | USD/ARS XXX.XXX | X amb | tour: <url>\nRazon: <linea>\n\nSIN STOCK: \"SIN_STOCK | <criterios>\"."
+        }
+      },
+      "id": "n-17",
+      "name": "SubAgente Matcher",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        2576,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "n-18",
+      "name": "GPT Matcher",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2592,
+        800
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0cXejbqqXHamFUYX",
+          "name": "OpenAI WESEKA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UlHoNXfh9nX5W8vn",
+          "cachedResultName": "bochile_propiedades"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "publicada",
+              "keyValue": "true"
+            },
+            {
+              "keyName": "operacion",
+              "keyValue": "={{ $fromAI(\"operacion\", \"venta o alquiler\", \"string\") }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "n-19",
+      "name": "Leer Catalogo Propiedades",
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        2704,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "ADMIN. Escribe CRM, notifica vendedor. AGENDAR / GUARDAR match / ACTUALIZAR lead.",
+        "text": "={{ $fromAI(\"orden\", \"Que hacer + datos\", \"string\") }}",
+        "options": {
+          "systemMessage": "ADMIN Bochile. Brazo operativo de Camila Pomerich. Unico que escribe CRM y manda brief a Camila al WhatsApp.\n\nA) AGENDAR (cuando Camila confirma visita con cliente):\n1. 'Leer Vendedores Activos' -> SIEMPRE elegir a \"Camila Pomerich\" (vendedor_id=E-1B). Si la lista la trae con otro nombre, igual usa E-1B Camila Pomerich.\n2. 'Crear Visita en CRM' con vendedor_id='E-1B' vendedor_nombre='Camila Pomerich'.\n3. 'Avisar Vendedor por WhatsApp Twilio' con mensaje EXACTO formato (es el BRIEF interno para que Camila tenga el lead a mano):\n   \"BRIEF VISITA. Cliente: [NOMBRE] (tel +54...). Dia: [DD/MM] [HH:MM]. Direccion: [DIRECCION]. Prop: [P-XXX]. Score: XX. Presupuesto: USD/ARS XXX. Zona: XXX. Tour: <url>. Notas: ...\"\n   SIEMPRE incluir tel cliente +54XXXXXXXXXXX para que pueda contactarlo si hace falta.\n4. 'Actualizar Lead CRM' etapa='Visita agendada' vendedor_asignado='E-1B'.\n\nB) GUARDAR MATCH PENDIENTE: 'Guardar Match Pendiente' + 'Actualizar Lead CRM' etapa='En espera de stock'.\nC) ACTUALIZAR LEAD: 'Actualizar Lead CRM'.\n\nREGLAS:\n- NUNCA agendes sin fecha+hora confirmadas.\n- WhatsApp: telefonos con prefijo +54 (sin 'whatsapp:').\n- requiere_humano=true -> update CRM con nota, no avisar.\n\nDevolve resumen plano."
+        }
+      },
+      "id": "n-20",
+      "name": "SubAgente Administrativo",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        2992,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "n-21",
+      "name": "GPT Admin",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2864,
+        944
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "0cXejbqqXHamFUYX",
+          "name": "OpenAI WESEKA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "pfACps5XOWJo7UME",
+          "cachedResultName": "bochile_empleados"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "keyValue": "true"
+            },
+            {
+              "keyName": "rol",
+              "keyValue": "vendedor"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "n-22",
+      "name": "Leer Vendedores Activos",
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        3056,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UJOWnNg9k0BdMMJP",
+          "cachedResultName": "bochile_visitas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "visita_id": "={{ \"V-\" + $now.toMillis() }}",
+            "lead_id": "={{ $fromAI(\"lead_id\", \"L-XXX\", \"string\") }}",
+            "prop_id": "={{ $fromAI(\"prop_id\", \"P-XXX\", \"string\") }}",
+            "vendedor_id": "={{ $fromAI(\"vendedor_id\", \"E-X\", \"string\") }}",
+            "vendedor_nombre": "={{ $fromAI(\"vendedor_nombre\", \"nombre\", \"string\") }}",
+            "cliente_nombre": "={{ $fromAI(\"cliente_nombre\", \"nombre\", \"string\") }}",
+            "direccion": "={{ $fromAI(\"direccion\", \"dir\", \"string\") }}",
+            "fecha": "={{ $fromAI(\"fecha\", \"YYYY-MM-DD\", \"string\") }}",
+            "hora": "={{ $fromAI(\"hora\", \"HH:MM\", \"string\") }}",
+            "estado": "agendada",
+            "confirmada_cliente": "={{ true }}",
+            "notificada_vendedor": "={{ true }}",
+            "recordatorio_enviado": "={{ false }}",
+            "observaciones": "={{ $fromAI(\"observaciones\", \"notas\", \"string\") }}",
+            "creada_en": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-23",
+      "name": "Crear Visita en CRM",
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        3168,
+        896
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X1djtSSRbpiiNMTk",
+          "cachedResultName": "bochile_matches_pendientes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "match_id": "={{ \"MP-\" + $now.toMillis() }}",
+            "lead_id": "={{ $fromAI(\"lead_id\", \"ID\", \"string\") }}",
+            "lead_nombre": "={{ $fromAI(\"lead_nombre\", \"nombre\", \"string\") }}",
+            "lead_telefono": "={{ $fromAI(\"lead_telefono\", \"tel\", \"string\") }}",
+            "operacion": "={{ $fromAI(\"operacion\", \"op\", \"string\") }}",
+            "tipo": "={{ $fromAI(\"tipo\", \"tipo\", \"string\") }}",
+            "zona": "={{ $fromAI(\"zona\", \"zona\", \"string\") }}",
+            "ambientes_min": "={{ $fromAI(\"ambientes_min\", \"min\", \"number\") }}",
+            "presupuesto_min": "={{ $fromAI(\"presupuesto_min\", \"min\", \"number\") }}",
+            "presupuesto_max": "={{ $fromAI(\"presupuesto_max\", \"max\", \"number\") }}",
+            "moneda": "={{ $fromAI(\"moneda\", \"mon\", \"string\") }}",
+            "caracteristicas_must": "={{ $fromAI(\"caracteristicas_must\", \"must\", \"string\") }}",
+            "activo": "={{ true }}",
+            "creado_en": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-24",
+      "name": "Guardar Match Pendiente",
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        3376,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UGNAXqPUX0udDRPi",
+          "cachedResultName": "bochile_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "keyValue": "={{ $fromAI(\"lead_id\", \"ID\", \"string\") }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "operacion": "={{ $fromAI(\"operacion\", \"op\", \"string\") }}",
+            "tipo_propiedad": "={{ $fromAI(\"tipo_propiedad\", \"tipo\", \"string\") }}",
+            "zona_pref": "={{ $fromAI(\"zona_pref\", \"zona\", \"string\") }}",
+            "ambientes": "={{ $fromAI(\"ambientes\", \"amb\", \"number\") }}",
+            "presupuesto_min": "={{ $fromAI(\"presupuesto_min\", \"min\", \"number\") }}",
+            "presupuesto_max": "={{ $fromAI(\"presupuesto_max\", \"max\", \"number\") }}",
+            "moneda": "={{ $fromAI(\"moneda\", \"mon\", \"string\") }}",
+            "forma_pago": "={{ $fromAI(\"forma_pago\", \"pago\", \"string\") }}",
+            "urgencia": "={{ $fromAI(\"urgencia\", \"urg\", \"string\") }}",
+            "score": "={{ $fromAI(\"score\", \"0-100\", \"number\") }}",
+            "etapa": "={{ $fromAI(\"etapa\", \"etapa\", \"string\") }}",
+            "vendedor_asignado": "={{ $fromAI(\"vendedor_asignado\", \"E-X\", \"string\") }}",
+            "ultima_intencion": "={{ $fromAI(\"ultima_intencion\", \"intencion\", \"string\") }}",
+            "notas": "={{ $fromAI(\"notas\", \"notas\", \"string\") }}",
+            "actualizado_en": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-25",
+      "name": "Actualizar Lead CRM",
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        3568,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+5492915512515",
+        "toWhatsapp": true,
+        "message": "={{ $fromAI(\"mensaje\", \"Mensaje completo formato VISITA AGENDADA PARA LAS HH:MM CON [CLIENTE] EN [DIRECCION]\", \"string\") }}",
+        "options": {}
+      },
+      "id": "n-26",
+      "name": "Avisar Vendedor por WhatsApp Twilio",
+      "type": "n8n-nodes-base.twilioTool",
+      "typeVersion": 1,
+      "position": [
+        3728,
+        768
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "B5WIk9wqVUH8Z0t8",
+          "cachedResultName": "bochile_conversaciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "msg_id": "={{ \"M-\" + $now.toMillis() + \"-out\" }}",
+            "lead_id": "={{ $(\"Merge Caminos\").item.json.lead_id }}",
+            "telefono": "={{ $(\"Merge Caminos\").item.json.telefono }}",
+            "canal": "={{ $(\"Merge Caminos\").item.json.canal }}",
+            "direccion": "out",
+            "mensaje": "={{ $json.output }}",
+            "intencion_detectada": "",
+            "agente_que_respondio": "Vendedor CORE",
+            "requiere_humano": "={{ false }}",
+            "timestamp": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-27",
+      "name": "Log Mensaje Saliente",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2560,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "XeXT6GunMsOgpGa2",
+          "cachedResultName": "bochile_acciones_ia"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion_id": "={{ \"A-\" + $now.toMillis() }}",
+            "tipo": "conversacion_atendida",
+            "agente": "Vendedor CORE",
+            "lead_id": "={{ $(\"Merge Caminos\").item.json.lead_id }}",
+            "resumen": "={{ \"Mensaje \" + $(\"Merge Caminos\").item.json.msg_type + \" atendido via Twilio\" }}",
+            "detalle": "={{ ($(\"Vendedor CORE\").item.json.output || \"\").substring(0, 400) }}",
+            "resultado": "ok",
+            "tiempo_ahorrado_min": "={{ 4 }}",
+            "timestamp": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "n-28",
+      "name": "Registrar Accion IA",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2816,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "={{ $(\"Merge Caminos\").item.json.telefono_twilio }}",
+        "toWhatsapp": true,
+        "message": "={{ $(\"Vendedor CORE\").item.json.output }}",
+        "options": {}
+      },
+      "id": "n-29",
+      "name": "Responder al Cliente Twilio",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        3088,
+        416
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/xml"
+              }
+            ]
+          }
+        }
+      },
+      "id": "n-30",
+      "name": "OK al Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3312,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SD2NdIwb21OIrAuZ",
+          "cachedResultName": "bochile_buffer_msgs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $json.telefono }}",
+            "mensaje": "={{ $json.mensaje }}",
+            "msg_id": "={{ $json.msg_id }}",
+            "ts": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "buffer-insert-001",
+      "name": "Buffer - Insertar Msg",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1536,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "wait-30s-001",
+      "name": "Wait 30s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1808,
+        400
+      ],
+      "webhookId": "bochile-wait-30s"
+    },
+    {
+      "parameters": {
+        "operation": "getManyRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "SD2NdIwb21OIrAuZ",
+          "cachedResultName": "bochile_buffer_msgs"
+        }
+      },
+      "id": "buffer-leer-001",
+      "name": "Buffer - Leer Todos",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2064,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lee el item original via expression $('Merge Caminos') y la lista del buffer\nconst me = $('Merge Caminos').first().json;\nconst myTel = me.telefono;\nconst myMsgId = me.msg_id;\nconst myTs = me.timestamp_iso;\n\n// $input.all() trae las filas del buffer (Buffer - Leer Todos)\nconst allRows = $input.all().map(x => x.json);\nconst mine = allRows.filter(r => r && r.telefono === myTel);\nmine.sort((a, b) => (a.ts || '').localeCompare(b.ts || ''));\n\nif (mine.length === 0) {\n  return [{ json: { ...me, batched_count: 1 } }];\n}\n\nconst last = mine[mine.length - 1];\nif (last.msg_id !== myMsgId) {\n  // No soy el ultimo: skip silencioso\n  return [];\n}\n\n// Soy el ultimo: consolido los msgs de los ultimos 60s\nconst cutoff = new Date(new Date(myTs).getTime() - 60000).toISOString();\nconst recientes = mine.filter(r => (r.ts || '') >= cutoff);\nconst consolidado = recientes.map(r => r.mensaje).filter(Boolean).join('\\n');\n\nreturn [{ json: { ...me, mensaje: consolidado || me.mensaje, batched_count: recientes.length } }];\n"
+      },
+      "id": "buffer-check-001",
+      "name": "Buffer - Soy Ultimo?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Twilio": {
+      "main": [
+        [
+          {
+            "node": "Parsear Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Switch Tipo Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Tipo Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Texto - Set Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Audio - Download Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Imagen - Download Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio - Download Twilio": {
+      "main": [
+        [
+          {
+            "node": "Audio - Whisper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio - Whisper": {
+      "main": [
+        [
+          {
+            "node": "Audio - Set Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio - Set Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Merge Caminos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Imagen - Download Twilio": {
+      "main": [
+        [
+          {
+            "node": "Imagen - Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen - Vision": {
+      "main": [
+        [
+          {
+            "node": "Imagen - Set Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen - Set Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Merge Caminos",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Texto - Set Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Merge Caminos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Caminos": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Insertar Msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lead Existente": {
+      "main": [
+        [
+          {
+            "node": "Upsert Lead CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Lead CRM": {
+      "main": [
+        [
+          {
+            "node": "Log Mensaje Entrante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Mensaje Entrante": {
+      "main": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vendedor CORE": {
+      "main": [
+        [
+          {
+            "node": "Log Mensaje Saliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Vendedor CORE": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria Conversacion": {
+      "ai_memory": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SubAgente Calificador": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Calificador": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SubAgente Calificador",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser Calificador": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "SubAgente Calificador",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SubAgente Matcher": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Matcher": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SubAgente Matcher",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Catalogo Propiedades": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Matcher",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SubAgente Administrativo": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Admin": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Vendedores Activos": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Visita en CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Match Pendiente": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Lead CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar Vendedor por WhatsApp Twilio": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Mensaje Saliente": {
+      "main": [
+        [
+          {
+            "node": "Registrar Accion IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Accion IA": {
+      "main": [
+        [
+          {
+            "node": "Responder al Cliente Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder al Cliente Twilio": {
+      "main": [
+        [
+          {
+            "node": "OK al Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer - Insertar Msg": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Leer Todos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer - Leer Todos": {
+      "main": [
+        [
+          {
+            "node": "Buffer - Soy Ultimo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer - Soy Ultimo?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Lead Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null
+}

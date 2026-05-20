@@ -1,0 +1,52 @@
+{
+  "name": "Bochile RAG Search (sub-workflow para Matcher)",
+  "nodes": [
+    {
+      "id": "99364225-25eb-4f71-a98a-88d6966a018b",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"query\": \"casa familiar 3 ambientes en Palihue Bahia Blanca hasta 200000 USD\",\n  \"operation\": \"sale\",\n  \"property_type\": \"casa\",\n  \"price_max\": 200000,\n  \"price_currency\": \"USD\",\n  \"bedrooms_min\": 3\n}"
+      }
+    },
+    {
+      "id": "fe31f896-9c8a-4c90-aa94-dfb668bc00ba",
+      "name": "Call RAG and Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Recibe del trigger: { query, operation, property_type, price_max, price_currency, bedrooms_min }\n// Hace POST al RAG y devuelve string formateado al caller.\n\nconst RAG_URL = 'http://host.docker.internal:3003/api/search';\nconst inp = $input.first().json || {};\nconst q = String(inp.query || '').trim();\nif (!q) return [{ json: { result: 'ERROR: query es obligatorio' } }];\n\n// Mapear español a enum\nconst opMap = { venta:'sale', vender:'sale', vende:'sale', comprar:'sale', sale:'sale',\n  alquiler:'rent', alquilar:'rent', alquila:'rent', renta:'rent', rent:'rent' };\nconst ptMap = { depto:'departamento', dept:'departamento', terreno:'lote',\n  deposito:'galpon', 'depósito':'galpon', chacra:'campo', estancia:'campo',\n  garage:'cochera' };\n\nconst filters = { with_image: true };\nconst op = (opMap[String(inp.operation || '').toLowerCase()] || inp.operation || '').toString();\nif (op === 'sale' || op === 'rent') filters.operation = op;\nconst pt = (ptMap[String(inp.property_type || '').toLowerCase()] || inp.property_type || '').toString();\nif (pt) filters.property_type = pt;\nconst pc = String(inp.price_currency || '').toUpperCase();\nif (pc === 'USD' || pc === 'ARS') filters.price_currency = pc;\nif (Number(inp.price_max) > 0) filters.price_max = Number(inp.price_max);\nif (Number(inp.bedrooms_min) > 0) filters.bedrooms_min = Number(inp.bedrooms_min);\n\nconst body = { query: q, limit: 5, filters };\n\nlet data;\ntry {\n  data = await this.helpers.httpRequest({\n    method: 'POST',\n    url: RAG_URL,\n    headers: { 'Content-Type': 'application/json' },\n    body,\n    json: true,\n  });\n} catch (err) {\n  return [{ json: { result: 'ERROR_RAG: ' + (err.message || err).slice(0, 200) } }];\n}\n\nif (!data || !data.items || data.items.length === 0) {\n  return [{ json: { result: 'SIN_STOCK | criterios: ' + JSON.stringify(filters) } }];\n}\n\nconst lines = data.items.map(function(p, i) {\n  const precio = p.price ? p.price + ' ' + (p.price_currency || '') : (p.price_text || 'Consultar');\n  const ubic = (p.barrio && p.barrio !== 'unknown') ? p.barrio : (p.zona || 'Bahia Blanca');\n  return (i+1) + '. [' + p.prop_id + '] ' + p.title\n    + ' | ' + (p.property_type || '?')\n    + ' | ' + ubic\n    + ' | ' + (p.bedrooms ? p.bedrooms + ' amb' : 'amb ?')\n    + ' | ' + (p.area_m2 ? p.area_m2 + ' m2' : 'm2 ?')\n    + ' | ' + precio\n    + ' | URL: ' + p.url\n    + ' | score: ' + p.score;\n});\n\nreturn [{ json: { result: 'FILTERS_USED: ' + JSON.stringify(filters) + '\\nPROPIEDADES_ENCONTRADAS (' + data.items.length + '):\\n' + lines.join('\\n') } }];"
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Call RAG and Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null
+}

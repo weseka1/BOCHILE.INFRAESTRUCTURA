@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    font-feature-settings: 'cv11', 'ss01';
+    background: radial-gradient(ellipse at top, #1a2332 0%, #0f1620 60%);
+    background-attachment: fixed;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: theme('colors.surface.0'); }
+  ::-webkit-scrollbar-thumb { background: theme('colors.surface.3'); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: theme('colors.accent.DEFAULT'); }
+  ::selection { background: theme('colors.accent.DEFAULT'); color: theme('colors.accent.fg'); }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-1/80 backdrop-blur-sm border border-border rounded-xl shadow-card;
+  }
+  .table-row {
+    @apply border-b border-border-subtle hover:bg-surface-2 transition-colors;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-accent-fg hover:bg-bochile-champagne-light shadow-gold;
+  }
+  .btn-ghost {
+    @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border;
+  }
+  .empty-state {
+    @apply text-center py-12 px-6 text-text-muted;
+  }
+  .empty-state-title {
+    @apply font-display text-lg text-text mb-2;
+  }
+}

@@ -1,0 +1,745 @@
+{
+  "updatedAt": "2026-05-17T18:15:30.733Z",
+  "createdAt": "2026-05-12T05:44:22.662Z",
+  "id": "wrFto5o6Zk02sZty",
+  "name": "Bochile - Cobranza Alquileres (cron diario)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "n4-1",
+      "name": "Diario 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "contratos"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "activo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n4-2",
+      "name": "Contratos activos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const hoy = new Date();\nconst diaHoy = hoy.getDate();\nconst out = [];\nfor (const item of $input.all()) {\n  const c = item.json;\n  const diaV = Number(c.dia_vencimiento || 0);\n  let accion = null;\n  let diasParaPagar = 0;\n  if (diaHoy === diaV - 5) accion = \"recordatorio_5dias\";\n  else if (diaHoy === diaV - 1) accion = \"recordatorio_manana\";\n  else if (diaHoy === diaV) accion = \"vence_hoy\";\n  else if (diaHoy > diaV) { accion = \"atrasado\"; diasParaPagar = diaHoy - diaV; }\n  if (!accion) continue;\n  const moneda = c.moneda || \"ARS\";\n  const monto = Number(c.monto_actual || 0);\n  const monedaSimbolo = moneda === \"USD\" ? \"USD\" : \"$\";\n  const montoFmt = monedaSimbolo + \" \" + monto.toLocaleString(\"es-AR\");\n  const tel = String(c.inquilino_telefono || \"\").replace(/\\\\D/g, \"\");\n  const linkPago = `https://bochile.com.ar/pagar/${c.contrato_id}`;\n  let mensaje;\n  if (accion === \"recordatorio_5dias\") mensaje = `Hola ${c.inquilino_nombre}! El ${diaV} vence el alquiler de ${c.direccion} (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  else if (accion === \"recordatorio_manana\") mensaje = `Hola ${c.inquilino_nombre}! Manana vence el alquiler de ${c.direccion} por ${montoFmt}. ${linkPago} - Soy Camila de Bochile.`;\n  else if (accion === \"vence_hoy\") mensaje = `Hola ${c.inquilino_nombre}! Hoy vence el alquiler de ${c.direccion} (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  else mensaje = `Hola ${c.inquilino_nombre}, atraso ${diasParaPagar} dias (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  out.push({ json: { contrato_id: c.contrato_id, accion, tel, mensaje, monto, moneda, direccion: c.direccion, inquilino_nombre: c.inquilino_nombre, dias_atraso: diasParaPagar, escalar: accion === \"atrasado\" && diasParaPagar >= 3 } });\n}\nreturn out;"
+      },
+      "id": "n4-3",
+      "name": "Evaluar cada contrato",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+{{ $json.tel }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.mensaje }}",
+        "options": {}
+      },
+      "id": "n4-4",
+      "name": "WhatsApp Inquilino",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "webhookId": "8c92efa2-efcb-47bf-b3e7-b1dc5d08ac58",
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "contratos"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contrato_id": "={{ $json.contrato_id }}",
+            "dias_atraso": "={{ $json.dias_atraso }}",
+            "estado": "={{ $json.estado }}"
+          },
+          "matchingColumns": [
+            "contrato_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n4-5",
+      "name": "Actualizar contrato",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "acciones_ia"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion_id": "={{ \"AC-\" + $now.toMillis() }}",
+            "tipo": "cobranza_alquiler",
+            "agente": "Cron Cobranza",
+            "lead_id": "",
+            "resumen": "={{ \"Cobranza: \" + ($json.tipo || \"\") + \" contrato \" + ($json.contrato_id || \"\") }}",
+            "detalle": "={{ \"Inquilino: \" + ($json.inquilino_nombre || \"\") + \" | Atraso: \" + ($json.dias_atraso || 0) + \" dias\" }}",
+            "resultado": "ok",
+            "timestamp": "={{ $now.toISO() }}",
+            "tiempo_ahorrado_min": 5
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n4-6",
+      "name": "Log accion cobranza",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $(\"Evaluar cada contrato\").item.json.escalar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n4-7",
+      "name": "Escalar a Bochile?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+5492914413200",
+        "toWhatsapp": true,
+        "message": "=ATRASO {{ $(\"Evaluar cada contrato\").item.json.dias_atraso }} DIAS - {{ $(\"Evaluar cada contrato\").item.json.contrato_id }} - {{ $(\"Evaluar cada contrato\").item.json.inquilino_nombre }}. Requiere decision humana.",
+        "options": {}
+      },
+      "id": "n4-8",
+      "name": "Escalar a Camila Pomerich",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -304
+      ],
+      "webhookId": "939de82b-c48b-443e-a6aa-e2bc0a72d924",
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Diario 9:00": {
+      "main": [
+        [
+          {
+            "node": "Contratos activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contratos activos": {
+      "main": [
+        [
+          {
+            "node": "Evaluar cada contrato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar cada contrato": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Inquilino",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Inquilino": {
+      "main": [
+        [
+          {
+            "node": "Actualizar contrato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar contrato": {
+      "main": [
+        []
+      ]
+    },
+    "Log accion cobranza": {
+      "main": [
+        [
+          {
+            "node": "Escalar a Bochile?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalar a Bochile?": {
+      "main": [
+        [
+          {
+            "node": "Escalar a Camila Pomerich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "node:Diario 9:00": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "04211009-88b4-4c06-855c-fdf8e60a45fc",
+  "activeVersionId": "ef1ca3c7-6fb4-4f58-87a2-0f89e167f9e6",
+  "versionCounter": 43,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T05:44:22.666Z",
+      "createdAt": "2026-05-12T05:44:22.666Z",
+      "role": "workflow:owner",
+      "workflowId": "wrFto5o6Zk02sZty",
+      "projectId": "PNGfYwEth0ahPlvI",
+      "project": {
+        "updatedAt": "2025-09-26T02:00:37.322Z",
+        "createdAt": "2025-09-26T01:59:58.152Z",
+        "id": "PNGfYwEth0ahPlvI",
+        "name": "Juan Ignacio Lopez <46094470juani@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-05-14T23:46:05.020Z",
+    "createdAt": "2026-05-14T23:46:05.020Z",
+    "versionId": "ef1ca3c7-6fb4-4f58-87a2-0f89e167f9e6",
+    "workflowId": "wrFto5o6Zk02sZty",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 9
+              }
+            ]
+          }
+        },
+        "id": "n4-1",
+        "name": "Diario 9:00",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "contratos"
+          },
+          "operation": "read",
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "estado",
+                "lookupValue": "activo"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "n4-2",
+        "name": "Contratos activos",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          224,
+          0
+        ],
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3
+      },
+      {
+        "parameters": {
+          "jsCode": "const hoy = new Date();\nconst diaHoy = hoy.getDate();\nconst out = [];\nfor (const item of $input.all()) {\n  const c = item.json;\n  const diaV = Number(c.dia_vencimiento || 0);\n  let accion = null;\n  let diasParaPagar = 0;\n  if (diaHoy === diaV - 5) accion = \"recordatorio_5dias\";\n  else if (diaHoy === diaV - 1) accion = \"recordatorio_manana\";\n  else if (diaHoy === diaV) accion = \"vence_hoy\";\n  else if (diaHoy > diaV) { accion = \"atrasado\"; diasParaPagar = diaHoy - diaV; }\n  if (!accion) continue;\n  const moneda = c.moneda || \"ARS\";\n  const monto = Number(c.monto_actual || 0);\n  const monedaSimbolo = moneda === \"USD\" ? \"USD\" : \"$\";\n  const montoFmt = monedaSimbolo + \" \" + monto.toLocaleString(\"es-AR\");\n  const tel = String(c.inquilino_telefono || \"\").replace(/\\\\D/g, \"\");\n  const linkPago = `https://bochile.com.ar/pagar/${c.contrato_id}`;\n  let mensaje;\n  if (accion === \"recordatorio_5dias\") mensaje = `Hola ${c.inquilino_nombre}! El ${diaV} vence el alquiler de ${c.direccion} (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  else if (accion === \"recordatorio_manana\") mensaje = `Hola ${c.inquilino_nombre}! Manana vence el alquiler de ${c.direccion} por ${montoFmt}. ${linkPago} - Soy Camila de Bochile.`;\n  else if (accion === \"vence_hoy\") mensaje = `Hola ${c.inquilino_nombre}! Hoy vence el alquiler de ${c.direccion} (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  else mensaje = `Hola ${c.inquilino_nombre}, atraso ${diasParaPagar} dias (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  out.push({ json: { contrato_id: c.contrato_id, accion, tel, mensaje, monto, moneda, direccion: c.direccion, inquilino_nombre: c.inquilino_nombre, dias_atraso: diasParaPagar, escalar: accion === \"atrasado\" && diasParaPagar >= 3 } });\n}\nreturn out;"
+        },
+        "id": "n4-3",
+        "name": "Evaluar cada contrato",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "from": "=+14155238886",
+          "to": "=+{{ $json.tel }}",
+          "toWhatsapp": true,
+          "message": "={{ $json.mensaje }}",
+          "options": {}
+        },
+        "id": "n4-4",
+        "name": "WhatsApp Inquilino",
+        "type": "n8n-nodes-base.twilio",
+        "typeVersion": 1,
+        "position": [
+          672,
+          0
+        ],
+        "webhookId": "8c92efa2-efcb-47bf-b3e7-b1dc5d08ac58",
+        "credentials": {
+          "twilioApi": {
+            "id": "HR5fS1GSOu06duuX",
+            "name": "Twilio account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "contratos"
+          },
+          "operation": "update",
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "contrato_id": "={{ $json.contrato_id }}",
+              "dias_atraso": "={{ $json.dias_atraso }}",
+              "estado": "={{ $json.estado }}"
+            },
+            "matchingColumns": [
+              "contrato_id"
+            ],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "n4-5",
+        "name": "Actualizar contrato",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          896,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "acciones_ia"
+          },
+          "operation": "append",
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "accion_id": "={{ \"AC-\" + $now.toMillis() }}",
+              "tipo": "cobranza_alquiler",
+              "agente": "Cron Cobranza",
+              "lead_id": "",
+              "resumen": "={{ \"Cobranza: \" + ($json.tipo || \"\") + \" contrato \" + ($json.contrato_id || \"\") }}",
+              "detalle": "={{ \"Inquilino: \" + ($json.inquilino_nombre || \"\") + \" | Atraso: \" + ($json.dias_atraso || 0) + \" dias\" }}",
+              "resultado": "ok",
+              "timestamp": "={{ $now.toISO() }}",
+              "tiempo_ahorrado_min": 5
+            },
+            "matchingColumns": [],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "n4-6",
+        "name": "Log accion cobranza",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1120,
+          0
+        ],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput",
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "combinator": "and",
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $(\"Evaluar cada contrato\").item.json.escalar }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "n4-7",
+        "name": "Escalar a Bochile?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          1344,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "from": "=+14155238886",
+          "to": "=+5492914413200",
+          "toWhatsapp": true,
+          "message": "=ATRASO {{ $(\"Evaluar cada contrato\").item.json.dias_atraso }} DIAS - {{ $(\"Evaluar cada contrato\").item.json.contrato_id }} - {{ $(\"Evaluar cada contrato\").item.json.inquilino_nombre }}. Requiere decision humana.",
+          "options": {}
+        },
+        "id": "n4-8",
+        "name": "Escalar a Camila Pomerich",
+        "type": "n8n-nodes-base.twilio",
+        "typeVersion": 1,
+        "position": [
+          1680,
+          -304
+        ],
+        "webhookId": "939de82b-c48b-443e-a6aa-e2bc0a72d924",
+        "credentials": {
+          "twilioApi": {
+            "id": "HR5fS1GSOu06duuX",
+            "name": "Twilio account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Diario 9:00": {
+        "main": [
+          [
+            {
+              "node": "Contratos activos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Contratos activos": {
+        "main": [
+          [
+            {
+              "node": "Evaluar cada contrato",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluar cada contrato": {
+        "main": [
+          [
+            {
+              "node": "WhatsApp Inquilino",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "WhatsApp Inquilino": {
+        "main": [
+          [
+            {
+              "node": "Actualizar contrato",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Actualizar contrato": {
+        "main": [
+          []
+        ]
+      },
+      "Log accion cobranza": {
+        "main": [
+          []
+        ]
+      },
+      "Escalar a Bochile?": {
+        "main": [
+          [
+            {
+              "node": "Escalar a Camila Pomerich",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Juan Ignacio Lopez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-05-14T23:46:05.187Z",
+        "id": 399,
+        "workflowId": "wrFto5o6Zk02sZty",
+        "versionId": "ef1ca3c7-6fb4-4f58-87a2-0f89e167f9e6",
+        "event": "activated",
+        "userId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      },
+      {
+        "createdAt": "2026-05-14T23:46:05.359Z",
+        "id": 401,
+        "workflowId": "wrFto5o6Zk02sZty",
+        "versionId": "ef1ca3c7-6fb4-4f58-87a2-0f89e167f9e6",
+        "event": "activated",
+        "userId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      },
+      {
+        "createdAt": "2026-05-14T23:46:05.136Z",
+        "id": 398,
+        "workflowId": "wrFto5o6Zk02sZty",
+        "versionId": "ef1ca3c7-6fb4-4f58-87a2-0f89e167f9e6",
+        "event": "deactivated",
+        "userId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      },
+      {
+        "createdAt": "2026-05-14T23:46:05.269Z",
+        "id": 400,
+        "workflowId": "wrFto5o6Zk02sZty",
+        "versionId": "ef1ca3c7-6fb4-4f58-87a2-0f89e167f9e6",
+        "event": "deactivated",
+        "userId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      }
+    ]
+  }
+}

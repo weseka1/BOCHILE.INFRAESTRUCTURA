@@ -1,0 +1,712 @@
+{
+  "name": "Bochile - Cobranza Alquileres (cron diario)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "n4-1",
+      "name": "Diario 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TSBcE3hUHHvzcrr2",
+          "cachedResultName": "bochile_contratos"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "estado",
+              "keyValue": "activo"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "n4-2",
+      "name": "Contratos activos",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const hoy = new Date();\nconst diaHoy = hoy.getDate();\nconst out = [];\nfor (const item of $input.all()) {\n  const c = item.json;\n  const diaV = Number(c.dia_vencimiento || 0);\n  let accion = null;\n  let diasParaPagar = 0;\n  if (diaHoy === diaV - 5) accion = \"recordatorio_5dias\";\n  else if (diaHoy === diaV - 1) accion = \"recordatorio_manana\";\n  else if (diaHoy === diaV) accion = \"vence_hoy\";\n  else if (diaHoy > diaV) { accion = \"atrasado\"; diasParaPagar = diaHoy - diaV; }\n  if (!accion) continue;\n  const moneda = c.moneda || \"ARS\";\n  const monto = Number(c.monto_actual || 0);\n  const monedaSimbolo = moneda === \"USD\" ? \"USD\" : \"$\";\n  const montoFmt = monedaSimbolo + \" \" + monto.toLocaleString(\"es-AR\");\n  const tel = String(c.inquilino_telefono || \"\").replace(/\\\\D/g, \"\");\n  const linkPago = `https://bochile.com.ar/pagar/${c.contrato_id}`;\n  let mensaje;\n  if (accion === \"recordatorio_5dias\") mensaje = `Hola ${c.inquilino_nombre}! El ${diaV} vence el alquiler de ${c.direccion} (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  else if (accion === \"recordatorio_manana\") mensaje = `Hola ${c.inquilino_nombre}! Manana vence el alquiler de ${c.direccion} por ${montoFmt}. ${linkPago} - Soy Camila de Bochile.`;\n  else if (accion === \"vence_hoy\") mensaje = `Hola ${c.inquilino_nombre}! Hoy vence el alquiler de ${c.direccion} (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  else mensaje = `Hola ${c.inquilino_nombre}, atraso ${diasParaPagar} dias (${montoFmt}). ${linkPago} - Soy Camila de Bochile.`;\n  out.push({ json: { contrato_id: c.contrato_id, accion, tel, mensaje, monto, moneda, direccion: c.direccion, inquilino_nombre: c.inquilino_nombre, dias_atraso: diasParaPagar, escalar: accion === \"atrasado\" && diasParaPagar >= 3 } });\n}\nreturn out;"
+      },
+      "id": "n4-3",
+      "name": "Evaluar cada contrato",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+{{ $json.tel }}",
+        "toWhatsapp": true,
+        "message": "={{ $json.mensaje }}",
+        "options": {}
+      },
+      "id": "n4-4",
+      "name": "WhatsApp Inquilino",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "webhookId": "8c92efa2-efcb-47bf-b3e7-b1dc5d08ac58",
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TSBcE3hUHHvzcrr2",
+          "cachedResultName": "bochile_contratos"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contrato_id",
+              "keyValue": "={{ $(\"Evaluar cada contrato\").item.json.contrato_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "0": "{",
+          "1": "{",
+          "2": " ",
+          "3": "(",
+          "4": "{",
+          "5": " ",
+          "6": "\"",
+          "7": "m",
+          "8": "a",
+          "9": "p",
+          "10": "p",
+          "11": "i",
+          "12": "n",
+          "13": "g",
+          "14": "M",
+          "15": "o",
+          "16": "d",
+          "17": "e",
+          "18": "\"",
+          "19": ":",
+          "20": " ",
+          "21": "\"",
+          "22": "d",
+          "23": "e",
+          "24": "f",
+          "25": "i",
+          "26": "n",
+          "27": "e",
+          "28": "B",
+          "29": "e",
+          "30": "l",
+          "31": "o",
+          "32": "w",
+          "33": "\"",
+          "34": ",",
+          "35": " ",
+          "36": "\"",
+          "37": "v",
+          "38": "a",
+          "39": "l",
+          "40": "u",
+          "41": "e",
+          "42": "\"",
+          "43": ":",
+          "44": " ",
+          "45": "{",
+          "46": " ",
+          "47": "\"",
+          "48": "d",
+          "49": "i",
+          "50": "a",
+          "51": "s",
+          "52": "_",
+          "53": "a",
+          "54": "t",
+          "55": "r",
+          "56": "a",
+          "57": "s",
+          "58": "o",
+          "59": "\"",
+          "60": ":",
+          "61": " ",
+          "62": "$",
+          "63": "(",
+          "64": "\"",
+          "65": "E",
+          "66": "v",
+          "67": "a",
+          "68": "l",
+          "69": "u",
+          "70": "a",
+          "71": "r",
+          "72": " ",
+          "73": "c",
+          "74": "a",
+          "75": "d",
+          "76": "a",
+          "77": " ",
+          "78": "c",
+          "79": "o",
+          "80": "n",
+          "81": "t",
+          "82": "r",
+          "83": "a",
+          "84": "t",
+          "85": "o",
+          "86": "\"",
+          "87": ")",
+          "88": ".",
+          "89": "i",
+          "90": "t",
+          "91": "e",
+          "92": "m",
+          "93": ".",
+          "94": "j",
+          "95": "s",
+          "96": "o",
+          "97": "n",
+          "98": ".",
+          "99": "d",
+          "100": "i",
+          "101": "a",
+          "102": "s",
+          "103": "_",
+          "104": "a",
+          "105": "t",
+          "106": "r",
+          "107": "a",
+          "108": "s",
+          "109": "o",
+          "110": ",",
+          "111": " ",
+          "112": "\"",
+          "113": "e",
+          "114": "s",
+          "115": "t",
+          "116": "a",
+          "117": "d",
+          "118": "o",
+          "119": "\"",
+          "120": ":",
+          "121": " ",
+          "122": "$",
+          "123": "(",
+          "124": "\"",
+          "125": "E",
+          "126": "v",
+          "127": "a",
+          "128": "l",
+          "129": "u",
+          "130": "a",
+          "131": "r",
+          "132": " ",
+          "133": "c",
+          "134": "a",
+          "135": "d",
+          "136": "a",
+          "137": " ",
+          "138": "c",
+          "139": "o",
+          "140": "n",
+          "141": "t",
+          "142": "r",
+          "143": "a",
+          "144": "t",
+          "145": "o",
+          "146": "\"",
+          "147": ")",
+          "148": ".",
+          "149": "i",
+          "150": "t",
+          "151": "e",
+          "152": "m",
+          "153": ".",
+          "154": "j",
+          "155": "s",
+          "156": "o",
+          "157": "n",
+          "158": ".",
+          "159": "d",
+          "160": "i",
+          "161": "a",
+          "162": "s",
+          "163": "_",
+          "164": "a",
+          "165": "t",
+          "166": "r",
+          "167": "a",
+          "168": "s",
+          "169": "o",
+          "170": " ",
+          "171": ">",
+          "172": " ",
+          "173": "7",
+          "174": " ",
+          "175": "?",
+          "176": " ",
+          "177": "\"",
+          "178": "m",
+          "179": "o",
+          "180": "r",
+          "181": "o",
+          "182": "s",
+          "183": "o",
+          "184": "\"",
+          "185": " ",
+          "186": ":",
+          "187": " ",
+          "188": "\"",
+          "189": "a",
+          "190": "c",
+          "191": "t",
+          "192": "i",
+          "193": "v",
+          "194": "o",
+          "195": "\"",
+          "196": " ",
+          "197": "}",
+          "198": ",",
+          "199": " ",
+          "200": "\"",
+          "201": "m",
+          "202": "a",
+          "203": "t",
+          "204": "c",
+          "205": "h",
+          "206": "i",
+          "207": "n",
+          "208": "g",
+          "209": "C",
+          "210": "o",
+          "211": "l",
+          "212": "u",
+          "213": "m",
+          "214": "n",
+          "215": "s",
+          "216": "\"",
+          "217": ":",
+          "218": " ",
+          "219": "[",
+          "220": "\"",
+          "221": "c",
+          "222": "o",
+          "223": "n",
+          "224": "t",
+          "225": "r",
+          "226": "a",
+          "227": "t",
+          "228": "o",
+          "229": "_",
+          "230": "i",
+          "231": "d",
+          "232": "\"",
+          "233": "]",
+          "234": ",",
+          "235": " ",
+          "236": "\"",
+          "237": "s",
+          "238": "c",
+          "239": "h",
+          "240": "e",
+          "241": "m",
+          "242": "a",
+          "243": "\"",
+          "244": ":",
+          "245": " ",
+          "246": "[",
+          "247": "]",
+          "248": " ",
+          "249": "}",
+          "250": ")",
+          "251": " ",
+          "252": "}",
+          "253": "}",
+          "mappingMode": "defineBelow",
+          "value": {
+            "monto_actual": 0,
+            "dia_vencimiento": 0,
+            "dias_atraso": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contrato_id",
+              "displayName": "contrato_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "prop_id",
+              "displayName": "prop_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "direccion",
+              "displayName": "direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "inquilino_nombre",
+              "displayName": "inquilino_nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "inquilino_telefono",
+              "displayName": "inquilino_telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "propietario",
+              "displayName": "propietario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "monto_actual",
+              "displayName": "monto_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "moneda",
+              "displayName": "moneda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "dia_vencimiento",
+              "displayName": "dia_vencimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "frecuencia_ajuste",
+              "displayName": "frecuencia_ajuste",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "indice_ajuste",
+              "displayName": "indice_ajuste",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fecha_inicio",
+              "displayName": "fecha_inicio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fecha_fin",
+              "displayName": "fecha_fin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ultimo_pago",
+              "displayName": "ultimo_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "dias_atraso",
+              "displayName": "dias_atraso",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "n4-5",
+      "name": "Actualizar contrato",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "XeXT6GunMsOgpGa2",
+          "cachedResultName": "bochile_acciones_ia"
+        },
+        "columns": "{{ ({ \"mappingMode\": \"defineBelow\", \"value\": { \"accion_id\": \"A-\" + $now.toMillis(), \"tipo\": \"cobranza_alquiler\", \"agente\": \"Cron Cobranza\", \"lead_id\": \"\", \"resumen\": \"Cobranza \" + $(\"Evaluar cada contrato\").item.json.accion, \"detalle\": \"Contrato \" + $(\"Evaluar cada contrato\").item.json.contrato_id, \"resultado\": $(\"Evaluar cada contrato\").item.json.escalar ? \"escalado\" : \"enviado\", \"tiempo_ahorrado_min\": 5, \"timestamp\": $now.toISO() }, \"matchingColumns\": [], \"schema\": [] }) }}",
+        "options": {}
+      },
+      "id": "n4-6",
+      "name": "Log accion cobranza",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $(\"Evaluar cada contrato\").item.json.escalar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n4-7",
+      "name": "Escalar a Bochile?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+5492914413200",
+        "toWhatsapp": true,
+        "message": "=ATRASO {{ $(\"Evaluar cada contrato\").item.json.dias_atraso }} DIAS - {{ $(\"Evaluar cada contrato\").item.json.contrato_id }} - {{ $(\"Evaluar cada contrato\").item.json.inquilino_nombre }}. Requiere decision humana.",
+        "options": {}
+      },
+      "id": "n4-8",
+      "name": "Escalar a Camila Pomerich",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        -304
+      ],
+      "webhookId": "939de82b-c48b-443e-a6aa-e2bc0a72d924",
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Diario 9:00": {
+      "main": [
+        [
+          {
+            "node": "Contratos activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contratos activos": {
+      "main": [
+        [
+          {
+            "node": "Evaluar cada contrato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar cada contrato": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Inquilino",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Inquilino": {
+      "main": [
+        [
+          {
+            "node": "Actualizar contrato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar contrato": {
+      "main": [
+        [
+          {
+            "node": "Log accion cobranza",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log accion cobranza": {
+      "main": [
+        [
+          {
+            "node": "Escalar a Bochile?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalar a Bochile?": {
+      "main": [
+        [
+          {
+            "node": "Escalar a Camila Pomerich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": {
+    "node:Diario 9:00": {
+      "recurrenceRules": []
+    }
+  }
+}

@@ -1,0 +1,47 @@
+
+> bochile-rag@1.0.0 enrich
+> tsx src/enricher.ts --force-all
+
+[enrich] leyendo C:\Users\46094\Desktop\WESEKA_IA_STRUCTURE\01_CLIENTES\Bochile\04_INFRAESTRUCTURA_TECNICA\Bochile_Scraper\output\properties.json
+[enrich] 239 props ya enriquecidas en run previo
+[enrich] 239 totales | 0 skip | 239 a enriquecer (modelo gpt-4o-mini)
+...[enrich] 11835 error: [
+  {
+    "received": "null",
+    "code": "invalid_enum_value",
+    "options": [
+      "USD",
+      "ARS"
+    ],
+    "path": [
+      "price_currency"
+    ],
+    "message": "Invalid enum value. Expected 'USD' | 'ARS', received 'null'"
+  }
+]
+x...........................................................................[enrich] 21812 error: [
+  {
+    "received": "null",
+    "code": "invalid_enum_value",
+    "options": [
+      "USD",
+      "ARS"
+    ],
+    "path": [
+      "price_currency"
+    ],
+    "message": "Invalid enum value. Expected 'USD' | 'ARS', received 'null'"
+  }
+]
+x...............................................................................................................................................................
+[enrich] terminado: 237 ok, 2 fallaron
+[enrich] output: C:\Users\46094\Desktop\WESEKA_IA_STRUCTURE\01_CLIENTES\Bochile\04_INFRAESTRUCTURA_TECNICA\Bochile_Scraper\output\properties-enriched.json
+[enrich] cobertura post-enrich:
+  property_type        234/239 (98%)
+  bedrooms             147/239 (62%)
+  bathrooms            7/239 (3%)
+  area_m2              183/239 (77%)
+  price                118/239 (49%)
+  address              208/239 (87%)
+  barrio_extracted     92/239 (38%)
+  resumen              237/239 (99%)

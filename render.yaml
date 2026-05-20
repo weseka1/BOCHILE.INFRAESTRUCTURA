@@ -1,0 +1,130 @@
+# Render Blueprint - Bochile Infraestructura
+# Deploy: New Blueprint Instance en Render Dashboard, conectar este repo.
+#
+# Configura ANTES en Render dashboard los secrets:
+# - OPENAI_API_KEY
+# - QDRANT_URL, QDRANT_API_KEY (de Qdrant Cloud)
+# - GOOGLE_SHEETS_CREDS_JSON (contenido del service-account.json en una sola linea)
+# - SHEET_ID
+# - RESPONDIO_WEBHOOK_SECRET
+# - N8N_ENCRYPTION_KEY (generar uno random unico)
+# - N8N_BASIC_AUTH_USER, N8N_BASIC_AUTH_PASSWORD
+
+services:
+  # ============================================
+  # RAG server (text + CLIP visual hybrid)
+  # ============================================
+  - type: web
+    name: bochile-rag
+    runtime: node
+    plan: starter  # USD 7/mes
+    rootDir: 04_INFRAESTRUCTURA_TECNICA/Bochile_RAG
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: bochile_properties
+      - key: EMBED_MODEL
+        value: text-embedding-3-small
+      - key: EMBED_DIM
+        value: '1536'
+      - key: SERVER_PORT
+        value: '3003'
+      - key: ALLOW_ORIGIN
+        value: '*'
+      - key: RESPONDIO_WEBHOOK_SECRET
+        sync: false
+    healthCheckPath: /api/health
+
+  # ============================================
+  # Dashboard Backend (Express + googleapis)
+  # ============================================
+  - type: web
+    name: bochile-dashboard-api
+    runtime: node
+    plan: starter
+    rootDir: 05_DASHBOARD_WEB/backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SHEET_ID
+        sync: false
+      - key: GOOGLE_SHEETS_CREDS_JSON
+        sync: false  # JSON entero del service account como string
+      - key: PORT
+        value: '3002'
+      - key: CORS_ORIGIN
+        fromService:
+          name: bochile-dashboard-ui
+          type: web
+          property: hostport
+    healthCheckPath: /api/health
+
+  # ============================================
+  # Dashboard Frontend (Vite static site)
+  # ============================================
+  - type: web
+    name: bochile-dashboard-ui
+    runtime: static
+    plan: starter  # USD 0 para static
+    rootDir: 05_DASHBOARD_WEB/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: bochile-dashboard-api
+          type: web
+          property: hostport
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # ============================================
+  # n8n self-hosted (Docker)
+  # ============================================
+  - type: web
+    name: bochile-n8n
+    runtime: docker
+    plan: standard  # USD 25/mes (necesario para workflows con LLM)
+    dockerfilePath: ./n8n.Dockerfile
+    envVars:
+      - key: N8N_BASIC_AUTH_ACTIVE
+        value: 'true'
+      - key: N8N_BASIC_AUTH_USER
+        sync: false
+      - key: N8N_BASIC_AUTH_PASSWORD
+        sync: false
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
+      - key: N8N_HOST
+        fromService:
+          name: bochile-n8n
+          type: web
+          property: host
+      - key: N8N_PROTOCOL
+        value: https
+      - key: WEBHOOK_URL
+        fromService:
+          name: bochile-n8n
+          type: web
+          property: hostport
+      - key: GENERIC_TIMEZONE
+        value: America/Argentina/Buenos_Aires
+      - key: N8N_PORT
+        value: '5678'
+    disk:
+      name: n8n-data
+      mountPath: /home/node/.n8n
+      sizeGB: 1

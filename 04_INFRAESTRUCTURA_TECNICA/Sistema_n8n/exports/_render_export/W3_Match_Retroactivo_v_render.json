@@ -1,0 +1,448 @@
+{
+  "name": "Bochile - Match Retroactivo (cron)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "n3-1",
+      "name": "Cada 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "propiedades"
+        },
+        "options": {}
+      },
+      "id": "n3-2",
+      "name": "Propiedades publicadas recientes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "matches_pendientes"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "activo"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n3-3",
+      "name": "Matches pendientes activos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const props = $(\"Propiedades publicadas recientes\").all().map(i => i.json);\nconst matches = $(\"Matches pendientes activos\").all().map(i => i.json);\nconst out = [];\nfor (const p of props) {\n  for (const m of matches) {\n    if (p.operacion !== m.operacion) continue;\n    if (p.tipo !== m.tipo) continue;\n    if (m.zona && p.zona && m.zona.toLowerCase() !== p.zona.toLowerCase()) continue;\n    if (p.moneda !== m.moneda) continue;\n    if (m.ambientes_min && p.ambientes < m.ambientes_min) continue;\n    if (m.presupuesto_max && p.precio > m.presupuesto_max * 1.05) continue;\n    if (m.presupuesto_min && p.precio < m.presupuesto_min * 0.9) continue;\n    let scoreMatch = 60;\n    if (p.zona && m.zona && p.zona.toLowerCase() === m.zona.toLowerCase()) scoreMatch += 15;\n    if (p.precio <= m.presupuesto_max) scoreMatch += 10;\n    if (p.ambientes >= (m.ambientes_min || 0)) scoreMatch += 5;\n    const telefono = String(m.lead_telefono || \"\").replace(/\\D/g, \"\");\n    const monedaSimbolo = p.moneda === \"USD\" ? \"USD\" : \"$\";\n    const mensaje = `Hola ${m.lead_nombre}! Soy Camila de Bochile. Justo ingreso: ${p.titulo} en ${p.direccion}, ${monedaSimbolo} ${Number(p.precio).toLocaleString(\"es-AR\")}. Tour: ${p.tour_360_url || \"\"}. La queres ver?`;\n    out.push({ json: { match_id: m.match_id, prop_id: p.prop_id, lead_id: m.lead_id, lead_nombre: m.lead_nombre, telefono, mensaje, score_match: scoreMatch, titulo: p.titulo } });\n  }\n}\nreturn out;"
+      },
+      "id": "n3-4",
+      "name": "Cruzar prop x match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.respond.io/v2/contact/phone:{{ $json.telefono }}/message",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channelId\": 503760,\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": \"{{ ($json.mensaje || \"\").replace(/\\\\/g, \"\\\\\\\\\").replace(/\"/g, \"\\\\\\\"\").replace(/\\n/g, \"\\\\n\") }}\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "n3-5",
+      "name": "WhatsApp Aviso al Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZKhcvjnvP6IpEK6w",
+          "name": "respond.io API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "matches_pendientes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "match_id": "={{ $json.match_id }}",
+            "estado": "ofrecido",
+            "props_ofrecidas": "={{ $json.props_ofrecidas }}"
+          },
+          "matchingColumns": [
+            "match_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n3-6",
+      "name": "Desactivar match",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "etapa": "Calificado IA",
+            "actualizado_en": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n3-7",
+      "name": "Lead vuelve a Calificado IA",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "propiedades"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "prop_id": "={{ $json.prop_id }}",
+            "estado": "ofrecida"
+          },
+          "matchingColumns": [
+            "prop_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n3-8",
+      "name": "Marcar prop como ofrecida",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "acciones_ia"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion_id": "={{ \"AC-\" + $now.toMillis() }}",
+            "tipo": "match_retroactivo",
+            "agente": "Cron Matcher",
+            "lead_id": "={{ $json.lead_id || \"\" }}",
+            "resumen": "={{ \"Match retroactivo: \" + ($json.lead_nombre || \"\") + \" <- \" + ($json.prop_id || \"\") }}",
+            "detalle": "={{ \"Prop ofrecida: \" + ($json.prop_id || \"\") + \" - \" + ($json.prop_titulo || \"\") }}",
+            "resultado": "ok",
+            "timestamp": "={{ $now.toISO() }}",
+            "tiempo_ahorrado_min": 10
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n3-9",
+      "name": "Log Match Retroactivo",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Cada 15 min": {
+      "main": [
+        [
+          {
+            "node": "Propiedades publicadas recientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Propiedades publicadas recientes": {
+      "main": [
+        [
+          {
+            "node": "Matches pendientes activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matches pendientes activos": {
+      "main": [
+        [
+          {
+            "node": "Cruzar prop x match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cruzar prop x match": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Aviso al Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Aviso al Lead": {
+      "main": [
+        [
+          {
+            "node": "Desactivar match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desactivar match": {
+      "main": [
+        [
+          {
+            "node": "Lead vuelve a Calificado IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead vuelve a Calificado IA": {
+      "main": [
+        [
+          {
+            "node": "Marcar prop como ofrecida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar prop como ofrecida": {
+      "main": [
+        [
+          {
+            "node": "Log Match Retroactivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Match Retroactivo": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "node:Cada 15 min": {
+      "recurrenceRules": []
+    }
+  }
+}

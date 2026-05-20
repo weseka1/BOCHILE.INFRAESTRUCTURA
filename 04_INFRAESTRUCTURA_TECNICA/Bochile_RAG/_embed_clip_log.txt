@@ -1,0 +1,54 @@
+Client version 1.18.0 is incompatible with server version 1.16.2. Major versions should match and minor version difference must not exceed 1. Set checkCompatibility=false to skip version check.
+[reset] deleting bochile_property_images_clip
+[create] bochile_property_images_clip (512 dims, cosine)
+[clip-embed] 239 props * 3 imgs = 717 embeddings esperados
+[clip-embed] cargando modelo CLIP (descarga ~150MB primera vez)...
+[clip] loading vision encoder + processor (descarga ~150MB primera vez)...
+[clip] vision encoder ready
+  ... props 5/239 | embeds=15 | err=0
+  ... props 10/239 | embeds=30 | err=0
+  ... props 15/239 | embeds=44 | err=0
+  ... props 20/239 | embeds=59 | err=0
+  ... props 25/239 | embeds=72 | err=0
+  ... props 30/239 | embeds=87 | err=0
+  ... props 35/239 | embeds=102 | err=0
+  ... props 40/239 | embeds=117 | err=0
+  ... props 45/239 | embeds=131 | err=0
+  ... props 50/239 | embeds=143 | err=0
+  ... props 55/239 | embeds=154 | err=0
+  ... props 60/239 | embeds=169 | err=0
+  ... props 65/239 | embeds=183 | err=0
+  ... props 70/239 | embeds=198 | err=0
+  ... props 75/239 | embeds=210 | err=0
+  ... props 80/239 | embeds=225 | err=0
+  ... props 85/239 | embeds=240 | err=0
+  ... props 90/239 | embeds=255 | err=0
+  ... props 95/239 | embeds=270 | err=0
+  ... props 100/239 | embeds=281 | err=0
+  ... props 105/239 | embeds=296 | err=0
+  ... props 110/239 | embeds=311 | err=0
+  ... props 115/239 | embeds=326 | err=0
+  ... props 120/239 | embeds=341 | err=0
+  ... props 125/239 | embeds=356 | err=0
+  ... props 130/239 | embeds=371 | err=0
+  ... props 135/239 | embeds=386 | err=0
+  ... props 140/239 | embeds=401 | err=0
+  ... props 145/239 | embeds=416 | err=0
+  ... props 150/239 | embeds=431 | err=0
+  ... props 155/239 | embeds=446 | err=0
+  ... props 160/239 | embeds=461 | err=0
+  ... props 165/239 | embeds=476 | err=0
+  ... props 170/239 | embeds=491 | err=0
+  ... props 175/239 | embeds=506 | err=0
+  ... props 180/239 | embeds=521 | err=0
+  ... props 185/239 | embeds=536 | err=0
+  ... props 190/239 | embeds=551 | err=0
+  ... props 195/239 | embeds=566 | err=0
+  ... props 200/239 | embeds=579 | err=0
+  ... props 205/239 | embeds=594 | err=0
+  ... props 210/239 | embeds=608 | err=0
+  ... props 215/239 | embeds=619 | err=0
+  ... props 220/239 | embeds=629 | err=0
+  ... props 225/239 | embeds=644 | err=0
+  ... props 235/239 | embeds=668 | err=0
+[done] points=678 skipProps=4 errImgs=0 | collection=bochile_property_images_clip

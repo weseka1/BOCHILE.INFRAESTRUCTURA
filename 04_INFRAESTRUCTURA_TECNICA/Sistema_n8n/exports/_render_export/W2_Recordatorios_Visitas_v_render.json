@@ -1,0 +1,429 @@
+{
+  "name": "Bochile - Recordatorios de Visitas (cron)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "n2-1",
+      "name": "Cada hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "visitas"
+        },
+        "options": {}
+      },
+      "id": "n2-2",
+      "name": "Visitas pendientes recordatorio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "empleados"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "empleado_id",
+              "lookupValue": "={{ $json.vendedor_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n2-3",
+      "name": "Datos del Vendedor",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "n2-4",
+      "name": "Datos del Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nconst ahora = new Date();\nconst visitas = $(\"Visitas pendientes recordatorio\").all();\nconst vendedores = $(\"Datos del Vendedor\").all();\nconst leads = $(\"Datos del Lead\").all();\nfor (let i = 0; i < visitas.length; i++) {\n  const v = visitas[i].json;\n  const vendedor = vendedores[i] ? vendedores[i].json : {};\n  const lead = leads[i] ? leads[i].json : {};\n  if (!v.fecha || !v.hora) continue;\n  const [hh, mm] = String(v.hora).split(\":\").map(Number);\n  const fechaVisita = new Date(v.fecha + \"T00:00:00\");\n  fechaVisita.setHours(hh || 0, mm || 0, 0, 0);\n  const diffMin = (fechaVisita - ahora) / 60000;\n  let tipo = null;\n  if (diffMin > 1380 && diffMin <= 1500) tipo = \"24h\";\n  else if (diffMin > 30 && diffMin <= 90) tipo = \"1h\";\n  if (!tipo) continue;\n  const telCliente = String(lead.telefono || \"\").replace(/\\D/g, \"\");\n  const telVendedor = String(vendedor.telefono || \"\").replace(/\\D/g, \"\");\n  const msgCliente = tipo === \"24h\" ? `Hola ${v.cliente_nombre}! Visita manana ${v.fecha} a las ${v.hora} hs en ${v.direccion} con ${v.vendedor_nombre}.` : `Hola ${v.cliente_nombre}! En 1 hora te esperamos en ${v.direccion}.`;\n  const msgVendedor = tipo === \"24h\" ? `Manana ${v.hora} hs VISITA con ${v.cliente_nombre} en ${v.direccion}.` : `VISITA EN 1 HORA - ${v.cliente_nombre} - ${v.direccion} - ${v.hora} hs.`;\n  out.push({ json: { visita_id: v.visita_id, lead_id: v.lead_id, telefono_cliente: telCliente, telefono_vendedor: telVendedor, msg_cliente: msgCliente, msg_vendedor: msgVendedor, tipo_recordatorio: tipo, cliente_nombre: v.cliente_nombre, vendedor_nombre: v.vendedor_nombre, direccion: v.direccion, fecha: v.fecha, hora: v.hora } });\n}\nreturn out;"
+      },
+      "id": "n2-5",
+      "name": "Filtrar y armar mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "id": "n2-6",
+      "name": "WhatsApp respond.io Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.respond.io/v2/contact/phone:{{ String($json.telefono || $json.lead_telefono || $json.to || '').replace('whatsapp:', '').replace(/[^0-9]/g, '') }}/message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channelId\": 503760,\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": \"{{ $json.msg_cliente }}\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZKhcvjnvP6IpEK6w",
+          "name": "respond.io API"
+        }
+      }
+    },
+    {
+      "id": "n2-7",
+      "name": "WhatsApp respond.io Vendedor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.respond.io/v2/contact/phone:{{ String($json.telefono || $json.lead_telefono || $json.to || '').replace('whatsapp:', '').replace(/[^0-9]/g, '') }}/message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channelId\": 503760,\n  \"message\": {\n    \"type\": \"text\",\n    \"text\": \"{{ $(\\\"Filtrar y armar mensajes\\\").item.json.msg_vendedor }}\"\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZKhcvjnvP6IpEK6w",
+          "name": "respond.io API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "visitas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "visita_id": "={{ $json.visita_id }}",
+            "recordatorio_enviado": "={{ true }}"
+          },
+          "matchingColumns": [
+            "visita_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n2-8",
+      "name": "Marcar recordatorio enviado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "acciones_ia"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion_id": "={{ \"AC-\" + $now.toMillis() }}",
+            "tipo": "={{ $json.tipo || \"recordatorio\" }}",
+            "agente": "Cron Recordatorios",
+            "lead_id": "={{ $json.lead_id || \"\" }}",
+            "resumen": "={{ \"Recordatorio enviado \" + ($json.tipo || \"\") + \" - visita \" + ($json.visita_id || \"\") }}",
+            "detalle": "={{ \"Cliente: \" + ($json.cliente_nombre || \"\") + \" | Vendedor: \" + ($json.vendedor_nombre || \"\") + \" | Fecha: \" + ($json.fecha || \"\") + \" \" + ($json.hora || \"\") }}",
+            "resultado": "ok",
+            "timestamp": "={{ $now.toISO() }}",
+            "tiempo_ahorrado_min": 5
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n2-9",
+      "name": "Log accion recordatorio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        0
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Cada hora": {
+      "main": [
+        [
+          {
+            "node": "Visitas pendientes recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visitas pendientes recordatorio": {
+      "main": [
+        [
+          {
+            "node": "Datos del Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos del Vendedor": {
+      "main": [
+        [
+          {
+            "node": "Datos del Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos del Lead": {
+      "main": [
+        [
+          {
+            "node": "Filtrar y armar mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar y armar mensajes": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp respond.io Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp respond.io Cliente": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp respond.io Vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp respond.io Vendedor": {
+      "main": [
+        [
+          {
+            "node": "Marcar recordatorio enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar recordatorio enviado": {
+      "main": [
+        [
+          {
+            "node": "Log accion recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log accion recordatorio": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": {
+    "node:Cada hora": {
+      "recurrenceRules": [
+        0
+      ]
+    }
+  }
+}

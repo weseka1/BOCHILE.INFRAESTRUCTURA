@@ -1,0 +1,100 @@
+# ============================================
+# BOCHILE - .gitignore
+# ============================================
+
+# ---- Secrets (NUNCA committear) ----
+.env
+.env.local
+.env.production
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.template
+
+# Credentials JSON (service accounts, etc)
+**/credentials/
+!**/credentials/.gitkeep
+**/service-account*.json
+**/google-credentials*.json
+**/firebase-adminsdk*.json
+
+# ---- Node ----
+node_modules/
+**/node_modules/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---- Build outputs ----
+dist/
+build/
+out/
+.next/
+.nuxt/
+.vite/
+*.tsbuildinfo
+
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# ---- Datos pesados / outputs scraper ----
+04_INFRAESTRUCTURA_TECNICA/Bochile_Scraper/output/images/
+04_INFRAESTRUCTURA_TECNICA/Bochile_Scraper/output/screenshots/
+04_INFRAESTRUCTURA_TECNICA/Bochile_RAG/output/
+**/output/images/
+**/output/screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webp
+!99_ASSETS/**/*.png
+!99_ASSETS/**/*.jpg
+!**/docs/**/*.png
+!**/README*.png
+
+# ---- Backups con timestamp (solo dejamos LATEST) ----
+04_INFRAESTRUCTURA_TECNICA/Sistema_n8n/backups/W1_2026-*.json
+!04_INFRAESTRUCTURA_TECNICA/Sistema_n8n/backups/W1_LATEST.json
+
+# ---- Binarios + logs ----
+cloudflared.exe
+cloudflared.log
+ngrok.exe
+*.log
+logs/
+*.pid
+
+# ---- IDE / OS ----
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Claude / agentes ----
+.claude/
+
+# ---- Misc ----
+*.zip
+*.tar.gz
+*.7z
+*.bak
+*.tmp
+*.swp
+.cache/
+coverage/
+.nyc_output/

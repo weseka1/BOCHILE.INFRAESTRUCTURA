@@ -1,0 +1,3 @@
+match_id,lead_id,lead_nombre,lead_telefono,operacion,tipo,zona,ambientes_min,presupuesto_min,presupuesto_max,moneda,caracteristicas_must,activo,creado_en
+MP-001,L-2914490156,Sofia Martinez,+5492914490156,alquiler,departamento,Centro,2,500000,700000,ARS,"amoblado",true,2026-04-30T11:20:00Z
+MP-002,L-2914456712,Marcos Genovese,+5492914456712,venta,casa,Villa Belgrano,5,280000,360000,USD,"pileta,parque,seguridad_24h",true,2026-04-30T09:30:00Z

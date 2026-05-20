@@ -1,0 +1,221 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Render Blueprint para Bochile · Producción 24/7
+# https://render.com/docs/blueprint-spec
+#
+# CUATRO servicios — TODO en Render, sin Qdrant Cloud:
+#   1. bochile-qdrant          — Qdrant vector DB (Docker image)         $7
+#   2. bochile-n8n             — n8n self-hosted (workflows W1-W6)        $7
+#   3. bochile-rag             — Express + OpenAI + cliente Qdrant         $7
+#   4. bochile-scraper-diario  — Cron job (scrape + enrich + embed 6 AM)   $1
+#                                                                  ─────────
+#                                                          Render: $22/mes
+#
+# Por qué TODO en Render (decisión Juani 17 may):
+#   - Un solo dashboard, una sola cuenta
+#   - Latencia sub-milisegundo entre servicios (misma red privada Render)
+#   - Control total del container Qdrant (updates, backups manejados por vos)
+#   - +$7/mes vs Qdrant Cloud, pero te ahorrás cuenta y dashboard extra
+#
+# Para usar:
+#   1. Push este repo a GitHub (privado)
+#   2. Render Dashboard → New + → Blueprint → conectar repo
+#   3. Render lee este yaml y propone crear los 4 servicios
+#   4. Setear secrets manualmente en cada servicio (ver bloque al final)
+#   5. Primer deploy: ~5-10 min hasta que los 4 servicios queden Healthy
+#   6. Después: Render Shell de bochile-rag → npm run embed -- --reset
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  # ────────────────────────────────────────────────────────────────────────
+  # 1. QDRANT — Vector DB (Docker image oficial)
+  # ────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: bochile-qdrant
+    runtime: image
+    image:
+      url: docker.io/qdrant/qdrant:latest
+    plan: starter  # USD 7/mes, 512 MB RAM, 0.5 CPU. Suficiente para 100K props
+    region: oregon  # cambiá si querés otra region
+    healthCheckPath: /healthz
+    envVars:
+      - key: QDRANT__SERVICE__HTTP_PORT
+        value: "6333"
+      - key: QDRANT__SERVICE__API_KEY
+        sync: false  # secret — generar con: openssl rand -hex 32
+    disk:
+      name: qdrant-storage
+      mountPath: /qdrant/storage
+      sizeGB: 1  # 100K propiedades caben en < 10 MB, sobra
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 2. n8n — Self-hosted (workflows W1-W6 + sub-WF RAG Search)
+  # ────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: bochile-n8n
+    runtime: image
+    image:
+      url: docker.io/n8nio/n8n:latest
+    plan: starter
+    region: oregon
+    healthCheckPath: /healthz
+    envVars:
+      - key: N8N_PORT
+        value: "5678"
+      - key: N8N_PROTOCOL
+        value: https
+      - key: N8N_HOST
+        value: bochile-n8n.onrender.com
+      - key: WEBHOOK_URL
+        value: https://bochile-n8n.onrender.com/
+      - key: N8N_PUBLIC_URL
+        value: https://bochile-n8n.onrender.com
+      - key: GENERIC_TIMEZONE
+        value: America/Argentina/Buenos_Aires
+      - key: N8N_SECURE_COOKIE
+        value: "true"
+      - key: N8N_TRUST_PROXY
+        value: "true"
+      - key: N8N_ENCRYPTION_KEY
+        sync: false  # CRÍTICO: si lo perdés perdés credenciales encriptadas. BACKUP aparte
+      - key: N8N_BASIC_AUTH_ACTIVE
+        value: "true"
+      - key: N8N_BASIC_AUTH_USER
+        value: admin
+      - key: N8N_BASIC_AUTH_PASSWORD
+        sync: false  # password fuerte
+    disk:
+      name: n8n-data
+      mountPath: /home/node/.n8n  # SQLite + workflows + credentials + history persistente
+      sizeGB: 1
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 3. BOCHILE RAG — Express + OpenAI embeddings + cliente Qdrant
+  # ────────────────────────────────────────────────────────────────────────
+  - type: web
+    name: bochile-rag
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: 04_INFRAESTRUCTURA_TECNICA/Bochile_RAG
+    buildCommand: npm install
+    startCommand: npx tsx src/server.ts
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVER_PORT
+        value: "3003"
+      - key: OPENAI_API_KEY
+        sync: false  # secret
+      # QDRANT_URL: usar el dominio público del servicio Render. Ambos están
+      # en la misma región (oregon), latencia <5ms entre ellos.
+      - key: QDRANT_URL
+        value: https://bochile-qdrant.onrender.com
+      - key: QDRANT_API_KEY
+        sync: false  # MISMO valor que el de bochile-qdrant
+      - key: QDRANT_COLLECTION
+        value: bochile_properties
+      - key: EMBED_MODEL
+        value: text-embedding-3-small
+      - key: EMBED_DIM
+        value: "1536"
+      - key: ALLOW_ORIGIN
+        value: "*"
+      - key: SCRAPER_OUTPUT_JSON
+        value: ./output/properties-enriched.json  # debe estar committeado al repo
+
+  # ────────────────────────────────────────────────────────────────────────
+  # 4. BOCHILE SCRAPER DIARIO — Cron Job (6 AM AR = 9 AM UTC)
+  # ────────────────────────────────────────────────────────────────────────
+  - type: cron
+    name: bochile-scraper-diario
+    schedule: "0 9 * * *"  # 9 AM UTC = 6 AM Argentina
+    runtime: node
+    plan: starter  # USD 1/mes para cron jobs
+    region: oregon
+    rootDir: 04_INFRAESTRUCTURA_TECNICA/Bochile_Scraper
+    buildCommand: |
+      npm install
+      cd ../Bochile_RAG && npm install
+    startCommand: |
+      cd /opt/render/project/src/04_INFRAESTRUCTURA_TECNICA/Bochile_Scraper && \
+      YESTERDAY=$(date -d 'yesterday' +%Y-%m-%d) && \
+      npm run scrape -- --since "$YESTERDAY" --to-sheet && \
+      cd ../Bochile_RAG && \
+      npm run enrich && \
+      npm run upload-sheet && \
+      npm run embed
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false  # mismo que bochile-rag
+      - key: BOCHILE_SHEET_ID
+        value: 1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4
+      - key: BOCHILE_SHEET_TAB
+        value: propiedades
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/service-account.json  # ver Secret Files abajo
+      - key: QDRANT_URL
+        value: https://bochile-qdrant.onrender.com
+      - key: QDRANT_API_KEY
+        sync: false  # MISMO valor que bochile-qdrant
+      - key: QDRANT_COLLECTION
+        value: bochile_properties
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECRETS A SETEAR MANUALMENTE EN EL DASHBOARD DE RENDER
+# (Settings → Environment / Secret Files de cada servicio)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Generar primero la QDRANT_API_KEY (la usamos en 3 servicios):
+#   openssl rand -hex 32
+#   → ejemplo: 7f3c8a1b4d... (guardar para los 3 servicios)
+#
+# ─────────────────────────────────────
+# bochile-qdrant
+# ─────────────────────────────────────
+#   QDRANT__SERVICE__API_KEY = <la generada arriba>
+#
+# ─────────────────────────────────────
+# bochile-n8n
+# ─────────────────────────────────────
+#   N8N_ENCRYPTION_KEY        = <openssl rand -hex 32> (DIFERENTE de la Qdrant key)
+#   N8N_BASIC_AUTH_PASSWORD   = <password fuerte para acceder a https://bochile-n8n.onrender.com>
+#
+# ─────────────────────────────────────
+# bochile-rag
+# ─────────────────────────────────────
+#   OPENAI_API_KEY = sk-proj-... (la misma que usa Cami)
+#   QDRANT_API_KEY = <misma key que bochile-qdrant>
+#
+# ─────────────────────────────────────
+# bochile-scraper-diario
+# ─────────────────────────────────────
+#   OPENAI_API_KEY = sk-proj-... (mismo)
+#   QDRANT_API_KEY = <mismo>
+#   Secret File: /etc/secrets/service-account.json
+#     → contenido = el JSON del Service Account de Google que ya creaste para
+#       el Dashboard (vive hoy en 05_DASHBOARD_WEB/backend/credentials/)
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# DESPUÉS DEL PRIMER DEPLOY
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# 1. Verificar que los 4 servicios están Healthy (verde) en el dashboard
+#
+# 2. Embed inicial: Render → bochile-rag → Shell:
+#      npm run embed -- --reset
+#    (carga las 239 propiedades al Qdrant en Render)
+#
+# 3. Abrir https://bochile-n8n.onrender.com → login admin → importar los 6
+#    workflows desde 04_INFRAESTRUCTURA_TECNICA/Sistema_n8n/exports/_render_export/
+#
+# 4. Crear credenciales en n8n Render:
+#      - OpenAI account
+#      - Google Sheets OAuth2
+#      - Google Drive OAuth2
+#      - HTTP Header Auth para respond.io
+#
+# 5. Configurar workflow en respond.io que reenvíe mensajes a:
+#      https://bochile-n8n.onrender.com/webhook/bochile-chat
+#
+# ═══════════════════════════════════════════════════════════════════════════

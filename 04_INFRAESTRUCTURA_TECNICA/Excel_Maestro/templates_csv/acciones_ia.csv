@@ -1,0 +1,7 @@
+accion_id,tipo,agente,lead_id,resumen,detalle,resultado,tiempo_ahorrado_min,timestamp
+A-1746089900001,conversacion_atendida,Vendedor CORE,L-2914423398,Atendio consulta inicial,Lead Lucas Fernandez consulta por casa Palihue. Califico score 88.,ok,4,2026-04-30T10:42:30Z
+A-1746089900002,lead_calificado,SubAgente Calificador,L-2914423398,Score 88 · Caliente,"Pareja con 2 hijos. Presupuesto USD 250-300k. Forma de pago mixta.",ok,3,2026-04-30T10:44:30Z
+A-1746089900003,visita_agendada,SubAgente Admin,L-2914423398,Visita agendada sabado 10:30,Brown 1842 con Carlos Bochile. Notificacion enviada al vendedor.,ok,8,2026-04-30T10:47:00Z
+A-1746089900004,cobranza_alquiler,Cron Cobranza,,Cobro automatico Romina Calandri,"$680000 ARS via Mercado Pago. Recibo enviado.",enviado,5,2026-04-30T09:12:00Z
+A-1746089900005,match_pendiente_guardado,SubAgente Admin,L-2914490156,Match pendiente Sofia Martinez,Alquiler departamento Centro 2 amb amoblado ARS 500-700k. Sin stock.,ok,5,2026-04-30T11:22:00Z
+A-1746089900006,recordatorio_visita,Cron Recordatorios,L-2914512378,Recordatorio 24h enviado,Familia Beltran visita hoy 16:30 Brown 1842.,enviado,3,2026-05-01T16:30:00Z

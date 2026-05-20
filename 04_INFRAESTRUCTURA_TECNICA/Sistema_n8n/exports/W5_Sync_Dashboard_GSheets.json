@@ -1,0 +1,640 @@
+{
+  "name": "Bochile - Sync Dashboard a Google Sheets",
+  "nodes": [
+    {
+      "id": "n5-trig",
+      "name": "Cada 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n5-r1",
+      "name": "1 - Leer leads",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UGNAXqPUX0udDRPi",
+          "cachedResultName": "bochile_leads"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w1",
+      "name": "1 - Volcar leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"lead_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r2",
+      "name": "2 - Leer propiedades",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UlHoNXfh9nX5W8vn",
+          "cachedResultName": "bochile_propiedades"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w2",
+      "name": "2 - Volcar propiedades",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "propiedades"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"prop_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r3",
+      "name": "3 - Leer visitas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UJOWnNg9k0BdMMJP",
+          "cachedResultName": "bochile_visitas"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w3",
+      "name": "3 - Volcar visitas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "visitas"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"visita_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r4",
+      "name": "4 - Leer contratos",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TSBcE3hUHHvzcrr2",
+          "cachedResultName": "bochile_contratos"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w4",
+      "name": "4 - Volcar contratos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "contratos"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"contrato_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r5",
+      "name": "5 - Leer empleados",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2016,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "pfACps5XOWJo7UME",
+          "cachedResultName": "bochile_empleados"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w5",
+      "name": "5 - Volcar empleados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "empleados"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"empleado_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r6",
+      "name": "6 - Leer matches_pendientes",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "X1djtSSRbpiiNMTk",
+          "cachedResultName": "bochile_matches_pendientes"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w6",
+      "name": "6 - Volcar matches_pendientes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2688,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "matches_pendientes"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"match_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r7",
+      "name": "7 - Leer conversaciones",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2912,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "B5WIk9wqVUH8Z0t8",
+          "cachedResultName": "bochile_conversaciones"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w7",
+      "name": "7 - Volcar conversaciones",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3136,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "conversaciones"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"msg_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    },
+    {
+      "id": "n5-r8",
+      "name": "8 - Leer acciones_ia",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3360,
+        0
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "XeXT6GunMsOgpGa2",
+          "cachedResultName": "bochile_acciones_ia"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "n5-w8",
+      "name": "8 - Volcar acciones_ia",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3584,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.BOCHILE_GSHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "acciones_ia"
+        },
+        "columns": "={{ ({ \"mappingMode\": \"autoMapInputData\", \"value\": $json, \"matchingColumns\": [\"accion_id\"], \"schema\": [] }) }}",
+        "options": {
+          "handlingExtraData": "insertInNewColumn"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 2
+    }
+  ],
+  "connections": {
+    "Cada 5 min": {
+      "main": [
+        [
+          {
+            "node": "1 - Leer leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 - Leer leads": {
+      "main": [
+        [
+          {
+            "node": "1 - Volcar leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 - Volcar leads": {
+      "main": [
+        [
+          {
+            "node": "2 - Leer propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Leer propiedades": {
+      "main": [
+        [
+          {
+            "node": "2 - Volcar propiedades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 - Volcar propiedades": {
+      "main": [
+        [
+          {
+            "node": "3 - Leer visitas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 - Leer visitas": {
+      "main": [
+        [
+          {
+            "node": "3 - Volcar visitas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 - Volcar visitas": {
+      "main": [
+        [
+          {
+            "node": "4 - Leer contratos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - Leer contratos": {
+      "main": [
+        [
+          {
+            "node": "4 - Volcar contratos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4 - Volcar contratos": {
+      "main": [
+        [
+          {
+            "node": "5 - Leer empleados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 - Leer empleados": {
+      "main": [
+        [
+          {
+            "node": "5 - Volcar empleados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 - Volcar empleados": {
+      "main": [
+        [
+          {
+            "node": "6 - Leer matches_pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6 - Leer matches_pendientes": {
+      "main": [
+        [
+          {
+            "node": "6 - Volcar matches_pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6 - Volcar matches_pendientes": {
+      "main": [
+        [
+          {
+            "node": "7 - Leer conversaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Leer conversaciones": {
+      "main": [
+        [
+          {
+            "node": "7 - Volcar conversaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7 - Volcar conversaciones": {
+      "main": [
+        [
+          {
+            "node": "8 - Leer acciones_ia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8 - Leer acciones_ia": {
+      "main": [
+        [
+          {
+            "node": "8 - Volcar acciones_ia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null
+}

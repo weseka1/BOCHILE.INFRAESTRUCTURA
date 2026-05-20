@@ -1,0 +1,318 @@
+{
+  "name": "Bochile - Backup Mensual + Reset (W5)",
+  "nodes": [
+    {
+      "id": "trig-backup",
+      "name": "Cron Dia 1 Mes 3am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 1 * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gdrive-copy",
+      "name": "Backup en Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        250,
+        0
+      ],
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "name": "=Bochile {{ $now.minus({months: 1}).toFormat(\"yyyy-MM\") }} Backup",
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "s6bzy7p0HH3Gjmfr",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3
+    },
+    {
+      "id": "clear-leads",
+      "name": "Reset leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "options": {
+          "keepFirstRow": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3
+    },
+    {
+      "id": "clear-conversaciones",
+      "name": "Reset conversaciones",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        700,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "conversaciones"
+        },
+        "options": {
+          "keepFirstRow": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3
+    },
+    {
+      "id": "clear-visitas",
+      "name": "Reset visitas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        900,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "visitas"
+        },
+        "options": {
+          "keepFirstRow": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3
+    },
+    {
+      "id": "clear-matches_pendientes",
+      "name": "Reset matches_pendientes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "matches_pendientes"
+        },
+        "options": {
+          "keepFirstRow": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3
+    },
+    {
+      "id": "clear-acciones_ia",
+      "name": "Reset acciones_ia",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "acciones_ia"
+        },
+        "options": {
+          "keepFirstRow": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3
+    }
+  ],
+  "connections": {
+    "Cron Dia 1 Mes 3am": {
+      "main": [
+        [
+          {
+            "node": "Backup en Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backup en Drive": {
+      "main": [
+        [
+          {
+            "node": "Reset leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset leads": {
+      "main": [
+        [
+          {
+            "node": "Reset conversaciones",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset conversaciones": {
+      "main": [
+        [
+          {
+            "node": "Reset visitas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset visitas": {
+      "main": [
+        [
+          {
+            "node": "Reset matches_pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset matches_pendientes": {
+      "main": [
+        [
+          {
+            "node": "Reset acciones_ia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Cron Dia 1 Mes 3am": {
+      "recurrenceRules": []
+    }
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+
+# Output del scraper - solo committeamos properties-enriched.json (necesario
+# para el embed inicial en Render). El resto (images/, debug, logs) NO va.
+output/images/
+output/*.log
+output/debug-*.html
+output/test-*.json
+output/test-*.txt
+output/sheet-backup-*.json
+# properties.json y properties.csv son outputs intermedios; el enriched es el final.
+output/properties.json
+output/properties.csv

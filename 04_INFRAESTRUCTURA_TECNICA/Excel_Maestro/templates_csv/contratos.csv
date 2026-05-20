@@ -1,0 +1,7 @@
+contrato_id,prop_id,direccion,inquilino_nombre,inquilino_telefono,propietario,monto_actual,moneda,dia_vencimiento,frecuencia_ajuste,indice_ajuste,fecha_inicio,fecha_fin,estado,ultimo_pago,dias_atraso
+C-001,P-001,O'Higgins 234 7B,Romina Calandri,+5492914421180,Familia Ortiz,680000,ARS,5,cuatrimestral,IPC,2024-05-01,2026-05-01,activo,2026-04-05,0
+C-002,P-003,Alem 1456 4D,Florencia Bertola,+5492914462210,Pablo Iribarne,580000,ARS,1,cuatrimestral,IPC,2024-08-01,2026-08-01,activo,2026-04-01,3
+C-003,P-008,Donado 1245,Gaston Iribarne,+5492914517822,Diego Albarracin,920000,ARS,10,trimestral,ICL,2025-06-10,2026-06-10,activo,2026-04-10,0
+C-004,P-004,Sarmiento 542,Mariano Pellegrini,+5492914552209,Familia Schiavi,740000,ARS,3,cuatrimestral,IPC,2024-09-03,2026-09-03,activo,2026-04-03,0
+C-005,P-009,Costanera 156 5C,Familia Larranaga,+5492914557741,Familia Larranaga,1180000,ARS,8,semestral,IPC,2025-02-08,2026-08-08,activo,2026-04-08,0
+C-006,P-007,Mitre 890,Lucia Pelle,+5492914471208,Andrea Coria,820000,ARS,15,cuatrimestral,IPC,2024-06-15,2026-06-15,activo,2026-04-15,0

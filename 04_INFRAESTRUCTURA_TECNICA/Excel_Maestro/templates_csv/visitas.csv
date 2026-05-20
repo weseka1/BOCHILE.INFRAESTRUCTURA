@@ -1,0 +1,5 @@
+visita_id,lead_id,prop_id,vendedor_id,vendedor_nombre,cliente_nombre,direccion,fecha,hora,estado,confirmada_cliente,notificada_vendedor,recordatorio_enviado,resultado,observaciones,creada_en
+V-001,L-2914512378,P-002,E-1,Carlos Bochile,Familia Beltran,"Brown 1842, Palihue",2026-05-02,16:30,agendada,true,true,false,,Segunda visita. Estan muy interesados.,2026-04-30T11:00:00Z
+V-002,L-2914501267,P-001,E-2,Julieta Mendez,Andrea Coria,"O'Higgins 234 7B, Centro",2026-05-01,10:00,agendada,true,true,false,,Primera visita.,2026-04-30T15:00:00Z
+V-003,L-2914423398,P-002,E-1,Carlos Bochile,Lucas Fernandez,"Brown 1842, Palihue",2026-05-04,10:30,agendada,true,true,false,,Pareja con 2 chicos. Vende dpto en Centro.,2026-04-30T17:00:00Z
+V-004,L-2914467823,P-001,E-2,Julieta Mendez,Veronica Rial,"O'Higgins 234 7B, Centro",2026-05-03,18:00,agendada,false,false,false,,A confirmar.,2026-04-30T11:30:00Z

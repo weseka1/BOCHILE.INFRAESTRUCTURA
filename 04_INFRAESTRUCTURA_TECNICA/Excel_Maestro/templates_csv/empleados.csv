@@ -1,0 +1,5 @@
+empleado_id,nombre,rol,telefono,email,zona_especialidad,calendar_id,activo,visitas_mes,cierres_mes,comisiones_mes
+E-1,Carlos Bochile,vendedor,5492914401120,carlos@bochile.com.ar,"Palihue,Villa Belgrano,Country",,true,18,3,22400000
+E-2,Julieta Mendez,vendedor,5492914402230,julieta@bochile.com.ar,"Centro,Universitario",,true,14,3,15800000
+E-3,Valentin Soto,vendedor,5492914403341,valentin@bochile.com.ar,"Villa Mitre,Villa Don Bosco,Patagonia",,true,11,2,10500000
+E-4,Maria Lopez,admin,5492914404452,maria@bochile.com.ar,,,true,0,0,0

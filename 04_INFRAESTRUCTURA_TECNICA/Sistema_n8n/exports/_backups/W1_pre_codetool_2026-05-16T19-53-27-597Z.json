@@ -1,0 +1,3016 @@
+{
+  "updatedAt": "2026-05-16T19:50:33.510Z",
+  "createdAt": "2026-05-12T12:46:17.373Z",
+  "id": "aUMQyupnGJ5IWm5e",
+  "name": "Bochile - Chatbot Multi-Agente CORE (v4 Twilio)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bochile-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "n-1",
+      "name": "Webhook Twilio",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        400
+      ],
+      "webhookId": "bochile-twilio-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst from_raw = body.From || body.from || '';\nconst profile = body.ProfileName || body.profileName || 'Desconocido';\nconst text_body = body.Body || body.body || '';\nconst num_media = parseInt(body.NumMedia || body.numMedia || '0', 10);\nconst media_url = body.MediaUrl0 || body.mediaUrl0 || '';\nconst media_type = body.MediaContentType0 || body.mediaContentType0 || '';\n\nconst from = from_raw.replace('whatsapp:', '');\n\nlet msg_type = 'text';\nlet mensaje_original = text_body;\nif (num_media > 0 && media_url) {\n  if (media_type.startsWith('audio/')) msg_type = 'audio';\n  else if (media_type.startsWith('image/')) msg_type = 'image';\n  else { msg_type = 'document'; mensaje_original = text_body || '[adjunto recibido]'; }\n}\n\nif (!from || (!text_body && !media_url)) {\n  return [{ json: { skip: true, reason: 'payload_invalido' } }];\n}\n\nconst digits_only = from.replace(/\\D/g, '');\n\nreturn [{ json: {\n  telefono: from,\n  telefono_twilio: from,\n  nombre: profile,\n  mensaje_original: mensaje_original,\n  msg_type: msg_type,\n  media_url: media_url,\n  media_type: media_type,\n  canal: 'whatsapp_twilio',\n  lead_id: 'L-' + digits_only.slice(-10),\n  msg_id: 'M-' + Date.now(),\n  timestamp_iso: new Date().toISOString(),\n  skip: false\n}}];"
+      },
+      "id": "n-2",
+      "name": "Parsear Mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msg_type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msg_type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.msg_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "imagen"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "otro"
+        }
+      },
+      "id": "n-3",
+      "name": "Switch Tipo Mensaje",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "n-4a",
+      "name": "Audio - Download Twilio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        160
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "d6HsIalxJkkphlFP",
+          "name": "Twilio Basic Auth (Bochile)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "es"
+        }
+      },
+      "id": "n-5a",
+      "name": "Audio - Whisper",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        880,
+        208
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "4mQx97qkHBIhXxu3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "mensaje",
+              "value": "=[AUDIO TRANSCRIPTO] {{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "n-6a",
+      "name": "Audio - Set Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "n-4b",
+      "name": "Imagen - Download Twilio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        352
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "d6HsIalxJkkphlFP",
+          "name": "Twilio Basic Auth (Bochile)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "text": "Sos un asistente de Inmobiliaria Bochile (Bahia Blanca). Describi BREVEMENTE (1-2 lineas) la foto: si es propiedad (casa/dpto/lote), describi caracteristicas visibles (ambientes, estilo). Si es documento o plano, mencionalo. Si NO es inmobiliario, decilo. NO inventes direcciones ni precios.",
+        "inputType": "base64",
+        "options": {}
+      },
+      "id": "n-5b",
+      "name": "Imagen - Vision",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        880,
+        384
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "4mQx97qkHBIhXxu3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "mensaje",
+              "value": "=[IMAGEN RECIBIDA] {{ $json.content || $json.text || $json.response }}{{ $('Parsear Mensaje').item.json.mensaje_original ? ' | Caption: ' + $('Parsear Mensaje').item.json.mensaje_original : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "n-6b",
+      "name": "Imagen - Set Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "mensaje",
+              "value": "={{ $json.mensaje_original }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "n-4c",
+      "name": "Texto - Set Mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "n-7",
+      "name": "Merge Caminos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1296,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $(\"Merge Caminos\").item.json.mensaje }}",
+        "options": {
+          "systemMessage": "Sos CAMILA, la vendedora digital de Inmobiliaria Bochile (Bahía Blanca, desde 1970). Conversas por WhatsApp como una vendedora humana real: calidez argentina, vos, profesional pero cercana.\n\nTu misión: ATENDER, CALIFICAR, MATCHEAR Y AGENDAR visitas.\n\nTU EQUIPO DE SUB-AGENTES (herramientas):\n- SubAgente Calificador: lo llamás para puntuar al lead (score 0-100) y extraer datos estructurados.\n- SubAgente Matcher: lo llamás para buscar propiedades en el catálogo REAL (Qdrant + 239 propiedades de bochile.com).\n- SubAgente Administrativo: lo llamás cuando hay que AGENDAR visita, GUARDAR match_pendiente o ACTUALIZAR el lead en CRM.\n\nREGLAS DE ORO (CERO DIVAGACIÓN):\n\n1. **NUNCA INVENTES PROPIEDADES.** Antes de mencionar cualquier propiedad específica (dirección, precio, m²), TENÉS que haber llamado al SubAgente Matcher en el mismo turno.\n\n2. **CONFIÁ EN EL MATCHER.** Lo que devuelve es la única verdad. Si dice \"PROPIEDADES_ENCONTRADAS\", usá esos datos textuales. Si dice \"SIN_STOCK\", decile honestamente al lead que no hay y ofrecé guardar match_pendiente.\n\n3. **NO PROMETAS BARRIOS SIN CONFIRMAR.** Si el lead pide un barrio específico (\"Palihue\", \"Centro\"), llamá al Matcher con barrio=ese y vé qué devuelve. Si no hay stock ahí, decilo y ofrecé barrios cercanos donde SÍ haya.\n\n4. **NO INVENTES PRECIOS NI METROS.** Si el Matcher devolvió \"precio: Consultar\", decile literalmente al lead \"Consultá precio\" — NO estimes nada.\n\nCUÁNDO LLAMAR AL MATCHER (importante):\n- Apenas el lead pida ver propiedades, opciones, \"mostrame\", \"qué tenés\", etc. → llamá al Matcher YA con la info que tengas.\n- Apenas tengas: operación (venta/alquiler) + (tipo O zona O presupuesto) → llamá al Matcher.\n- Si el lead da datos súper específicos en el primer mensaje (ej. \"casa 3 amb Bahía Blanca 200k USD\"), llamá al Matcher YA, NO pidas más cosas antes.\n- Solo pedí más info ANTES del Matcher si el lead es ultra-vago (\"hola que tenés?\", \"busco algo\").\n\nCUÁNDO PEDIR MÁS DATOS (antes de matchear):\n- Si no tenés operación (venta/alquiler) Y el mensaje no la implica.\n- Si el lead solo dijo \"hola\" o no dio NADA concreto.\n- Una sola pregunta a la vez. Después matcheás.\n\nFLUJO TÍPICO:\n1. Lead saluda + da algo de info → respondés cálido + (si tenés mínimo de datos) llamás Calificador + Matcher en mismo turno.\n2. Si Matcher devolvió propiedades → presentás 1-2 con tour 360/URL + preguntás si quiere agendar.\n3. Si lead acepta visita → llamás al Administrativo.\n4. Si Matcher devolvió SIN_STOCK → ofrecés guardar match_pendiente y avisar cuando aparezca.\n\nREGLAS DE COMUNICACIÓN:\n- Respuestas cortas, conversacionales. UNA pregunta por mensaje. Máximo 4 líneas.\n- NUNCA mandes el prop_id al cliente (es interno). Sí mandá la URL si la tenés.\n- Si te preguntan algo que no sabés (legal, técnico), decí \"consulto con el equipo y te respondo\" y marca requiere_humano=true vía el Administrativo.\n- Para cobranza de alquiler, reclamo de inquilino o gestión de contrato → pasá directo al Administrativo, NO uses Matcher.\n\nOUTPUT: SIEMPRE devolvés la respuesta lista para mandar al cliente final (texto plano, sin marcadores, sin JSON, sin prop_id)."
+        }
+      },
+      "id": "n-11",
+      "name": "Vendedor CORE",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2128,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "n-12",
+      "name": "GPT Vendedor CORE",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1504,
+        752
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "4mQx97qkHBIhXxu3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $(\"Merge Caminos\").item.json.telefono }}",
+        "contextWindowLength": 20
+      },
+      "id": "n-13",
+      "name": "Memoria Conversacion",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1648,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "CALIFICADOR. Score 0-100 + datos. Llamar apenas tengas contexto basico.",
+        "text": "={{ $fromAI(\"conversacion\", \"Resumen conversacion\", \"string\") }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "CALIFICADOR Bochile. Analiza conversacion, devolve JSON parser.\n\nSCORING:\n- 0-40 FRIO: pregunta vaga, \"solo mirando\".\n- 41-70 TIBIO: intencion clara, faltan datos.\n- 71-100 CALIENTE: presupuesto+urgencia+zona+tipo+forma_pago definidos.\n\nVALIDOS:\n- zona: Palihue|Centro|Universitario|Villa Mitre|Villa Belgrano|Patagonia|Tiro Federal|Villa Don Bosco|Almafuerte|Country\n- operacion: venta|alquiler|alquiler_temporario\n- tipo: casa|departamento|ph|lote|local|oficina\n- moneda: USD|ARS\n- urgencia: alta|media|baja\n- forma_pago: cash|credito|mixto|vende_otra\n- listo_para_visita: true SOLO si score>=70 Y zona Y presupuesto Y tipo\n\nFalta dato: null o \"\". NO inventes. Devolve EXCLUSIVAMENTE el JSON del parser."
+        }
+      },
+      "id": "n-14",
+      "name": "SubAgente Calificador",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        1856,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "n-15",
+      "name": "GPT Calificador",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        880
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "4mQx97qkHBIhXxu3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"score\":85,\"etapa\":\"Calificado IA\",\"operacion\":\"venta\",\"tipo\":\"casa\",\"zona\":\"Palihue\",\"ambientes\":4,\"presupuesto_min\":250000,\"presupuesto_max\":300000,\"moneda\":\"USD\",\"forma_pago\":\"mixto\",\"urgencia\":\"alta\",\"razon\":\"...\",\"listo_para_visita\":true,\"requiere_humano\":false}"
+      },
+      "id": "n-16",
+      "name": "Parser Calificador",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2048,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "MATCHER. Cruza criterios con catalogo. Hasta 3 props o SIN_STOCK. Llamar SOLO con operacion+tipo+zona+presupuesto.",
+        "text": "={{ $fromAI(\"criterios\", \"JSON criterios\", \"string\") }}",
+        "options": {
+          "systemMessage": "Sos el sub-agente MATCHER de Bochile. Tu UNICA tarea: buscar propiedades del catalogo real usando la herramienta `search_catalog`.\n\nREGLA OBLIGATORIA: cada vez que te llaman, DEBES invocar search_catalog UNA VEZ con TODOS los parametros llenos. Es OBLIGATORIO completar:\n- query: descripcion natural larga incluyendo TIPO + UBICACION + AMBIENTES + MONTO. Ej: \"casa familiar 3 ambientes en barrio Centro de Bahia Blanca hasta 200000 USD\"\n- operation: SIEMPRE \"sale\" para venta o \"rent\" para alquiler (NUNCA en español, NUNCA vacio si el lead lo dijo).\n- property_type: SIEMPRE casa, departamento, ph, duplex, lote, local, oficina, cochera, campo o galpon (uno solo, singular, minuscula). NUNCA vacio si el lead mencionó tipo.\n- price_max: numero (sin decimales). Si dijo 200k poner 200000. Si dijo 1.5M poner 1500000.\n- price_currency: \"USD\" o \"ARS\" (default USD para venta en Argentina).\n- bedrooms_min: numero de ambientes (3 si dijo \"3 ambientes\", \"tres\" o \"tres amb\").\n\nVos NO inventes datos. Recibis los criterios del CORE en formato JSON y los traduces al schema.\n\nCRITERIO -> SCHEMA:\n- \"venta\" / \"comprar\" -> operation: \"sale\"\n- \"alquiler\" / \"alquilar\" -> operation: \"rent\"\n- \"casa\" / \"chalet\" / \"PH\" -> property_type segun corresponda\n- \"depto\" / \"departamento\" / \"apartament\" -> property_type: \"departamento\"\n- \"lote\" / \"terreno\" -> property_type: \"lote\"\n- \"USD\" / \"dólares\" / \"u$s\" -> price_currency: \"USD\"\n- \"ARS\" / \"pesos\" -> price_currency: \"ARS\"\n- \"3 amb\" / \"3 ambientes\" / \"3 dorm\" -> bedrooms_min: 3\n\nDESPUES de llamar al tool:\n- Si recibis \"PROPIEDADES_ENCONTRADAS\" con score >= 0.5 en al menos una: devolve hasta 3 al CORE con formato:\n  PROPS_OK\n  1. prop_id | titulo | precio | zona/barrio | amb/banos/m2 | URL\n- Si recibis \"SIN_STOCK\" o todos los scores son < 0.5: devolve \"SIN_STOCK + <resumen criterios>\" para que el CORE active match_pendiente.\n- NUNCA inventes propiedades. NUNCA modifiques datos.\n\nNUNCA respondas SIN haber llamado a search_catalog primero. Si no podes llamar al tool, decile al CORE: \"ERROR_MATCHER tool no disponible\"."
+        }
+      },
+      "id": "n-17",
+      "name": "SubAgente Matcher",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        2176,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "n-18",
+      "name": "GPT Matcher",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2176,
+        1040
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "4mQx97qkHBIhXxu3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "id": "n-19",
+      "name": "Buscar Catalogo RAG",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.2,
+      "position": [
+        2368,
+        608
+      ],
+      "parameters": {
+        "name": "search_catalog",
+        "description": "Busca propiedades del catalogo de Bochile por similaridad semantica + filtros estrictos. Devuelve hasta 5 propiedades reales. Si no hay match, devuelve SIN_STOCK.",
+        "language": "javaScript",
+        "jsCode": "// Tool: busca propiedades en el RAG.\n// Recibe SOLO un query natural en español del LLM y extrae los filtros con regex.\n\nconst RAG_URL = 'http://host.docker.internal:3003/api/search';\nconst _q = (typeof query !== 'undefined' && query) ? String(query).trim() : '';\nif (!_q) return 'ERROR: query es obligatorio';\n\nconst qLower = _q.toLowerCase();\n\n// === Parser natural de filtros desde el query ===\nconst filters = { with_image: true };\n\n// Operation\nif (/\\b(venta|vender|vende|comprar|compra)\\b/.test(qLower)) filters.operation = 'sale';\nelse if (/\\b(alquiler|alquilar|alquila|renta|rentar)\\b/.test(qLower)) filters.operation = 'rent';\n\n// Property type (orden importa: galpon antes que generic)\nif (/\\b(casa|chalet)\\b/.test(qLower)) filters.property_type = 'casa';\nelse if (/\\b(depto|departamento|apartament)\\b/.test(qLower)) filters.property_type = 'departamento';\nelse if (/\\bph\\b/.test(qLower)) filters.property_type = 'ph';\nelse if (/\\bd[uú]plex\\b/.test(qLower)) filters.property_type = 'duplex';\nelse if (/\\b(galp[oó]n|dep[oó]sito|industrial)\\b/.test(qLower)) filters.property_type = 'galpon';\nelse if (/\\b(lote|terreno|parcela|fracci[oó]n)\\b/.test(qLower)) filters.property_type = 'lote';\nelse if (/\\b(local|comercio|negocio)\\b/.test(qLower)) filters.property_type = 'local';\nelse if (/\\boficina\\b/.test(qLower)) filters.property_type = 'oficina';\nelse if (/\\b(cochera|garage)\\b/.test(qLower)) filters.property_type = 'cochera';\nelse if (/\\b(campo|estancia|chacra|hect[áa]reas?)\\b/.test(qLower)) filters.property_type = 'campo';\n\n// Precio: matches como \"200000 USD\", \"200 mil USD\", \"200k USD\", \"USD 200000\", \"1.5M\"\nconst priceRe1 = /(\\d+(?:[.,]\\d+)?)\\s*(?:mil|k)\\s*(usd|dolares|d[oó]lares|u\\$s)/i;\nconst priceRe2 = /(\\d+(?:[.,]\\d+)?)\\s*(?:millon|m)\\s*(usd|dolares|d[oó]lares)/i;\nconst priceRe3 = /(\\d{4,9})\\s*(usd|dolares|d[oó]lares|u\\$s)/i;\nconst priceReArs = /(\\d{4,12})\\s*(ars|pesos|peso\\b)/i;\nconst priceReUsdPrefix = /(usd|u\\$s|d[oó]lares?)\\s*\\$?\\s*(\\d{4,9})/i;\nlet m;\nif ((m = qLower.match(priceRe1))) {\n  filters.price_max = parseInt(m[1].replace(/[.,]/g, ''), 10) * 1000;\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceRe2))) {\n  filters.price_max = Math.round(parseFloat(m[1].replace(',', '.')) * 1000000);\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceRe3))) {\n  filters.price_max = parseInt(m[1], 10);\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceReUsdPrefix))) {\n  filters.price_max = parseInt(m[2], 10);\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceReArs))) {\n  filters.price_max = parseInt(m[1], 10);\n  filters.price_currency = 'ARS';\n}\n\n// Ambientes / dormitorios\nconst ambRe = /(\\d+)\\s*(amb|ambiente|dorm|dormitorio|cuarto)/i;\nif ((m = qLower.match(ambRe))) filters.bedrooms_min = parseInt(m[1], 10);\nelse if (/monoambient/i.test(qLower)) filters.bedrooms_min = 1;\n\nconst input = { query: _q, limit: 5, filters };\n\n// n8n toolCode no expone fetch; usamos this.helpers.httpRequest (API nativa de n8n)\nlet data;\ntry {\n  data = await this.helpers.httpRequest({\n    method: 'POST',\n    url: RAG_URL,\n    headers: { 'Content-Type': 'application/json' },\n    body: input,\n    json: true,\n  });\n} catch (err) {\n  return 'ERROR_RAG: ' + (err.message || String(err)).slice(0, 200);\n}\n\nif (!data || !data.items || data.items.length === 0) {\n  return 'SIN_STOCK | criterios: ' + JSON.stringify(input.filters);\n}\n\n// Debug: incluir los filtros aplicados para que el LLM sepa qué busco\nconst debug = 'FILTERS_USED: ' + JSON.stringify(input.filters) + '\\n';\n\nconst lines = data.items.map(function(p, i) {\n  const precio = p.price ? p.price + ' ' + (p.price_currency || '') : (p.price_text || 'Consultar');\n  const ubic = (p.barrio && p.barrio !== 'unknown') ? p.barrio : (p.zona || 'Bahia Blanca');\n  return (i+1) + '. [' + p.prop_id + '] ' + p.title\n    + ' | tipo: ' + (p.property_type || '?')\n    + ' | zona: ' + ubic\n    + ' | ' + (p.bedrooms ? p.bedrooms + ' amb' : 'amb sin dato')\n    + ' | ' + (p.area_m2 ? p.area_m2 + ' m2' : 'm2 sin dato')\n    + ' | precio: ' + precio\n    + ' | URL: ' + p.url\n    + ' | score: ' + p.score;\n});\n\nreturn debug + 'PROPIEDADES_ENCONTRADAS (' + data.items.length + '):\\n' + lines.join('\\n');\n",
+        "specifyInputSchema": true,
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Descripcion completa en español INCLUYENDO: tipo (casa/depto/lote/...), operacion (venta/alquiler), zona/barrio si lo dijo, ambientes (\\\"3 ambientes\\\"), presupuesto (\\\"hasta 200000 USD\\\" o \\\"hasta 200 mil USD\\\"). Ej: \\\"casa familiar 3 ambientes en Palihue venta hasta 300000 USD con quincho\\\". El sistema parsea estos datos del texto para aplicar filtros estrictos.\"}},\"required\":[\"query\"]}"
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "ADMIN. Escribe CRM, notifica vendedor. AGENDAR / GUARDAR match / ACTUALIZAR lead.",
+        "text": "={{ $fromAI(\"orden\", \"Que hacer + datos\", \"string\") }}",
+        "options": {
+          "systemMessage": "ADMIN Bochile. Brazo operativo de Camila Pomerich. Unico que escribe CRM y manda brief a Camila al WhatsApp.\n\nA) AGENDAR (cuando Camila confirma visita con cliente):\n1. 'Leer Vendedores Activos' -> SIEMPRE elegir a \"Camila Pomerich\" (vendedor_id=E-1B). Si la lista la trae con otro nombre, igual usa E-1B Camila Pomerich.\n2. 'Crear Visita en CRM' con vendedor_id='E-1B' vendedor_nombre='Camila Pomerich'.\n3. 'Avisar Vendedor por WhatsApp Twilio' con mensaje EXACTO formato (es el BRIEF interno para que Camila tenga el lead a mano):\n   \"BRIEF VISITA. Cliente: [NOMBRE] (tel +54...). Dia: [DD/MM] [HH:MM]. Direccion: [DIRECCION]. Prop: [P-XXX]. Score: XX. Presupuesto: USD/ARS XXX. Zona: XXX. Tour: <url>. Notas: ...\"\n   SIEMPRE incluir tel cliente +54XXXXXXXXXXX para que pueda contactarlo si hace falta.\n4. 'Actualizar Lead CRM' etapa='Visita agendada' vendedor_asignado='E-1B'.\n\nB) GUARDAR MATCH PENDIENTE: 'Guardar Match Pendiente' + 'Actualizar Lead CRM' etapa='En espera de stock'.\nC) ACTUALIZAR LEAD: 'Actualizar Lead CRM'.\n\nREGLAS:\n- NUNCA agendes sin fecha+hora confirmadas.\n- WhatsApp: telefonos con prefijo +54 (sin 'whatsapp:').\n- requiere_humano=true -> update CRM con nota, no avisar.\n\nDevolve resumen plano."
+        }
+      },
+      "id": "n-20",
+      "name": "SubAgente Administrativo",
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 3,
+      "position": [
+        2576,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "id": "n-21",
+      "name": "GPT Admin",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2448,
+        400
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "4mQx97qkHBIhXxu3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "VENDEDORES. Devuelve todos los empleados activos.",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "empleados"
+        },
+        "options": {}
+      },
+      "id": "n-22",
+      "name": "Leer Vendedores Activos",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2544,
+        736
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "CREAR VISITA. Insertar nueva visita agendada en la tabla visitas.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "visitas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "visita_id": "={{ \"V-\" + $now.toMillis() }}",
+            "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', 'L-XXX', 'string') }}",
+            "prop_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('prop_id', 'P-XXX', 'string') }}",
+            "vendedor_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('vendedor_id', 'E-X', 'string') }}",
+            "vendedor_nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('vendedor_nombre', 'nombre', 'string') }}",
+            "cliente_nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cliente_nombre', 'nombre', 'string') }}",
+            "direccion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('direccion', 'dir', 'string') }}",
+            "fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fecha', 'YYYY-MM-DD', 'string') }}",
+            "hora": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora', 'HH:MM', 'string') }}",
+            "estado": "agendada",
+            "confirmada_cliente": "={{ true }}",
+            "notificada_vendedor": "={{ true }}",
+            "recordatorio_enviado": "={{ false }}",
+            "observaciones": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('observaciones', 'notas', 'string') }}",
+            "creada_en": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n-23",
+      "name": "Crear Visita en CRM",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2704,
+        848
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "GUARDAR MATCH. Insertar match pendiente cuando no hay stock para el lead.",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "matches_pendientes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "match_id": "={{ \"MP-\" + $now.toMillis() }}",
+            "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', 'L-XXX', 'string') }}",
+            "lead_nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_nombre', 'nombre', 'string') }}",
+            "lead_telefono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_telefono', '+54...', 'string') }}",
+            "criterios_json": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('criterios_json', 'JSON criterios', 'string') }}",
+            "creado_en": "={{ $now.toISO() }}",
+            "estado": "activo",
+            "props_ofrecidas": ""
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n-24",
+      "name": "Guardar Match Pendiente",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2896,
+        960
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "ACTUALIZAR LEAD. Actualizar campos (etapa, score, vendedor_asignado, etc) del lead actual.",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', 'L-XXX', 'string') }}",
+            "etapa": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('etapa', 'Nuevo/Calificado IA/Visita agendada/En espera de stock/Negociación', 'string') }}",
+            "score": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('score', '0-100', 'number') }}",
+            "vendedor_asignado": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('vendedor_asignado', 'E-X', 'string') }}",
+            "operacion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('operacion', 'venta/alquiler', 'string') }}",
+            "tipo_propiedad": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_propiedad', 'casa/departamento/...', 'string') }}",
+            "zona_pref": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('zona_pref', 'Palihue/...', 'string') }}",
+            "ambientes": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ambientes', '0-10', 'number') }}",
+            "presupuesto_min": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('presupuesto_min', '0', 'number') }}",
+            "presupuesto_max": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('presupuesto_max', '0', 'number') }}",
+            "moneda": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('moneda', 'USD/ARS', 'string') }}",
+            "forma_pago": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('forma_pago', 'cash/credito/mixto/vende_otra', 'string') }}",
+            "urgencia": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('urgencia', 'alta/media/baja', 'string') }}",
+            "ultima_intencion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ultima_intencion', 'resumen', 'string') }}",
+            "notas": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('notas', 'notas', 'string') }}",
+            "actualizado_en": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "n-25",
+      "name": "Actualizar Lead CRM",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        3072,
+        1056
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+5492915512515",
+        "toWhatsapp": true,
+        "message": "={{ $fromAI(\"mensaje\", \"Mensaje completo formato VISITA AGENDADA PARA LAS HH:MM CON [CLIENTE] EN [DIRECCION]\", \"string\") }}",
+        "options": {}
+      },
+      "id": "n-26",
+      "name": "Avisar Vendedor por WhatsApp Twilio",
+      "type": "n8n-nodes-base.twilioTool",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        432
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "+5492915512515",
+        "toWhatsapp": true,
+        "message": "={{ $(\"Vendedor CORE\").item.json.output }}",
+        "options": {}
+      },
+      "id": "n-29",
+      "name": "Responder al Cliente Twilio",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        128
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "HR5fS1GSOu06duuX",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/xml"
+              }
+            ]
+          }
+        }
+      },
+      "id": "n-30",
+      "name": "OK al Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3312,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json[\"lead_id\"] }}",
+            "nombre": "={{ $json[\"nombre\"] }}",
+            "telefono": "={{ $json[\"telefono\"] }}",
+            "email": "={{ $json[\"email\"] }}",
+            "canal": "={{ $json[\"canal\"] }}",
+            "operacion": "={{ $json[\"operacion\"] }}",
+            "tipo_propiedad": "={{ $json[\"tipo_propiedad\"] }}",
+            "zona_pref": "={{ $json[\"zona_pref\"] }}",
+            "ambientes": "={{ $json[\"ambientes\"] }}",
+            "presupuesto_min": "={{ $json[\"presupuesto_min\"] }}",
+            "presupuesto_max": "={{ $json[\"presupuesto_max\"] }}",
+            "moneda": "={{ $json[\"moneda\"] }}",
+            "forma_pago": "={{ $json[\"forma_pago\"] }}",
+            "urgencia": "={{ $json[\"urgencia\"] }}",
+            "score": "={{ $json[\"score\"] }}",
+            "etapa": "={{ $json[\"etapa\"] }}",
+            "vendedor_asignado": "={{ $json[\"vendedor_asignado\"] }}",
+            "ultima_intencion": "={{ $json[\"ultima_intencion\"] }}",
+            "notas": "={{ $json[\"notas\"] }}",
+            "creado_en": "={{ $json[\"creado_en\"] }}",
+            "actualizado_en": "={{ $json[\"actualizado_en\"] }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "sheet-sheet-sync-lead",
+      "name": "Upsert Lead CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        224
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "conversaciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "msg_id": "={{ $('Merge Caminos').item.json.msg_id }}",
+            "lead_id": "={{ $('Merge Caminos').item.json.lead_id }}",
+            "telefono": "={{ $('Merge Caminos').item.json.telefono }}",
+            "canal": "={{ $('Merge Caminos').item.json.canal }}",
+            "direccion": "in",
+            "mensaje": "={{ $('Merge Caminos').item.json.mensaje }}",
+            "intencion_detectada": "={{ $('Merge Caminos').item.json.msg_type }}",
+            "agente_que_respondio": "pending",
+            "requiere_humano": "={{ false }}",
+            "timestamp": "={{ $('Merge Caminos').item.json.timestamp_iso }}"
+          },
+          "matchingColumns": [
+            "msg_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "sheet-sheet-sync-msg-entrante",
+      "name": "Log Mensaje Entrante",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1776,
+        32
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "conversaciones"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "msg_id": "={{ \"M-\" + $now.toMillis() + \"-out\" }}",
+            "lead_id": "={{ $('Merge Caminos').item.json.lead_id }}",
+            "telefono": "={{ $('Merge Caminos').item.json.telefono }}",
+            "canal": "whatsapp_twilio",
+            "direccion": "out",
+            "mensaje": "={{ $('Vendedor CORE').item.json.output }}",
+            "intencion_detectada": "response",
+            "agente_que_respondio": "Vendedor CORE",
+            "requiere_humano": "={{ false }}",
+            "timestamp": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "msg_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "sheet-sheet-sync-msg-saliente",
+      "name": "Log Mensaje Saliente",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2576,
+        128
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "acciones_ia"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion_id": "={{ \"A-\" + $now.toMillis() }}",
+            "tipo": "conversacion_atendida",
+            "agente": "Vendedor CORE",
+            "lead_id": "={{ $('Merge Caminos').item.json.lead_id }}",
+            "resumen": "={{ 'Mensaje ' + ($('Merge Caminos').item.json.msg_type || 'text') + ' atendido via Twilio' }}",
+            "detalle": "={{ ($('Vendedor CORE').item.json.output || '').substring(0, 200) }}",
+            "resultado": "ok",
+            "timestamp": "={{ $now.toISO() }}",
+            "tiempo_ahorrado_min": 4
+          },
+          "matchingColumns": [
+            "accion_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "sheet-sheet-sync-accion",
+      "name": "Registrar Accion IA",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2816,
+        128
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "gs-buscar-lead",
+      "name": "Buscar Lead Existente",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1536,
+        416
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 3,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook Twilio": {
+      "main": [
+        [
+          {
+            "node": "Parsear Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Switch Tipo Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Tipo Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Texto - Set Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Audio - Download Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Imagen - Download Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio - Download Twilio": {
+      "main": [
+        [
+          {
+            "node": "Audio - Whisper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio - Whisper": {
+      "main": [
+        [
+          {
+            "node": "Audio - Set Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio - Set Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Merge Caminos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Imagen - Download Twilio": {
+      "main": [
+        [
+          {
+            "node": "Imagen - Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen - Vision": {
+      "main": [
+        [
+          {
+            "node": "Imagen - Set Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Imagen - Set Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Merge Caminos",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Texto - Set Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Merge Caminos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Caminos": {
+      "main": [
+        [
+          {
+            "node": "Buscar Lead Existente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vendedor CORE": {
+      "main": [
+        [
+          {
+            "node": "Log Mensaje Saliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Vendedor CORE": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria Conversacion": {
+      "ai_memory": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SubAgente Calificador": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Calificador": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SubAgente Calificador",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser Calificador": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "SubAgente Calificador",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SubAgente Matcher": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Matcher": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SubAgente Matcher",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SubAgente Administrativo": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Admin": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Vendedores Activos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Visita en CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Match Pendiente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Lead CRM": {
+      "ai_tool": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar Vendedor por WhatsApp Twilio": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Administrativo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder al Cliente Twilio": {
+      "main": [
+        [
+          {
+            "node": "OK al Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Lead CRM": {
+      "main": [
+        [
+          {
+            "node": "Log Mensaje Entrante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Mensaje Entrante": {
+      "main": [
+        [
+          {
+            "node": "Vendedor CORE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Mensaje Saliente": {
+      "main": [
+        [
+          {
+            "node": "Registrar Accion IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Accion IA": {
+      "main": [
+        [
+          {
+            "node": "Responder al Cliente Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Lead Existente": {
+      "main": [
+        [
+          {
+            "node": "Upsert Lead CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Catalogo RAG": {
+      "ai_tool": [
+        [
+          {
+            "node": "SubAgente Matcher",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "2a562b2b-9a0d-4ca6-81b5-2ba5fa8e3067",
+  "activeVersionId": "2a562b2b-9a0d-4ca6-81b5-2ba5fa8e3067",
+  "versionCounter": 319,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-12T12:46:17.382Z",
+      "createdAt": "2026-05-12T12:46:17.382Z",
+      "role": "workflow:owner",
+      "workflowId": "aUMQyupnGJ5IWm5e",
+      "projectId": "PNGfYwEth0ahPlvI",
+      "project": {
+        "updatedAt": "2025-09-26T02:00:37.322Z",
+        "createdAt": "2025-09-26T01:59:58.152Z",
+        "id": "PNGfYwEth0ahPlvI",
+        "name": "Juan Ignacio Lopez <46094470juani@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-05-16T19:50:33.513Z",
+    "createdAt": "2026-05-16T19:50:33.513Z",
+    "versionId": "2a562b2b-9a0d-4ca6-81b5-2ba5fa8e3067",
+    "workflowId": "aUMQyupnGJ5IWm5e",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "bochile-chat",
+          "responseMode": "responseNode",
+          "options": {
+            "rawBody": false
+          }
+        },
+        "id": "n-1",
+        "name": "Webhook Twilio",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          400
+        ],
+        "webhookId": "bochile-twilio-webhook"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst from_raw = body.From || body.from || '';\nconst profile = body.ProfileName || body.profileName || 'Desconocido';\nconst text_body = body.Body || body.body || '';\nconst num_media = parseInt(body.NumMedia || body.numMedia || '0', 10);\nconst media_url = body.MediaUrl0 || body.mediaUrl0 || '';\nconst media_type = body.MediaContentType0 || body.mediaContentType0 || '';\n\nconst from = from_raw.replace('whatsapp:', '');\n\nlet msg_type = 'text';\nlet mensaje_original = text_body;\nif (num_media > 0 && media_url) {\n  if (media_type.startsWith('audio/')) msg_type = 'audio';\n  else if (media_type.startsWith('image/')) msg_type = 'image';\n  else { msg_type = 'document'; mensaje_original = text_body || '[adjunto recibido]'; }\n}\n\nif (!from || (!text_body && !media_url)) {\n  return [{ json: { skip: true, reason: 'payload_invalido' } }];\n}\n\nconst digits_only = from.replace(/\\D/g, '');\n\nreturn [{ json: {\n  telefono: from,\n  telefono_twilio: from,\n  nombre: profile,\n  mensaje_original: mensaje_original,\n  msg_type: msg_type,\n  media_url: media_url,\n  media_type: media_type,\n  canal: 'whatsapp_twilio',\n  lead_id: 'L-' + digits_only.slice(-10),\n  msg_id: 'M-' + Date.now(),\n  timestamp_iso: new Date().toISOString(),\n  skip: false\n}}];"
+        },
+        "id": "n-2",
+        "name": "Parsear Mensaje",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict"
+                  },
+                  "combinator": "and",
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.msg_type }}",
+                      "rightValue": "text",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                },
+                "renameOutput": true,
+                "outputKey": "texto"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict"
+                  },
+                  "combinator": "and",
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.msg_type }}",
+                      "rightValue": "audio",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                },
+                "renameOutput": true,
+                "outputKey": "audio"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict"
+                  },
+                  "combinator": "and",
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.msg_type }}",
+                      "rightValue": "image",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                },
+                "renameOutput": true,
+                "outputKey": "imagen"
+              }
+            ]
+          },
+          "options": {
+            "fallbackOutput": "extra",
+            "renameFallbackOutput": "otro"
+          }
+        },
+        "id": "n-3",
+        "name": "Switch Tipo Mensaje",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          448,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $json.media_url }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file"
+              }
+            }
+          }
+        },
+        "id": "n-4a",
+        "name": "Audio - Download Twilio",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          672,
+          160
+        ],
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "d6HsIalxJkkphlFP",
+            "name": "Twilio Basic Auth (Bochile)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "audio",
+          "operation": "transcribe",
+          "options": {
+            "language": "es"
+          }
+        },
+        "id": "n-5a",
+        "name": "Audio - Whisper",
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          880,
+          208
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "4mQx97qkHBIhXxu3",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "mensaje",
+                "value": "=[AUDIO TRANSCRIPTO] {{ $json.text }}",
+                "type": "string"
+              }
+            ]
+          },
+          "includeOtherFields": true,
+          "options": {}
+        },
+        "id": "n-6a",
+        "name": "Audio - Set Mensaje",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1104,
+          208
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ $json.media_url }}",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpBasicAuth",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file"
+              }
+            }
+          }
+        },
+        "id": "n-4b",
+        "name": "Imagen - Download Twilio",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          672,
+          352
+        ],
+        "credentials": {
+          "httpBasicAuth": {
+            "id": "d6HsIalxJkkphlFP",
+            "name": "Twilio Basic Auth (Bochile)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "image",
+          "operation": "analyze",
+          "modelId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4o"
+          },
+          "text": "Sos un asistente de Inmobiliaria Bochile (Bahia Blanca). Describi BREVEMENTE (1-2 lineas) la foto: si es propiedad (casa/dpto/lote), describi caracteristicas visibles (ambientes, estilo). Si es documento o plano, mencionalo. Si NO es inmobiliario, decilo. NO inventes direcciones ni precios.",
+          "inputType": "base64",
+          "options": {}
+        },
+        "id": "n-5b",
+        "name": "Imagen - Vision",
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 1.8,
+        "position": [
+          880,
+          384
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "4mQx97qkHBIhXxu3",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "mensaje",
+                "value": "=[IMAGEN RECIBIDA] {{ $json.content || $json.text || $json.response }}{{ $('Parsear Mensaje').item.json.mensaje_original ? ' | Caption: ' + $('Parsear Mensaje').item.json.mensaje_original : '' }}",
+                "type": "string"
+              }
+            ]
+          },
+          "includeOtherFields": true,
+          "options": {}
+        },
+        "id": "n-6b",
+        "name": "Imagen - Set Mensaje",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1104,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "mensaje",
+                "value": "={{ $json.mensaje_original }}",
+                "type": "string"
+              }
+            ]
+          },
+          "includeOtherFields": true,
+          "options": {}
+        },
+        "id": "n-4c",
+        "name": "Texto - Set Mensaje",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          672,
+          608
+        ]
+      },
+      {
+        "parameters": {
+          "numberInputs": 3
+        },
+        "id": "n-7",
+        "name": "Merge Caminos",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1296,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $(\"Merge Caminos\").item.json.mensaje }}",
+          "options": {
+            "systemMessage": "Sos CAMILA, la vendedora digital de Inmobiliaria Bochile (Bahía Blanca, desde 1970). Conversas por WhatsApp como una vendedora humana real: calidez argentina, vos, profesional pero cercana.\n\nTu misión: ATENDER, CALIFICAR, MATCHEAR Y AGENDAR visitas.\n\nTU EQUIPO DE SUB-AGENTES (herramientas):\n- SubAgente Calificador: lo llamás para puntuar al lead (score 0-100) y extraer datos estructurados.\n- SubAgente Matcher: lo llamás para buscar propiedades en el catálogo REAL (Qdrant + 239 propiedades de bochile.com).\n- SubAgente Administrativo: lo llamás cuando hay que AGENDAR visita, GUARDAR match_pendiente o ACTUALIZAR el lead en CRM.\n\nREGLAS DE ORO (CERO DIVAGACIÓN):\n\n1. **NUNCA INVENTES PROPIEDADES.** Antes de mencionar cualquier propiedad específica (dirección, precio, m²), TENÉS que haber llamado al SubAgente Matcher en el mismo turno.\n\n2. **CONFIÁ EN EL MATCHER.** Lo que devuelve es la única verdad. Si dice \"PROPIEDADES_ENCONTRADAS\", usá esos datos textuales. Si dice \"SIN_STOCK\", decile honestamente al lead que no hay y ofrecé guardar match_pendiente.\n\n3. **NO PROMETAS BARRIOS SIN CONFIRMAR.** Si el lead pide un barrio específico (\"Palihue\", \"Centro\"), llamá al Matcher con barrio=ese y vé qué devuelve. Si no hay stock ahí, decilo y ofrecé barrios cercanos donde SÍ haya.\n\n4. **NO INVENTES PRECIOS NI METROS.** Si el Matcher devolvió \"precio: Consultar\", decile literalmente al lead \"Consultá precio\" — NO estimes nada.\n\nCUÁNDO LLAMAR AL MATCHER (importante):\n- Apenas el lead pida ver propiedades, opciones, \"mostrame\", \"qué tenés\", etc. → llamá al Matcher YA con la info que tengas.\n- Apenas tengas: operación (venta/alquiler) + (tipo O zona O presupuesto) → llamá al Matcher.\n- Si el lead da datos súper específicos en el primer mensaje (ej. \"casa 3 amb Bahía Blanca 200k USD\"), llamá al Matcher YA, NO pidas más cosas antes.\n- Solo pedí más info ANTES del Matcher si el lead es ultra-vago (\"hola que tenés?\", \"busco algo\").\n\nCUÁNDO PEDIR MÁS DATOS (antes de matchear):\n- Si no tenés operación (venta/alquiler) Y el mensaje no la implica.\n- Si el lead solo dijo \"hola\" o no dio NADA concreto.\n- Una sola pregunta a la vez. Después matcheás.\n\nFLUJO TÍPICO:\n1. Lead saluda + da algo de info → respondés cálido + (si tenés mínimo de datos) llamás Calificador + Matcher en mismo turno.\n2. Si Matcher devolvió propiedades → presentás 1-2 con tour 360/URL + preguntás si quiere agendar.\n3. Si lead acepta visita → llamás al Administrativo.\n4. Si Matcher devolvió SIN_STOCK → ofrecés guardar match_pendiente y avisar cuando aparezca.\n\nREGLAS DE COMUNICACIÓN:\n- Respuestas cortas, conversacionales. UNA pregunta por mensaje. Máximo 4 líneas.\n- NUNCA mandes el prop_id al cliente (es interno). Sí mandá la URL si la tenés.\n- Si te preguntan algo que no sabés (legal, técnico), decí \"consulto con el equipo y te respondo\" y marca requiere_humano=true vía el Administrativo.\n- Para cobranza de alquiler, reclamo de inquilino o gestión de contrato → pasá directo al Administrativo, NO uses Matcher.\n\nOUTPUT: SIEMPRE devolvés la respuesta lista para mandar al cliente final (texto plano, sin marcadores, sin JSON, sin prop_id)."
+          }
+        },
+        "id": "n-11",
+        "name": "Vendedor CORE",
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3.1,
+        "position": [
+          2128,
+          176
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4o",
+            "cachedResultName": "gpt-4o"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0.4
+          }
+        },
+        "id": "n-12",
+        "name": "GPT Vendedor CORE",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          1504,
+          752
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "4mQx97qkHBIhXxu3",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sessionIdType": "customKey",
+          "sessionKey": "={{ $(\"Merge Caminos\").item.json.telefono }}",
+          "contextWindowLength": 20
+        },
+        "id": "n-13",
+        "name": "Memoria Conversacion",
+        "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+        "typeVersion": 1.3,
+        "position": [
+          1648,
+          720
+        ]
+      },
+      {
+        "parameters": {
+          "toolDescription": "CALIFICADOR. Score 0-100 + datos. Llamar apenas tengas contexto basico.",
+          "text": "={{ $fromAI(\"conversacion\", \"Resumen conversacion\", \"string\") }}",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "CALIFICADOR Bochile. Analiza conversacion, devolve JSON parser.\n\nSCORING:\n- 0-40 FRIO: pregunta vaga, \"solo mirando\".\n- 41-70 TIBIO: intencion clara, faltan datos.\n- 71-100 CALIENTE: presupuesto+urgencia+zona+tipo+forma_pago definidos.\n\nVALIDOS:\n- zona: Palihue|Centro|Universitario|Villa Mitre|Villa Belgrano|Patagonia|Tiro Federal|Villa Don Bosco|Almafuerte|Country\n- operacion: venta|alquiler|alquiler_temporario\n- tipo: casa|departamento|ph|lote|local|oficina\n- moneda: USD|ARS\n- urgencia: alta|media|baja\n- forma_pago: cash|credito|mixto|vende_otra\n- listo_para_visita: true SOLO si score>=70 Y zona Y presupuesto Y tipo\n\nFalta dato: null o \"\". NO inventes. Devolve EXCLUSIVAMENTE el JSON del parser."
+          }
+        },
+        "id": "n-14",
+        "name": "SubAgente Calificador",
+        "type": "@n8n/n8n-nodes-langchain.agentTool",
+        "typeVersion": 3,
+        "position": [
+          1856,
+          608
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4o-mini",
+            "cachedResultName": "gpt-4o-mini"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0.1
+          }
+        },
+        "id": "n-15",
+        "name": "GPT Calificador",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          1824,
+          880
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "4mQx97qkHBIhXxu3",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsonSchemaExample": "{\"score\":85,\"etapa\":\"Calificado IA\",\"operacion\":\"venta\",\"tipo\":\"casa\",\"zona\":\"Palihue\",\"ambientes\":4,\"presupuesto_min\":250000,\"presupuesto_max\":300000,\"moneda\":\"USD\",\"forma_pago\":\"mixto\",\"urgencia\":\"alta\",\"razon\":\"...\",\"listo_para_visita\":true,\"requiere_humano\":false}"
+        },
+        "id": "n-16",
+        "name": "Parser Calificador",
+        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+        "typeVersion": 1.3,
+        "position": [
+          2048,
+          880
+        ]
+      },
+      {
+        "parameters": {
+          "toolDescription": "MATCHER. Cruza criterios con catalogo. Hasta 3 props o SIN_STOCK. Llamar SOLO con operacion+tipo+zona+presupuesto.",
+          "text": "={{ $fromAI(\"criterios\", \"JSON criterios\", \"string\") }}",
+          "options": {
+            "systemMessage": "Sos el sub-agente MATCHER de Bochile. Tu UNICA tarea: buscar propiedades del catalogo real usando la herramienta `search_catalog`.\n\nREGLA OBLIGATORIA: cada vez que te llaman, DEBES invocar search_catalog UNA VEZ con TODOS los parametros llenos. Es OBLIGATORIO completar:\n- query: descripcion natural larga incluyendo TIPO + UBICACION + AMBIENTES + MONTO. Ej: \"casa familiar 3 ambientes en barrio Centro de Bahia Blanca hasta 200000 USD\"\n- operation: SIEMPRE \"sale\" para venta o \"rent\" para alquiler (NUNCA en español, NUNCA vacio si el lead lo dijo).\n- property_type: SIEMPRE casa, departamento, ph, duplex, lote, local, oficina, cochera, campo o galpon (uno solo, singular, minuscula). NUNCA vacio si el lead mencionó tipo.\n- price_max: numero (sin decimales). Si dijo 200k poner 200000. Si dijo 1.5M poner 1500000.\n- price_currency: \"USD\" o \"ARS\" (default USD para venta en Argentina).\n- bedrooms_min: numero de ambientes (3 si dijo \"3 ambientes\", \"tres\" o \"tres amb\").\n\nVos NO inventes datos. Recibis los criterios del CORE en formato JSON y los traduces al schema.\n\nCRITERIO -> SCHEMA:\n- \"venta\" / \"comprar\" -> operation: \"sale\"\n- \"alquiler\" / \"alquilar\" -> operation: \"rent\"\n- \"casa\" / \"chalet\" / \"PH\" -> property_type segun corresponda\n- \"depto\" / \"departamento\" / \"apartament\" -> property_type: \"departamento\"\n- \"lote\" / \"terreno\" -> property_type: \"lote\"\n- \"USD\" / \"dólares\" / \"u$s\" -> price_currency: \"USD\"\n- \"ARS\" / \"pesos\" -> price_currency: \"ARS\"\n- \"3 amb\" / \"3 ambientes\" / \"3 dorm\" -> bedrooms_min: 3\n\nDESPUES de llamar al tool:\n- Si recibis \"PROPIEDADES_ENCONTRADAS\" con score >= 0.5 en al menos una: devolve hasta 3 al CORE con formato:\n  PROPS_OK\n  1. prop_id | titulo | precio | zona/barrio | amb/banos/m2 | URL\n- Si recibis \"SIN_STOCK\" o todos los scores son < 0.5: devolve \"SIN_STOCK + <resumen criterios>\" para que el CORE active match_pendiente.\n- NUNCA inventes propiedades. NUNCA modifiques datos.\n\nNUNCA respondas SIN haber llamado a search_catalog primero. Si no podes llamar al tool, decile al CORE: \"ERROR_MATCHER tool no disponible\"."
+          }
+        },
+        "id": "n-17",
+        "name": "SubAgente Matcher",
+        "type": "@n8n/n8n-nodes-langchain.agentTool",
+        "typeVersion": 3,
+        "position": [
+          2176,
+          784
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4o-mini",
+            "cachedResultName": "gpt-4o-mini"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0.2
+          }
+        },
+        "id": "n-18",
+        "name": "GPT Matcher",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          2176,
+          1040
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "4mQx97qkHBIhXxu3",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "id": "n-19",
+        "name": "Buscar Catalogo RAG",
+        "type": "@n8n/n8n-nodes-langchain.toolCode",
+        "typeVersion": 1.2,
+        "position": [
+          2368,
+          608
+        ],
+        "parameters": {
+          "name": "search_catalog",
+          "description": "Busca propiedades del catalogo de Bochile por similaridad semantica + filtros estrictos. Devuelve hasta 5 propiedades reales. Si no hay match, devuelve SIN_STOCK.",
+          "language": "javaScript",
+          "jsCode": "// Tool: busca propiedades en el RAG.\n// Recibe SOLO un query natural en español del LLM y extrae los filtros con regex.\n\nconst RAG_URL = 'http://host.docker.internal:3003/api/search';\nconst _q = (typeof query !== 'undefined' && query) ? String(query).trim() : '';\nif (!_q) return 'ERROR: query es obligatorio';\n\nconst qLower = _q.toLowerCase();\n\n// === Parser natural de filtros desde el query ===\nconst filters = { with_image: true };\n\n// Operation\nif (/\\b(venta|vender|vende|comprar|compra)\\b/.test(qLower)) filters.operation = 'sale';\nelse if (/\\b(alquiler|alquilar|alquila|renta|rentar)\\b/.test(qLower)) filters.operation = 'rent';\n\n// Property type (orden importa: galpon antes que generic)\nif (/\\b(casa|chalet)\\b/.test(qLower)) filters.property_type = 'casa';\nelse if (/\\b(depto|departamento|apartament)\\b/.test(qLower)) filters.property_type = 'departamento';\nelse if (/\\bph\\b/.test(qLower)) filters.property_type = 'ph';\nelse if (/\\bd[uú]plex\\b/.test(qLower)) filters.property_type = 'duplex';\nelse if (/\\b(galp[oó]n|dep[oó]sito|industrial)\\b/.test(qLower)) filters.property_type = 'galpon';\nelse if (/\\b(lote|terreno|parcela|fracci[oó]n)\\b/.test(qLower)) filters.property_type = 'lote';\nelse if (/\\b(local|comercio|negocio)\\b/.test(qLower)) filters.property_type = 'local';\nelse if (/\\boficina\\b/.test(qLower)) filters.property_type = 'oficina';\nelse if (/\\b(cochera|garage)\\b/.test(qLower)) filters.property_type = 'cochera';\nelse if (/\\b(campo|estancia|chacra|hect[áa]reas?)\\b/.test(qLower)) filters.property_type = 'campo';\n\n// Precio: matches como \"200000 USD\", \"200 mil USD\", \"200k USD\", \"USD 200000\", \"1.5M\"\nconst priceRe1 = /(\\d+(?:[.,]\\d+)?)\\s*(?:mil|k)\\s*(usd|dolares|d[oó]lares|u\\$s)/i;\nconst priceRe2 = /(\\d+(?:[.,]\\d+)?)\\s*(?:millon|m)\\s*(usd|dolares|d[oó]lares)/i;\nconst priceRe3 = /(\\d{4,9})\\s*(usd|dolares|d[oó]lares|u\\$s)/i;\nconst priceReArs = /(\\d{4,12})\\s*(ars|pesos|peso\\b)/i;\nconst priceReUsdPrefix = /(usd|u\\$s|d[oó]lares?)\\s*\\$?\\s*(\\d{4,9})/i;\nlet m;\nif ((m = qLower.match(priceRe1))) {\n  filters.price_max = parseInt(m[1].replace(/[.,]/g, ''), 10) * 1000;\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceRe2))) {\n  filters.price_max = Math.round(parseFloat(m[1].replace(',', '.')) * 1000000);\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceRe3))) {\n  filters.price_max = parseInt(m[1], 10);\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceReUsdPrefix))) {\n  filters.price_max = parseInt(m[2], 10);\n  filters.price_currency = 'USD';\n} else if ((m = qLower.match(priceReArs))) {\n  filters.price_max = parseInt(m[1], 10);\n  filters.price_currency = 'ARS';\n}\n\n// Ambientes / dormitorios\nconst ambRe = /(\\d+)\\s*(amb|ambiente|dorm|dormitorio|cuarto)/i;\nif ((m = qLower.match(ambRe))) filters.bedrooms_min = parseInt(m[1], 10);\nelse if (/monoambient/i.test(qLower)) filters.bedrooms_min = 1;\n\nconst input = { query: _q, limit: 5, filters };\n\n// n8n toolCode no expone fetch; usamos this.helpers.httpRequest (API nativa de n8n)\nlet data;\ntry {\n  data = await this.helpers.httpRequest({\n    method: 'POST',\n    url: RAG_URL,\n    headers: { 'Content-Type': 'application/json' },\n    body: input,\n    json: true,\n  });\n} catch (err) {\n  return 'ERROR_RAG: ' + (err.message || String(err)).slice(0, 200);\n}\n\nif (!data || !data.items || data.items.length === 0) {\n  return 'SIN_STOCK | criterios: ' + JSON.stringify(input.filters);\n}\n\n// Debug: incluir los filtros aplicados para que el LLM sepa qué busco\nconst debug = 'FILTERS_USED: ' + JSON.stringify(input.filters) + '\\n';\n\nconst lines = data.items.map(function(p, i) {\n  const precio = p.price ? p.price + ' ' + (p.price_currency || '') : (p.price_text || 'Consultar');\n  const ubic = (p.barrio && p.barrio !== 'unknown') ? p.barrio : (p.zona || 'Bahia Blanca');\n  return (i+1) + '. [' + p.prop_id + '] ' + p.title\n    + ' | tipo: ' + (p.property_type || '?')\n    + ' | zona: ' + ubic\n    + ' | ' + (p.bedrooms ? p.bedrooms + ' amb' : 'amb sin dato')\n    + ' | ' + (p.area_m2 ? p.area_m2 + ' m2' : 'm2 sin dato')\n    + ' | precio: ' + precio\n    + ' | URL: ' + p.url\n    + ' | score: ' + p.score;\n});\n\nreturn debug + 'PROPIEDADES_ENCONTRADAS (' + data.items.length + '):\\n' + lines.join('\\n');\n",
+          "specifyInputSchema": true,
+          "inputSchema": "{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Descripcion completa en español INCLUYENDO: tipo (casa/depto/lote/...), operacion (venta/alquiler), zona/barrio si lo dijo, ambientes (\\\"3 ambientes\\\"), presupuesto (\\\"hasta 200000 USD\\\" o \\\"hasta 200 mil USD\\\"). Ej: \\\"casa familiar 3 ambientes en Palihue venta hasta 300000 USD con quincho\\\". El sistema parsea estos datos del texto para aplicar filtros estrictos.\"}},\"required\":[\"query\"]}"
+        }
+      },
+      {
+        "parameters": {
+          "toolDescription": "ADMIN. Escribe CRM, notifica vendedor. AGENDAR / GUARDAR match / ACTUALIZAR lead.",
+          "text": "={{ $fromAI(\"orden\", \"Que hacer + datos\", \"string\") }}",
+          "options": {
+            "systemMessage": "ADMIN Bochile. Brazo operativo de Camila Pomerich. Unico que escribe CRM y manda brief a Camila al WhatsApp.\n\nA) AGENDAR (cuando Camila confirma visita con cliente):\n1. 'Leer Vendedores Activos' -> SIEMPRE elegir a \"Camila Pomerich\" (vendedor_id=E-1B). Si la lista la trae con otro nombre, igual usa E-1B Camila Pomerich.\n2. 'Crear Visita en CRM' con vendedor_id='E-1B' vendedor_nombre='Camila Pomerich'.\n3. 'Avisar Vendedor por WhatsApp Twilio' con mensaje EXACTO formato (es el BRIEF interno para que Camila tenga el lead a mano):\n   \"BRIEF VISITA. Cliente: [NOMBRE] (tel +54...). Dia: [DD/MM] [HH:MM]. Direccion: [DIRECCION]. Prop: [P-XXX]. Score: XX. Presupuesto: USD/ARS XXX. Zona: XXX. Tour: <url>. Notas: ...\"\n   SIEMPRE incluir tel cliente +54XXXXXXXXXXX para que pueda contactarlo si hace falta.\n4. 'Actualizar Lead CRM' etapa='Visita agendada' vendedor_asignado='E-1B'.\n\nB) GUARDAR MATCH PENDIENTE: 'Guardar Match Pendiente' + 'Actualizar Lead CRM' etapa='En espera de stock'.\nC) ACTUALIZAR LEAD: 'Actualizar Lead CRM'.\n\nREGLAS:\n- NUNCA agendes sin fecha+hora confirmadas.\n- WhatsApp: telefonos con prefijo +54 (sin 'whatsapp:').\n- requiere_humano=true -> update CRM con nota, no avisar.\n\nDevolve resumen plano."
+          }
+        },
+        "id": "n-20",
+        "name": "SubAgente Administrativo",
+        "type": "@n8n/n8n-nodes-langchain.agentTool",
+        "typeVersion": 3,
+        "position": [
+          2576,
+          288
+        ]
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4o-mini",
+            "cachedResultName": "gpt-4o-mini"
+          },
+          "builtInTools": {},
+          "options": {
+            "temperature": 0.1
+          }
+        },
+        "id": "n-21",
+        "name": "GPT Admin",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          2448,
+          400
+        ],
+        "credentials": {
+          "openAiApi": {
+            "id": "4mQx97qkHBIhXxu3",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "VENDEDORES. Devuelve todos los empleados activos.",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "empleados"
+          },
+          "options": {}
+        },
+        "id": "n-22",
+        "name": "Leer Vendedores Activos",
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          2544,
+          736
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "CREAR VISITA. Insertar nueva visita agendada en la tabla visitas.",
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "visitas"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "visita_id": "={{ \"V-\" + $now.toMillis() }}",
+              "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', 'L-XXX', 'string') }}",
+              "prop_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('prop_id', 'P-XXX', 'string') }}",
+              "vendedor_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('vendedor_id', 'E-X', 'string') }}",
+              "vendedor_nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('vendedor_nombre', 'nombre', 'string') }}",
+              "cliente_nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('cliente_nombre', 'nombre', 'string') }}",
+              "direccion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('direccion', 'dir', 'string') }}",
+              "fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fecha', 'YYYY-MM-DD', 'string') }}",
+              "hora": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora', 'HH:MM', 'string') }}",
+              "estado": "agendada",
+              "confirmada_cliente": "={{ true }}",
+              "notificada_vendedor": "={{ true }}",
+              "recordatorio_enviado": "={{ false }}",
+              "observaciones": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('observaciones', 'notas', 'string') }}",
+              "creada_en": "={{ $now.toISO() }}"
+            },
+            "matchingColumns": [],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "n-23",
+        "name": "Crear Visita en CRM",
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          2704,
+          848
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "GUARDAR MATCH. Insertar match pendiente cuando no hay stock para el lead.",
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "matches_pendientes"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "match_id": "={{ \"MP-\" + $now.toMillis() }}",
+              "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', 'L-XXX', 'string') }}",
+              "lead_nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_nombre', 'nombre', 'string') }}",
+              "lead_telefono": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_telefono', '+54...', 'string') }}",
+              "criterios_json": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('criterios_json', 'JSON criterios', 'string') }}",
+              "creado_en": "={{ $now.toISO() }}",
+              "estado": "activo",
+              "props_ofrecidas": ""
+            },
+            "matchingColumns": [],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "n-24",
+        "name": "Guardar Match Pendiente",
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          2896,
+          960
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "descriptionType": "manual",
+          "toolDescription": "ACTUALIZAR LEAD. Actualizar campos (etapa, score, vendedor_asignado, etc) del lead actual.",
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "leads"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "lead_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lead_id', 'L-XXX', 'string') }}",
+              "etapa": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('etapa', 'Nuevo/Calificado IA/Visita agendada/En espera de stock/Negociación', 'string') }}",
+              "score": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('score', '0-100', 'number') }}",
+              "vendedor_asignado": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('vendedor_asignado', 'E-X', 'string') }}",
+              "operacion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('operacion', 'venta/alquiler', 'string') }}",
+              "tipo_propiedad": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_propiedad', 'casa/departamento/...', 'string') }}",
+              "zona_pref": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('zona_pref', 'Palihue/...', 'string') }}",
+              "ambientes": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ambientes', '0-10', 'number') }}",
+              "presupuesto_min": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('presupuesto_min', '0', 'number') }}",
+              "presupuesto_max": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('presupuesto_max', '0', 'number') }}",
+              "moneda": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('moneda', 'USD/ARS', 'string') }}",
+              "forma_pago": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('forma_pago', 'cash/credito/mixto/vende_otra', 'string') }}",
+              "urgencia": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('urgencia', 'alta/media/baja', 'string') }}",
+              "ultima_intencion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('ultima_intencion', 'resumen', 'string') }}",
+              "notas": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('notas', 'notas', 'string') }}",
+              "actualizado_en": "={{ $now.toISO() }}"
+            },
+            "matchingColumns": [
+              "lead_id"
+            ],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "n-25",
+        "name": "Actualizar Lead CRM",
+        "type": "n8n-nodes-base.googleSheetsTool",
+        "typeVersion": 4.7,
+        "position": [
+          3072,
+          1056
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "from": "=+14155238886",
+          "to": "=+5492915512515",
+          "toWhatsapp": true,
+          "message": "={{ $fromAI(\"mensaje\", \"Mensaje completo formato VISITA AGENDADA PARA LAS HH:MM CON [CLIENTE] EN [DIRECCION]\", \"string\") }}",
+          "options": {}
+        },
+        "id": "n-26",
+        "name": "Avisar Vendedor por WhatsApp Twilio",
+        "type": "n8n-nodes-base.twilioTool",
+        "typeVersion": 1,
+        "position": [
+          2864,
+          432
+        ],
+        "credentials": {
+          "twilioApi": {
+            "id": "HR5fS1GSOu06duuX",
+            "name": "Twilio account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "from": "=+14155238886",
+          "to": "+5492915512515",
+          "toWhatsapp": true,
+          "message": "={{ $(\"Vendedor CORE\").item.json.output }}",
+          "options": {}
+        },
+        "id": "n-29",
+        "name": "Responder al Cliente Twilio",
+        "type": "n8n-nodes-base.twilio",
+        "typeVersion": 1,
+        "position": [
+          3072,
+          128
+        ],
+        "credentials": {
+          "twilioApi": {
+            "id": "HR5fS1GSOu06duuX",
+            "name": "Twilio account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/xml"
+                }
+              ]
+            }
+          }
+        },
+        "id": "n-30",
+        "name": "OK al Webhook",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          3312,
+          128
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "leads"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "lead_id": "={{ $json[\"lead_id\"] }}",
+              "nombre": "={{ $json[\"nombre\"] }}",
+              "telefono": "={{ $json[\"telefono\"] }}",
+              "email": "={{ $json[\"email\"] }}",
+              "canal": "={{ $json[\"canal\"] }}",
+              "operacion": "={{ $json[\"operacion\"] }}",
+              "tipo_propiedad": "={{ $json[\"tipo_propiedad\"] }}",
+              "zona_pref": "={{ $json[\"zona_pref\"] }}",
+              "ambientes": "={{ $json[\"ambientes\"] }}",
+              "presupuesto_min": "={{ $json[\"presupuesto_min\"] }}",
+              "presupuesto_max": "={{ $json[\"presupuesto_max\"] }}",
+              "moneda": "={{ $json[\"moneda\"] }}",
+              "forma_pago": "={{ $json[\"forma_pago\"] }}",
+              "urgencia": "={{ $json[\"urgencia\"] }}",
+              "score": "={{ $json[\"score\"] }}",
+              "etapa": "={{ $json[\"etapa\"] }}",
+              "vendedor_asignado": "={{ $json[\"vendedor_asignado\"] }}",
+              "ultima_intencion": "={{ $json[\"ultima_intencion\"] }}",
+              "notas": "={{ $json[\"notas\"] }}",
+              "creado_en": "={{ $json[\"creado_en\"] }}",
+              "actualizado_en": "={{ $json[\"actualizado_en\"] }}"
+            },
+            "matchingColumns": [
+              "lead_id"
+            ],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "sheet-sheet-sync-lead",
+        "name": "Upsert Lead CRM",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1568,
+          224
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "conversaciones"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "msg_id": "={{ $('Merge Caminos').item.json.msg_id }}",
+              "lead_id": "={{ $('Merge Caminos').item.json.lead_id }}",
+              "telefono": "={{ $('Merge Caminos').item.json.telefono }}",
+              "canal": "={{ $('Merge Caminos').item.json.canal }}",
+              "direccion": "in",
+              "mensaje": "={{ $('Merge Caminos').item.json.mensaje }}",
+              "intencion_detectada": "={{ $('Merge Caminos').item.json.msg_type }}",
+              "agente_que_respondio": "pending",
+              "requiere_humano": "={{ false }}",
+              "timestamp": "={{ $('Merge Caminos').item.json.timestamp_iso }}"
+            },
+            "matchingColumns": [
+              "msg_id"
+            ],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "sheet-sheet-sync-msg-entrante",
+        "name": "Log Mensaje Entrante",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1776,
+          32
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "conversaciones"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "msg_id": "={{ \"M-\" + $now.toMillis() + \"-out\" }}",
+              "lead_id": "={{ $('Merge Caminos').item.json.lead_id }}",
+              "telefono": "={{ $('Merge Caminos').item.json.telefono }}",
+              "canal": "whatsapp_twilio",
+              "direccion": "out",
+              "mensaje": "={{ $('Vendedor CORE').item.json.output }}",
+              "intencion_detectada": "response",
+              "agente_que_respondio": "Vendedor CORE",
+              "requiere_humano": "={{ false }}",
+              "timestamp": "={{ $now.toISO() }}"
+            },
+            "matchingColumns": [
+              "msg_id"
+            ],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "sheet-sheet-sync-msg-saliente",
+        "name": "Log Mensaje Saliente",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2576,
+          128
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "acciones_ia"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "accion_id": "={{ \"A-\" + $now.toMillis() }}",
+              "tipo": "conversacion_atendida",
+              "agente": "Vendedor CORE",
+              "lead_id": "={{ $('Merge Caminos').item.json.lead_id }}",
+              "resumen": "={{ 'Mensaje ' + ($('Merge Caminos').item.json.msg_type || 'text') + ' atendido via Twilio' }}",
+              "detalle": "={{ ($('Vendedor CORE').item.json.output || '').substring(0, 200) }}",
+              "resultado": "ok",
+              "timestamp": "={{ $now.toISO() }}",
+              "tiempo_ahorrado_min": 4
+            },
+            "matchingColumns": [
+              "accion_id"
+            ],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": true
+          },
+          "options": {}
+        },
+        "id": "sheet-sheet-sync-accion",
+        "name": "Registrar Accion IA",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2816,
+          128
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "leads"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "lead_id",
+                "lookupValue": "={{ $json.lead_id }}"
+              }
+            ]
+          },
+          "options": {
+            "returnFirstMatch": true
+          }
+        },
+        "id": "gs-buscar-lead",
+        "name": "Buscar Lead Existente",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1536,
+          416
+        ],
+        "retryOnFail": true,
+        "waitBetweenTries": 2000,
+        "maxTries": 3,
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "9NvEcPkNdH6i0j3L",
+            "name": "Google Sheets account"
+          }
+        },
+        "onError": "continueRegularOutput"
+      }
+    ],
+    "connections": {
+      "Webhook Twilio": {
+        "main": [
+          [
+            {
+              "node": "Parsear Mensaje",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parsear Mensaje": {
+        "main": [
+          [
+            {
+              "node": "Switch Tipo Mensaje",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch Tipo Mensaje": {
+        "main": [
+          [
+            {
+              "node": "Texto - Set Mensaje",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Audio - Download Twilio",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Imagen - Download Twilio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audio - Download Twilio": {
+        "main": [
+          [
+            {
+              "node": "Audio - Whisper",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audio - Whisper": {
+        "main": [
+          [
+            {
+              "node": "Audio - Set Mensaje",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audio - Set Mensaje": {
+        "main": [
+          [
+            {
+              "node": "Merge Caminos",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Imagen - Download Twilio": {
+        "main": [
+          [
+            {
+              "node": "Imagen - Vision",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Imagen - Vision": {
+        "main": [
+          [
+            {
+              "node": "Imagen - Set Mensaje",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Imagen - Set Mensaje": {
+        "main": [
+          [
+            {
+              "node": "Merge Caminos",
+              "type": "main",
+              "index": 2
+            }
+          ]
+        ]
+      },
+      "Texto - Set Mensaje": {
+        "main": [
+          [
+            {
+              "node": "Merge Caminos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge Caminos": {
+        "main": [
+          [
+            {
+              "node": "Buscar Lead Existente",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Vendedor CORE": {
+        "main": [
+          [
+            {
+              "node": "Log Mensaje Saliente",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT Vendedor CORE": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Memoria Conversacion": {
+        "ai_memory": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_memory",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SubAgente Calificador": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT Calificador": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "SubAgente Calificador",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parser Calificador": {
+        "ai_outputParser": [
+          [
+            {
+              "node": "SubAgente Calificador",
+              "type": "ai_outputParser",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SubAgente Matcher": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT Matcher": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "SubAgente Matcher",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "SubAgente Administrativo": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT Admin": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "SubAgente Administrativo",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Leer Vendedores Activos": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear Visita en CRM": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Guardar Match Pendiente": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Actualizar Lead CRM": {
+        "ai_tool": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Avisar Vendedor por WhatsApp Twilio": {
+        "ai_tool": [
+          [
+            {
+              "node": "SubAgente Administrativo",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Responder al Cliente Twilio": {
+        "main": [
+          [
+            {
+              "node": "OK al Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Upsert Lead CRM": {
+        "main": [
+          [
+            {
+              "node": "Log Mensaje Entrante",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log Mensaje Entrante": {
+        "main": [
+          [
+            {
+              "node": "Vendedor CORE",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log Mensaje Saliente": {
+        "main": [
+          [
+            {
+              "node": "Registrar Accion IA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Registrar Accion IA": {
+        "main": [
+          [
+            {
+              "node": "Responder al Cliente Twilio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Buscar Lead Existente": {
+        "main": [
+          [
+            {
+              "node": "Upsert Lead CRM",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Buscar Catalogo RAG": {
+        "ai_tool": [
+          [
+            {
+              "node": "SubAgente Matcher",
+              "type": "ai_tool",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Juan Ignacio Lopez",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-05-16T19:50:33.711Z",
+        "id": 449,
+        "workflowId": "aUMQyupnGJ5IWm5e",
+        "versionId": "2a562b2b-9a0d-4ca6-81b5-2ba5fa8e3067",
+        "event": "activated",
+        "userId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      },
+      {
+        "createdAt": "2026-05-16T19:50:33.650Z",
+        "id": 448,
+        "workflowId": "aUMQyupnGJ5IWm5e",
+        "versionId": "2a562b2b-9a0d-4ca6-81b5-2ba5fa8e3067",
+        "event": "deactivated",
+        "userId": "7baeb3a3-9444-44a1-8757-2d2bf60106a5"
+      }
+    ]
+  }
+}

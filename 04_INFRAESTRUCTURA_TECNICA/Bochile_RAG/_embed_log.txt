@@ -1,0 +1,16 @@
+
+> bochile-rag@1.0.0 embed
+> tsx src/embed.ts --reset
+
+[embed] modo: RESET 
+Client version 1.18.0 is incompatible with server version 1.16.2. Major versions should match and minor version difference must not exceed 1. Set checkCompatibility=false to skip version check.
+[qdrant] coleccion "bochile_properties" eliminada
+[qdrant] creando coleccion "bochile_properties"...
+[qdrant] coleccion lista con 11 indices de payload
+[embed] cargando catalogo enriquecido desde C:\Users\46094\Desktop\WESEKA_IA_STRUCTURE\01_CLIENTES\Bochile\04_INFRAESTRUCTURA_TECNICA\Bochile_Scraper\output\properties-enriched.json
+[embed] 239 propiedades en el JSON
+[embed] 3 batches de hasta 100
+...
+[embed] terminado: 239 propiedades embedeadas
+[embed] tokens estimados: 52373 (~USD 0.0010)
+[embed] coleccion total: 239 puntos

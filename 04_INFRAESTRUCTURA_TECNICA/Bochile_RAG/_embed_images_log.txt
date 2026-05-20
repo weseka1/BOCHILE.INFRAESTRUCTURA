@@ -1,0 +1,29 @@
+[reset] deleting collection bochile_property_images
+Client version 1.18.0 is incompatible with server version 1.16.2. Major versions should match and minor version difference must not exceed 1. Set checkCompatibility=false to skip version check.
+[create] collection bochile_property_images (1536 dims)
+[embed-images] 239 propiedades a procesar | 3 imgs c/u | modelo gpt-4o-mini
+  ... 10/239 props embeded
+  ... 20/239 props embeded
+  ... 30/239 props embeded
+  ... 40/239 props embeded
+  ... 50/239 props embeded
+  ... 60/239 props embeded
+  ... 70/239 props embeded
+  ... 80/239 props embeded
+  ... 90/239 props embeded
+  ... 100/239 props embeded
+  ... 110/239 props embeded
+  ... 120/239 props embeded
+  ... 130/239 props embeded
+  ... 140/239 props embeded
+  ... 150/239 props embeded
+  ... 160/239 props embeded
+  ... 170/239 props embeded
+  ... 180/239 props embeded
+  ... 190/239 props embeded
+  ... 200/239 props embeded
+  ... 210/239 props embeded
+  ... 220/239 props embeded
+  ... 230/239 props embeded
+[upsert] subiendo 235 puntos a Qdrant...
+[done] ok=235 skip=4 err=0 | colleccion: bochile_property_images

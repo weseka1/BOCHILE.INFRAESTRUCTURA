@@ -1,0 +1,6 @@
+msg_id,lead_id,telefono,canal,direccion,mensaje,intencion_detectada,agente_que_respondio,requiere_humano,timestamp
+M-1746089820001,L-2914423398,+5492914423398,whatsapp,in,Hola! Vi un aviso de una casa en Palihue esta disponible?,consulta,pending,false,2026-04-30T10:42:00Z
+M-1746089820002,L-2914423398,+5492914423398,whatsapp,out,Hola Lucas! Soy Camila de Inmobiliaria Bochile. Si tengo varias casas en Palihue. Es para vivir o como inversion?,saludo,Vendedor CORE,false,2026-04-30T10:42:30Z
+M-1746089820003,L-2914423398,+5492914423398,whatsapp,in,Para vivir, somos pareja con 2 nenes,calificacion,pending,false,2026-04-30T10:43:00Z
+M-1746089820004,L-2914423398,+5492914423398,whatsapp,out,"Perfecto! Cual es el presupuesto en el que se mueven y como lo financian?",calificacion,Vendedor CORE,false,2026-04-30T10:43:20Z
+M-1746089820005,L-2914423398,+5492914423398,whatsapp,in,Hasta 300k USD. Vendo el dpto del Centro y el resto credito,calificacion,pending,false,2026-04-30T10:44:00Z
