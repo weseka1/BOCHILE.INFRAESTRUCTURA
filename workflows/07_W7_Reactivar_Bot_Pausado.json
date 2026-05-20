@@ -1,0 +1,158 @@
+{
+  "name": "W7 - Reactivar Bot Pausado",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "name": "Cron cada hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "dcd73303-0662-4c09-bfe0-94be9cc9b1b6"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "options": {}
+      },
+      "name": "Leer Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        460,
+        300
+      ],
+      "id": "1f8083da-405b-4d2d-9b98-cfbd569e6cf8",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtra leads con bot_pausado_hasta < ahora y devuelve uno por uno para update\nconst rows = $input.all().map(i => i.json);\nconst ahora = new Date();\nconst expirados = rows.filter(r => {\n  const t = r.bot_pausado_hasta;\n  if (!t) return false;\n  const d = new Date(t);\n  return !isNaN(d.getTime()) && d <= ahora;\n});\nconsole.log(\"[w7] expirados:\", expirados.length);\nreturn expirados.map(r => ({ json: { lead_id: r.lead_id, telefono: r.telefono } }));"
+      },
+      "name": "Filtrar Expirados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "id": "dec69c58-bb43-4451-a992-a95f9b281437",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1YChe5KTSiZzeqmdVOaU29k1LfJKY3JXXDDEQiwgeTy4"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "bot_pausado_hasta": "",
+            "actualizado_en": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "name": "Limpiar Pausa",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        900,
+        300
+      ],
+      "id": "7a8243d5-9b8d-4fa3-a28c-41f45da68d4f",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9NvEcPkNdH6i0j3L",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron cada hora": {
+      "main": [
+        [
+          {
+            "node": "Leer Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Leads": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Expirados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Expirados": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Pausa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Cron cada hora": {
+      "recurrenceRules": []
+    }
+  }
+}

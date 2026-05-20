@@ -50,6 +50,9 @@ venv/
 env/
 
 # ---- Datos pesados / outputs scraper ----
+apps/scraper/output/images/
+apps/scraper/output/screenshots/
+apps/rag/output/
 04_INFRAESTRUCTURA_TECNICA/Bochile_Scraper/output/images/
 04_INFRAESTRUCTURA_TECNICA/Bochile_Scraper/output/screenshots/
 04_INFRAESTRUCTURA_TECNICA/Bochile_RAG/output/
@@ -65,8 +68,11 @@ env/
 !**/README*.png
 
 # ---- Backups con timestamp (solo dejamos LATEST) ----
+scripts/_backups/W1_2026-*.json
+!scripts/_backups/W1_LATEST.json
 04_INFRAESTRUCTURA_TECNICA/Sistema_n8n/backups/W1_2026-*.json
 !04_INFRAESTRUCTURA_TECNICA/Sistema_n8n/backups/W1_LATEST.json
+_historico/04_INFRAESTRUCTURA_TECNICA_legacy/Sistema_n8n/backups/W1_2026-*.json
 
 # ---- Binarios + logs ----
 cloudflared.exe

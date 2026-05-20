@@ -33,6 +33,7 @@ const WORKFLOWS = [
   { id: 'wrFto5o6Zk02sZty', filename: 'W4_Cobranza_Alquileres_v_render.json' },
   { id: 'lf3gZgVCD3SdPri4', filename: 'W5_Backup_Mensual_v_render.json' },
   { id: '6Dk2umeJDNViv9yb', filename: 'SUB_Bochile_RAG_Search_v_render.json' },
+  { id: '68STmQW3hQg815a1', filename: 'W7_Reactivar_Bot_Pausado_v_render.json' },
 ];
 
 function req(opts) {

@@ -32,7 +32,7 @@ const DRY_RUN = process.argv.includes('--dry-run');
 
 async function main() {
   const auth = new google.auth.GoogleAuth({
-    keyFile: config.googleCredentialsPath,
+    ...config.googleCreds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
   const client = await auth.getClient();

@@ -1,25 +1,37 @@
-# Render Blueprint - Bochile Infraestructura
-# Deploy: New Blueprint Instance en Render Dashboard, conectar este repo.
+# Render Blueprint - Bochile WESEKA.IA
+# ----------------------------------------
+# Deploy con un clic: Render Dashboard -> New -> Blueprint -> conectar este repo.
 #
-# Configura ANTES en Render dashboard los secrets:
-# - OPENAI_API_KEY
-# - QDRANT_URL, QDRANT_API_KEY (de Qdrant Cloud)
-# - GOOGLE_SHEETS_CREDS_JSON (contenido del service-account.json en una sola linea)
-# - SHEET_ID
-# - RESPONDIO_WEBHOOK_SECRET
-# - N8N_ENCRYPTION_KEY (generar uno random unico)
-# - N8N_BASIC_AUTH_USER, N8N_BASIC_AUTH_PASSWORD
+# Antes de hacer Deploy, configura ESTOS secrets en el dashboard de Render
+# (Settings -> Environment de cada servicio):
+#
+#   bochile-rag:
+#     OPENAI_API_KEY                ← platform.openai.com
+#     QDRANT_URL                    ← cloud.qdrant.io (cluster URL)
+#     QDRANT_API_KEY                ← cloud.qdrant.io (API key)
+#     RESPONDIO_WEBHOOK_SECRET      ← respond.io -> Settings -> Webhooks -> Clave firma
+#
+#   bochile-dashboard-api:
+#     SHEET_ID                      ← URL del Google Sheet
+#     GOOGLE_SHEETS_CREDS_JSON      ← contenido completo del service-account.json en 1 linea
+#
+#   bochile-n8n:
+#     N8N_BASIC_AUTH_USER           ← usuario admin (vos eligen)
+#     N8N_BASIC_AUTH_PASSWORD       ← password admin (random largo)
+#     N8N_ENCRYPTION_KEY            ← random largo, CRITICO (si cambia, perdes credenciales)
+#
+# ----------------------------------------
 
 services:
   # ============================================
-  # RAG server (text + CLIP visual hybrid)
+  # 1. RAG SERVER (CLIP visual + text search)
   # ============================================
   - type: web
     name: bochile-rag
     runtime: node
     plan: starter  # USD 7/mes
-    rootDir: 04_INFRAESTRUCTURA_TECNICA/Bochile_RAG
-    buildCommand: npm install && npm run build
+    rootDir: apps/rag
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -45,13 +57,13 @@ services:
     healthCheckPath: /api/health
 
   # ============================================
-  # Dashboard Backend (Express + googleapis)
+  # 2. DASHBOARD API (lee Sheet via service account)
   # ============================================
   - type: web
     name: bochile-dashboard-api
     runtime: node
-    plan: starter
-    rootDir: 05_DASHBOARD_WEB/backend
+    plan: starter  # USD 7/mes
+    rootDir: apps/dashboard-api
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -60,24 +72,26 @@ services:
       - key: SHEET_ID
         sync: false
       - key: GOOGLE_SHEETS_CREDS_JSON
-        sync: false  # JSON entero del service account como string
+        sync: false
       - key: PORT
         value: '3002'
-      - key: CORS_ORIGIN
+      - key: ALLOW_ORIGIN
         fromService:
           name: bochile-dashboard-ui
           type: web
           property: hostport
+      - key: CACHE_TTL_SECONDS
+        value: '30'
     healthCheckPath: /api/health
 
   # ============================================
-  # Dashboard Frontend (Vite static site)
+  # 3. DASHBOARD UI (Vite static site)
   # ============================================
   - type: web
     name: bochile-dashboard-ui
     runtime: static
-    plan: starter  # USD 0 para static
-    rootDir: 05_DASHBOARD_WEB/frontend
+    plan: starter  # USD 0 (static)
+    rootDir: apps/dashboard-ui
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
@@ -92,12 +106,12 @@ services:
         destination: /index.html
 
   # ============================================
-  # n8n self-hosted (Docker)
+  # 4. N8N (workflow engine)
   # ============================================
   - type: web
     name: bochile-n8n
     runtime: docker
-    plan: standard  # USD 25/mes (necesario para workflows con LLM)
+    plan: standard  # USD 25/mes (necesario para workflows LLM pesados)
     dockerfilePath: ./n8n.Dockerfile
     envVars:
       - key: N8N_BASIC_AUTH_ACTIVE
@@ -124,7 +138,9 @@ services:
         value: America/Argentina/Buenos_Aires
       - key: N8N_PORT
         value: '5678'
+      - key: NODE_ENV
+        value: production
     disk:
       name: n8n-data
       mountPath: /home/node/.n8n
-      sizeGB: 1
+      sizeGB: 2  # workflows + sqlite + execution data

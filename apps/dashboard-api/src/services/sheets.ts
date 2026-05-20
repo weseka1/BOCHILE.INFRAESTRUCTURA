@@ -13,7 +13,7 @@ let sheetsClient: sheets_v4.Sheets | null = null;
 async function getClient(): Promise<sheets_v4.Sheets> {
   if (sheetsClient) return sheetsClient;
   const auth = new google.auth.GoogleAuth({
-    keyFile: config.googleCredentialsPath,
+    ...config.googleCreds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   });
   const client = await auth.getClient();
