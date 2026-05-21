@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -11,12 +12,16 @@ import { AccionesPage } from '@/pages/AccionesPage';
 import { EmpleadosPage } from '@/pages/EmpleadosPage';
 
 export default function App() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const location = useLocation();
+  useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
+
   return (
     <div className="flex min-h-screen bg-surface-0 text-text">
-      <Sidebar />
+      <Sidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
       <main className="flex-1 min-w-0">
-        <TopBar />
-        <div className="p-6">
+        <TopBar onMenu={() => setDrawerOpen(true)} />
+        <div className="p-3 sm:p-6">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/leads" element={<LeadsPage />} />

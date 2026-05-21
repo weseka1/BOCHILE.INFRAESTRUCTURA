@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const links = [
@@ -13,54 +13,89 @@ const links = [
   { to: '/empleados', label: 'Empleados', icon: UserCog },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ open, onClose }: SidebarProps) {
   return (
-    <aside className="w-60 shrink-0 bg-surface-1 border-r border-border h-screen sticky top-0 flex flex-col">
-      {/* Brand header con paleta Bochile (navy + champagne) */}
-      <div className="px-5 py-5 border-b border-border bg-gradient-to-br from-surface-1 to-surface-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shadow-gold">
-            <span className="font-display text-xl font-bold text-accent-fg">B</span>
-          </div>
-          <div>
-            <div className="font-display text-xl font-semibold text-text leading-tight">
-              Bochile
+    <>
+      {/* Backdrop (solo mobile cuando esta abierto) */}
+      <div
+        className={cn(
+          'fixed inset-0 bg-black/60 z-30 md:hidden transition-opacity',
+          open ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={cn(
+          'bg-surface-1 border-r border-border flex flex-col',
+          // Desktop: sidebar fijo de 240px siempre visible
+          'md:w-60 md:shrink-0 md:h-screen md:sticky md:top-0 md:translate-x-0',
+          // Mobile: drawer fixed 80% ancho que entra desde la izquierda
+          'fixed top-0 left-0 h-full w-72 max-w-[85vw] z-40 transition-transform',
+          open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+        )}
+      >
+        {/* Brand header */}
+        <div className="px-5 py-5 border-b border-border bg-gradient-to-br from-surface-1 to-surface-2 flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shadow-gold">
+              <span className="font-display text-xl font-bold text-accent-fg">B</span>
             </div>
-            <div className="text-[10px] text-accent uppercase tracking-widest font-medium">
-              Inmobiliaria · 1970
+            <div>
+              <div className="font-display text-xl font-semibold text-text leading-tight">
+                Bochile
+              </div>
+              <div className="text-[10px] text-accent uppercase tracking-widest font-medium">
+                Inmobiliaria · 1970
+              </div>
             </div>
           </div>
+          {/* Boton X cerrar (solo mobile) */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 text-text-muted hover:text-text rounded-lg hover:bg-surface-2 transition-colors"
+            aria-label="Cerrar menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="text-xs text-text-muted mt-2 italic">
+        <div className="px-5 pb-3 text-xs text-text-muted italic border-b border-border">
           Sistema Operativo IA
         </div>
-      </div>
 
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {links.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
-                isActive
-                  ? 'bg-accent text-accent-fg font-semibold shadow-gold'
-                  : 'text-text-muted hover:text-text hover:bg-surface-2',
-              )
-            }
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
+        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+          {links.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              onClick={onClose}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all',
+                  isActive
+                    ? 'bg-accent text-accent-fg font-semibold shadow-gold'
+                    : 'text-text-muted hover:text-text hover:bg-surface-2',
+                )
+              }
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
 
-      <div className="px-4 py-3 border-t border-border text-[10px] text-text-subtle text-center">
-        <div className="text-accent font-medium tracking-wider mb-1">WESEKA · IA</div>
-        <div>Powered by Camila Pomerich</div>
-      </div>
-    </aside>
+        <div className="px-4 py-3 border-t border-border text-[10px] text-text-subtle text-center">
+          <div className="text-accent font-medium tracking-wider mb-1">WESEKA · IA</div>
+          <div>Powered by Camila Pomerich</div>
+        </div>
+      </aside>
+    </>
   );
 }
