@@ -206,6 +206,8 @@ export function ConversacionesPage() {
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.02)_0%,_transparent_70%)]">
                 {selected.mensajes.map((m) => {
                   const isIn = m.direccion === 'in';
+                  const tipo = (m as any).msg_type || 'text';
+                  const mediaUrl = (m as any).media_url || '';
                   return (
                     <div key={m.msg_id} className={cn('flex', isIn ? 'justify-start' : 'justify-end')}>
                       <div className={cn(
@@ -214,15 +216,65 @@ export function ConversacionesPage() {
                           ? 'bg-surface-2 text-text rounded-bl-md'
                           : 'bg-emerald-600/80 text-white rounded-br-md',
                       )}>
-                        <div className="flex items-center gap-1.5 text-[10px] opacity-70 mb-0.5">
+                        <div className="flex items-center gap-1.5 text-[10px] opacity-70 mb-1">
                           {isIn ? <UserIcon className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                           <span>{isIn ? 'Cliente' : 'Cami'}</span>
+                          {tipo !== 'text' && (
+                            <>
+                              <span>·</span>
+                              <span className="uppercase font-mono">{tipo}</span>
+                            </>
+                          )}
                           <span>·</span>
                           <span>{formatHoraCorta(m.timestamp)}</span>
                         </div>
-                        <div className="text-sm whitespace-pre-wrap break-words">
-                          {m.mensaje || <em className="opacity-60">(media)</em>}
-                        </div>
+
+                        {/* Audio */}
+                        {tipo === 'audio' && mediaUrl && (
+                          <audio
+                            controls
+                            preload="none"
+                            src={mediaUrl}
+                            className="w-full max-w-[280px] mb-1.5"
+                            style={{ height: 36 }}
+                          >
+                            tu navegador no soporta audio
+                          </audio>
+                        )}
+
+                        {/* Imagen */}
+                        {tipo === 'image' && mediaUrl && (
+                          <a href={mediaUrl} target="_blank" rel="noreferrer" className="block mb-1.5">
+                            <img
+                              src={mediaUrl}
+                              alt="adjunto"
+                              className="max-w-[280px] max-h-[300px] rounded-lg object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          </a>
+                        )}
+
+                        {/* Documento/video u otro media: link */}
+                        {(tipo === 'document' || (tipo !== 'text' && tipo !== 'audio' && tipo !== 'image')) && mediaUrl && (
+                          <a
+                            href={mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs underline opacity-80 mb-1.5 block break-all"
+                          >
+                            {tipo === 'document' ? 'Ver documento' : 'Abrir adjunto'}
+                          </a>
+                        )}
+
+                        {/* Texto (mensaje o transcripcion) */}
+                        {m.mensaje && (
+                          <div className="text-sm whitespace-pre-wrap break-words">
+                            {m.mensaje}
+                          </div>
+                        )}
+                        {!m.mensaje && !mediaUrl && (
+                          <em className="opacity-60 text-sm">(vacio)</em>
+                        )}
                       </div>
                     </div>
                   );

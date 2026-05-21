@@ -117,9 +117,12 @@ export interface Conversacion {
   msg_id: string;
   lead_id: string;
   telefono: string;
+  nombre?: string;
   canal: string;
   direccion: 'in' | 'out' | string;
   mensaje: string;
+  msg_type?: 'text' | 'audio' | 'image' | 'document' | string;
+  media_url?: string;
   intencion_detectada: string;
   agente_que_respondio: string;
   requiere_humano: boolean;
