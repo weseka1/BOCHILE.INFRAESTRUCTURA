@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
-import { formatDate } from '@/lib/utils';
+import { formatFechaVisita, formatHora } from '@/lib/utils';
 import type { Visita } from '@/types/domain';
 
 const estadoColor = (estado: string) => {
@@ -29,8 +29,8 @@ export function VisitasPage() {
           rowKey={(r) => r.visita_id}
           rows={rows}
           columns={[
-            { key: 'fecha', header: 'Fecha', cell: (r) => formatDate(r.fecha) },
-            { key: 'hora', header: 'Hora', cell: (r) => r.hora },
+            { key: 'fecha', header: 'Fecha', cell: (r) => formatFechaVisita(r.fecha) },
+            { key: 'hora', header: 'Hora', cell: (r) => formatHora(r.hora) },
             { key: 'cliente', header: 'Cliente', cell: (r) => <span className="font-medium">{r.cliente_nombre}</span> },
             { key: 'prop', header: 'Prop', cell: (r) => <span className="font-mono text-xs">{r.prop_id}</span> },
             { key: 'dir', header: 'Dirección', cell: (r) => r.direccion },

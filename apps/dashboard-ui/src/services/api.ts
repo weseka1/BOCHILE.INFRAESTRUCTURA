@@ -1,9 +1,11 @@
 /**
  * Wrapper minimal de fetch contra el backend.
- * En desarrollo, Vite proxea /api -> http://localhost:3001 (ver vite.config.ts)
+ * Local dev: Vite proxea /api -> http://localhost:3002 (ver vite.config.ts)
+ * Render: VITE_API_URL apunta al hostport del bochile-dashboard-api (ej https://bochile-dashboard-api.onrender.com)
  */
 
-const BASE = '/api';
+const ENV_URL = (import.meta as any).env?.VITE_API_URL as string | undefined;
+const BASE = ENV_URL ? `${ENV_URL.replace(/\/$/, '')}/api` : '/api';
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
