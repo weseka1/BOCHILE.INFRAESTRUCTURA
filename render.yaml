@@ -1,68 +1,12 @@
-# Render Blueprint - Bochile WESEKA.IA
-# ----------------------------------------
-# Deploy con un clic: Render Dashboard -> New -> Blueprint -> conectar este repo.
-#
-# Antes de hacer Deploy, configura ESTOS secrets en el dashboard de Render
-# (Settings -> Environment de cada servicio):
-#
-#   bochile-rag:
-#     OPENAI_API_KEY                ← platform.openai.com
-#     QDRANT_URL                    ← cloud.qdrant.io (cluster URL)
-#     QDRANT_API_KEY                ← cloud.qdrant.io (API key)
-#     RESPONDIO_WEBHOOK_SECRET      ← respond.io -> Settings -> Webhooks -> Clave firma
-#
-#   bochile-dashboard-api:
-#     SHEET_ID                      ← URL del Google Sheet
-#     GOOGLE_SHEETS_CREDS_JSON      ← contenido completo del service-account.json en 1 linea
-#
-#   bochile-n8n:
-#     N8N_BASIC_AUTH_USER           ← usuario admin (vos eligen)
-#     N8N_BASIC_AUTH_PASSWORD       ← password admin (random largo)
-#     N8N_ENCRYPTION_KEY            ← random largo, CRITICO (si cambia, perdes credenciales)
-#
-# ----------------------------------------
+# Render Blueprint - Dashboard Bochile (api + ui)
+# bochile-rag y bochile-n8n ya estan deployados aparte, NO los re-creamos aca.
+# Backup de la versión completa en render.full.yaml.
 
 services:
-  # ============================================
-  # 1. RAG SERVER (CLIP visual + text search)
-  # ============================================
-  - type: web
-    name: bochile-rag
-    runtime: node
-    plan: starter  # USD 7/mes
-    rootDir: apps/rag
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: QDRANT_URL
-        sync: false
-      - key: QDRANT_API_KEY
-        sync: false
-      - key: QDRANT_COLLECTION
-        value: bochile_properties
-      - key: EMBED_MODEL
-        value: text-embedding-3-small
-      - key: EMBED_DIM
-        value: '1536'
-      - key: SERVER_PORT
-        value: '3003'
-      - key: ALLOW_ORIGIN
-        value: '*'
-      - key: RESPONDIO_WEBHOOK_SECRET
-        sync: false
-    healthCheckPath: /api/health
-
-  # ============================================
-  # 2. DASHBOARD API (lee Sheet via service account)
-  # ============================================
   - type: web
     name: bochile-dashboard-api
     runtime: node
-    plan: starter  # USD 7/mes
+    plan: starter
     rootDir: apps/dashboard-api
     buildCommand: npm install
     startCommand: npm start
@@ -84,9 +28,6 @@ services:
         value: '30'
     healthCheckPath: /api/health
 
-  # ============================================
-  # 3. DASHBOARD UI (Vite static site)
-  # ============================================
   - type: web
     name: bochile-dashboard-ui
     runtime: static
@@ -103,43 +44,3 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-
-  # ============================================
-  # 4. N8N (workflow engine)
-  # ============================================
-  - type: web
-    name: bochile-n8n
-    runtime: docker
-    plan: standard  # USD 25/mes (necesario para workflows LLM pesados)
-    dockerfilePath: ./n8n.Dockerfile
-    envVars:
-      - key: N8N_BASIC_AUTH_ACTIVE
-        value: 'true'
-      - key: N8N_BASIC_AUTH_USER
-        sync: false
-      - key: N8N_BASIC_AUTH_PASSWORD
-        sync: false
-      - key: N8N_ENCRYPTION_KEY
-        sync: false
-      - key: N8N_HOST
-        fromService:
-          name: bochile-n8n
-          type: web
-          property: host
-      - key: N8N_PROTOCOL
-        value: https
-      - key: WEBHOOK_URL
-        fromService:
-          name: bochile-n8n
-          type: web
-          property: hostport
-      - key: GENERIC_TIMEZONE
-        value: America/Argentina/Buenos_Aires
-      - key: N8N_PORT
-        value: '5678'
-      - key: NODE_ENV
-        value: production
-    disk:
-      name: n8n-data
-      mountPath: /home/node/.n8n
-      sizeGB: 2  # workflows + sqlite + execution data
