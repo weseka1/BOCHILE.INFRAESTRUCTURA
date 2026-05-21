@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { VentasPage } from '@/pages/VentasPage';
+import { AlquileresPage } from '@/pages/AlquileresPage';
 import { LeadsPage } from '@/pages/LeadsPage';
 import { PropiedadesPage } from '@/pages/PropiedadesPage';
 import { VisitasPage } from '@/pages/VisitasPage';
@@ -24,6 +26,8 @@ export default function App() {
         <div className="p-3 sm:p-6">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/ventas" element={<VentasPage />} />
+            <Route path="/alquileres" element={<AlquileresPage />} />
             <Route path="/leads" element={<LeadsPage />} />
             <Route path="/propiedades" element={<PropiedadesPage />} />
             <Route path="/visitas" element={<VisitasPage />} />

@@ -1,16 +1,40 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog, X } from 'lucide-react';
+import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog, X, ShoppingCart, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const links = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/leads', label: 'Leads', icon: Users },
-  { to: '/propiedades', label: 'Propiedades', icon: Home },
-  { to: '/visitas', label: 'Visitas', icon: Calendar },
-  { to: '/contratos', label: 'Contratos', icon: FileText },
-  { to: '/conversaciones', label: 'Conversaciones', icon: MessageSquare },
-  { to: '/acciones', label: 'Acciones IA', icon: Sparkles },
-  { to: '/empleados', label: 'Empleados', icon: UserCog },
+const sections: { title: string | null; links: { to: string; label: string; icon: any }[] }[] = [
+  {
+    title: null,
+    links: [
+      { to: '/', label: 'Panel Central', icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: 'Ventas',
+    links: [
+      { to: '/ventas', label: 'Dashboard Ventas', icon: ShoppingCart },
+      { to: '/leads?op=venta', label: 'Leads de Venta', icon: Users },
+      { to: '/propiedades?op=venta', label: 'Propiedades en Venta', icon: Home },
+    ],
+  },
+  {
+    title: 'Alquileres',
+    links: [
+      { to: '/alquileres', label: 'Dashboard Alquileres', icon: KeyRound },
+      { to: '/leads?op=alquiler', label: 'Leads de Alquiler', icon: Users },
+      { to: '/propiedades?op=alquiler', label: 'Propiedades en Alquiler', icon: Home },
+      { to: '/contratos', label: 'Contratos', icon: FileText },
+    ],
+  },
+  {
+    title: 'Operaciones',
+    links: [
+      { to: '/visitas', label: 'Visitas', icon: Calendar },
+      { to: '/conversaciones', label: 'Conversaciones', icon: MessageSquare },
+      { to: '/acciones', label: 'Acciones IA', icon: Sparkles },
+      { to: '/empleados', label: 'Empleados', icon: UserCog },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -69,25 +93,36 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           Sistema Operativo IA
         </div>
 
-        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {links.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all',
-                  isActive
-                    ? 'bg-accent text-accent-fg font-semibold shadow-gold'
-                    : 'text-text-muted hover:text-text hover:bg-surface-2',
-                )
-              }
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {label}
-            </NavLink>
+        <nav className="flex-1 py-3 px-2 overflow-y-auto">
+          {sections.map((section, sIdx) => (
+            <div key={sIdx} className={cn(sIdx > 0 && 'mt-4')}>
+              {section.title && (
+                <div className="px-3 py-1.5 text-[10px] uppercase tracking-[0.15em] text-accent/70 font-semibold">
+                  {section.title}
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {section.links.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/'}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                        isActive
+                          ? 'bg-accent text-accent-fg font-semibold shadow-gold'
+                          : 'text-text-muted hover:text-text hover:bg-surface-2',
+                      )
+                    }
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
