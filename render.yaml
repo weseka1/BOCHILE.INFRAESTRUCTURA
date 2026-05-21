@@ -90,7 +90,6 @@ services:
   - type: web
     name: bochile-dashboard-ui
     runtime: static
-    plan: starter  # USD 0 (static)
     rootDir: apps/dashboard-ui
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
