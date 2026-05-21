@@ -69,8 +69,8 @@ async function classifyAndDescribe(imagePath: string): Promise<{ ambient: string
 }
 
 const COLLECTION = 'bochile_property_images_clip';
-const IMAGES_BASE = path.resolve('../Bochile_Scraper/output/images');
-const PROPS_JSON = path.resolve('output/properties-enriched.json');
+const IMAGES_BASE = path.resolve('../scraper/output/images');
+const PROPS_JSON = path.resolve('../scraper/output/properties-enriched.json');
 
 const LIMIT_FLAG = process.argv.indexOf('--limit');
 const LIMIT = LIMIT_FLAG !== -1 ? parseInt(process.argv[LIMIT_FLAG + 1] ?? '0', 10) : 0;

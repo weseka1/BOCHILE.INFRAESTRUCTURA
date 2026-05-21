@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Automatización de Cobranza de Alquileres — Bochile</title>
+<style>
+  @page { size: A4; margin: 25mm 20mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #1a1a1a;
+    line-height: 1.55;
+    margin: 0;
+    font-size: 11pt;
+  }
+  .portada {
+    text-align: center;
+    padding: 60mm 0 40mm 0;
+    page-break-after: always;
+  }
+  .portada .logo {
+    font-size: 42pt;
+    font-weight: 900;
+    letter-spacing: 4pt;
+    background: linear-gradient(135deg, #d4af37, #f4d03f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8mm;
+  }
+  .portada .subtitulo {
+    font-size: 14pt;
+    color: #555;
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+  }
+  .portada .titulo {
+    margin-top: 25mm;
+    font-size: 26pt;
+    color: #1a1a1a;
+    font-weight: 700;
+  }
+  .portada .bajada {
+    font-size: 13pt;
+    color: #666;
+    margin-top: 8mm;
+    font-style: italic;
+  }
+  .portada .footer {
+    margin-top: 45mm;
+    color: #888;
+    font-size: 10pt;
+  }
+  h1 {
+    color: #1a1a1a;
+    border-bottom: 3px solid #d4af37;
+    padding-bottom: 4mm;
+    margin-top: 0;
+    font-size: 22pt;
+  }
+  h2 {
+    color: #1a1a1a;
+    margin-top: 12mm;
+    font-size: 16pt;
+    border-left: 4px solid #d4af37;
+    padding-left: 4mm;
+  }
+  h3 {
+    color: #444;
+    font-size: 13pt;
+    margin-top: 8mm;
+  }
+  .destacado {
+    background: linear-gradient(135deg, #fef9e7, #fcf3cf);
+    border-left: 5px solid #d4af37;
+    padding: 6mm 8mm;
+    margin: 6mm 0;
+    border-radius: 3mm;
+  }
+  .destacado strong { color: #8a6d00; }
+  .timeline {
+    margin: 8mm 0;
+  }
+  .timeline-item {
+    display: flex;
+    margin-bottom: 6mm;
+    page-break-inside: avoid;
+  }
+  .timeline-num {
+    background: #d4af37;
+    color: white;
+    width: 12mm;
+    height: 12mm;
+    border-radius: 50%;
+    font-weight: 900;
+    font-size: 14pt;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 5mm;
+  }
+  .timeline-text {
+    flex: 1;
+    padding-top: 1.5mm;
+  }
+  .timeline-text .titulo {
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 12pt;
+  }
+  .timeline-text .desc {
+    color: #555;
+    margin-top: 1mm;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6mm 0;
+    font-size: 10pt;
+  }
+  th {
+    background: #1a1a1a;
+    color: #d4af37;
+    padding: 4mm;
+    text-align: left;
+    font-weight: 700;
+  }
+  td {
+    padding: 4mm;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+  .badge {
+    display: inline-block;
+    padding: 1mm 3mm;
+    border-radius: 4mm;
+    font-weight: 700;
+    font-size: 9pt;
+  }
+  .badge-verde { background: #d5f5e3; color: #186a3b; }
+  .badge-amarillo { background: #fef9e7; color: #8a6d00; }
+  .badge-rojo { background: #fadbd8; color: #922b21; }
+  .badge-azul { background: #d4e6f1; color: #1a5276; }
+  .mensaje-ejemplo {
+    background: #e8f5e9;
+    border-radius: 6mm;
+    padding: 4mm 6mm;
+    margin: 3mm 0;
+    font-style: italic;
+    color: #1b5e20;
+    border-left: 4px solid #2e7d32;
+    font-size: 10pt;
+  }
+  .nota {
+    background: #f5f5f5;
+    padding: 3mm 5mm;
+    border-radius: 3mm;
+    margin: 4mm 0;
+    font-size: 10pt;
+    color: #666;
+  }
+  .beneficio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm;
+    margin: 6mm 0;
+  }
+  .beneficio-card {
+    background: #fafafa;
+    border-radius: 3mm;
+    padding: 5mm;
+    border-top: 4px solid #d4af37;
+  }
+  .beneficio-card .num {
+    font-size: 24pt;
+    font-weight: 900;
+    color: #d4af37;
+    line-height: 1;
+  }
+  .beneficio-card .desc {
+    margin-top: 3mm;
+    font-size: 10pt;
+    color: #555;
+  }
+  .footer-page {
+    text-align: center;
+    color: #999;
+    font-size: 9pt;
+    margin-top: 15mm;
+    padding-top: 5mm;
+    border-top: 1px solid #e0e0e0;
+  }
+  .page-break { page-break-after: always; }
+</style>
+</head>
+<body>
+
+<!-- PORTADA -->
+<div class="portada">
+  <div class="logo">BOCHILE</div>
+  <div class="subtitulo">Inmobiliaria · Bahía Blanca · Desde 1970</div>
+  <div class="titulo">Cobranza Automatizada<br>de Alquileres</div>
+  <div class="bajada">Cómo Cami se encarga sola de recordarle a cada inquilino<br>cuando llega la fecha de pago</div>
+  <div class="footer">
+    Sistema operado por <strong>WESEKA.IA</strong><br>
+    Mayo 2026
+  </div>
+</div>
+
+<!-- PÁGINA 1: QUÉ ES -->
+<h1>¿De qué se trata esto?</h1>
+
+<p>Hoy en Bochile, cada mes alguien tiene que sentarse a revisar la planilla de contratos, ver quién paga cuándo, ¿quién está atrasado, y mandar mensaje por mensaje a cada inquilino. Eso es laburo repetitivo, manual, y se les escapan recordatorios.</p>
+
+<p><strong>La solución:</strong> Cami (nuestra asesora digital) hace todo ese trabajo sola, todos los días a las 9 de la mañana, sin que ustedes hagan nada.</p>
+
+<div class="destacado">
+  <strong>En una frase:</strong> Cami revisa cada contrato activo, calcula qué día vence cada alquiler, y le manda un WhatsApp al inquilino en el momento justo (con el monto, la dirección y el link para pagar).
+</div>
+
+<h2>El flujo en 4 pasos</h2>
+
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-num">1</div>
+    <div class="timeline-text">
+      <div class="titulo">Todas las mañanas a las 9hs</div>
+      <div class="desc">El sistema se despierta solo y abre la planilla de contratos. No hace falta que nadie le diga nada.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-num">2</div>
+    <div class="timeline-text">
+      <div class="titulo">Revisa cada contrato uno por uno</div>
+      <div class="desc">Para cada inquilino, mira qué día del mes vence el alquiler y lo compara con la fecha de hoy.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-num">3</div>
+    <div class="timeline-text">
+      <div class="titulo">Decide qué mensaje mandar</div>
+      <div class="desc">Según cuántos días faltan (o pasaron desde el vencimiento), elige el mensaje apropiado. Si todo está al día, no manda nada.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-num">4</div>
+    <div class="timeline-text">
+      <div class="titulo">Manda el WhatsApp y registra todo</div>
+      <div class="desc">El inquilino recibe el mensaje desde el número oficial de Bochile. Cami anota en la planilla qué hizo, cuándo y a quién. Total trazabilidad.</div>
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- PÁGINA 2: MENSAJES -->
+<h1>Los 4 tipos de mensajes</h1>
+
+<p>Cami no manda siempre el mismo mensaje. Se adapta a la situación:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Cuándo</th>
+      <th>Qué le manda al inquilino</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <span class="badge badge-azul">5 días antes</span><br>
+        <small>Recordatorio temprano</small>
+      </td>
+      <td>
+        <div class="mensaje-ejemplo">"Hola Juan! El 10 vence el alquiler de Av. Alem 127 ($ 350.000). Te paso el link para pagar: bochile.com.ar/pagar/C-001 — Soy Cami de Bochile."</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="badge badge-amarillo">1 día antes</span><br>
+        <small>Aviso urgente</small>
+      </td>
+      <td>
+        <div class="mensaje-ejemplo">"Hola Juan! Mañana vence el alquiler de Av. Alem 127 por $ 350.000. bochile.com.ar/pagar/C-001 — Soy Cami de Bochile."</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="badge badge-verde">El día que vence</span><br>
+        <small>Vencimiento hoy</small>
+      </td>
+      <td>
+        <div class="mensaje-ejemplo">"Hola Juan! Hoy vence el alquiler de Av. Alem 127 ($ 350.000). bochile.com.ar/pagar/C-001 — Soy Cami de Bochile."</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="badge badge-rojo">Atrasado</span><br>
+        <small>Pasó la fecha</small>
+      </td>
+      <td>
+        <div class="mensaje-ejemplo">"Hola Juan, atraso 3 días ($ 350.000). bochile.com.ar/pagar/C-001 — Soy Cami de Bochile."</div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="nota">
+  <strong>📝 Nota:</strong> Cada mensaje incluye el nombre del inquilino, la dirección, el monto en su moneda (pesos o dólares según el contrato) y el link de pago personalizado para ese contrato.
+</div>
+
+<h2>¿Y si el inquilino no paga?</h2>
+
+<p>Cuando un inquilino lleva <strong>3 días o más de atraso</strong>, Cami no se queda solo con el mensaje. Hace algo más:</p>
+
+<div class="destacado">
+  <strong>Escala a Camila (la vendedora real):</strong> le manda un WhatsApp interno diciendo<br>
+  <em>"El inquilino Juan Pérez (Av. Alem 127) tiene 3 días de atraso por $ 350.000. Necesita seguimiento humano."</em>
+</div>
+
+<p>Así Camila sabe inmediatamente con qué casos hablar personalmente, sin tener que estar revisando planillas todos los días.</p>
+
+<div class="page-break"></div>
+
+<!-- PÁGINA 3: BENEFICIOS -->
+<h1>¿Qué gana Bochile?</h1>
+
+<div class="beneficio-grid">
+  <div class="beneficio-card">
+    <div class="num">0hs</div>
+    <div class="desc"><strong>De trabajo manual.</strong> Nadie en Bochile tiene que sentarse a mandar recordatorios. Cami lo hace todos los días a las 9 sin falta.</div>
+  </div>
+  <div class="beneficio-card">
+    <div class="num">100%</div>
+    <div class="desc"><strong>De cobertura.</strong> Ni un contrato se olvida. Si está cargado en la planilla, Cami lo revisa. Sin excepciones.</div>
+  </div>
+  <div class="beneficio-card">
+    <div class="num">24/7</div>
+    <div class="desc"><strong>Funcionando.</strong> Aunque la oficina esté cerrada, los recordatorios salen. Aunque Camila esté de vacaciones, el sistema sigue.</div>
+  </div>
+  <div class="beneficio-card">
+    <div class="num">↑↑</div>
+    <div class="desc"><strong>Menos atrasos.</strong> Recordar al inquilino con anticipación reduce significativamente los pagos tardíos.</div>
+  </div>
+</div>
+
+<h2>¿Qué pasa con los datos?</h2>
+
+<p>Todo queda registrado en una planilla de Google Sheets que ustedes pueden mirar cuando quieran:</p>
+
+<ul>
+  <li><strong>Pestaña Contratos:</strong> todos los contratos activos con sus datos.</li>
+  <li><strong>Pestaña Acciones IA:</strong> cada vez que Cami manda un mensaje, queda anotado: a quién, cuándo, qué le dijo, si respondió.</li>
+  <li><strong>Pestaña Conversaciones:</strong> si el inquilino responde, también queda registrado.</li>
+</ul>
+
+<p>Si en algún momento prefieren <strong>desactivar a Cami para algún inquilino específico</strong> (por ejemplo, porque están en negociación especial), basta con marcar una casilla en la planilla y Cami deja de mandarle mensajes a esa persona.</p>
+
+<h2>¿Y si Cami se equivoca?</h2>
+
+<p>Cami nunca cobra ni mueve plata. Solo manda mensajes informativos. Si el inquilino quiere responder con una duda compleja, la conversación pasa automáticamente al equipo humano de Bochile.</p>
+
+<div class="destacado">
+  <strong>Resumen final:</strong> Bochile sigue siendo el dueño absoluto de la relación con cada inquilino. Cami es una asistente que se encarga del trabajo repetitivo, pero ustedes mantienen el control de todo lo importante.
+</div>
+
+<div class="footer-page">
+  <strong>Sistema desarrollado por WESEKA.IA</strong><br>
+  Para más información o ajustes en la operación, contactanos.<br>
+  <em>Mayo 2026 — Versión 1.0</em>
+</div>
+
+</body>
+</html>

@@ -67,6 +67,11 @@ apps/rag/output/
 !**/docs/**/*.png
 !**/README*.png
 
+# ---- Qdrant snapshots (binarios pesados, NO al repo) ----
+scripts/_qdrant_snapshots/
+**/_qdrant_snapshots/
+*.snapshot
+
 # ---- Backups con timestamp (solo dejamos LATEST) ----
 scripts/_backups/W1_2026-*.json
 !scripts/_backups/W1_LATEST.json
