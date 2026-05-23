@@ -15,7 +15,21 @@ import metrics from './routes/metrics';
 
 const app = express();
 
-app.use(cors({ origin: config.allowOrigin }));
+const allowedOrigins = String(config.allowOrigin || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes('*')) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (allowedOrigins.some(o => o.endsWith('*') && origin.startsWith(o.slice(0, -1)))) return cb(null, true);
+    return cb(new Error(`CORS: origin ${origin} no permitido`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
@@ -40,5 +54,5 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 app.listen(config.port, () => {
   console.log(`Bochile Dashboard API on http://localhost:${config.port}`);
   console.log(`Sheet: ${config.sheetId}`);
-  console.log(`CORS origin: ${config.allowOrigin}`);
+  console.log(`CORS origins permitidos: ${allowedOrigins.join(', ')}`);
 });

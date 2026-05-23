@@ -30,5 +30,7 @@ export const config = {
   sheetId: required('SHEET_ID'),
   googleCreds: resolveGoogleCreds(),
   cacheTtlSeconds: parseInt(process.env.CACHE_TTL_SECONDS ?? '30', 10),
-  allowOrigin: process.env.ALLOW_ORIGIN ?? 'http://localhost:5175',
+  // CSV de origenes permitidos. En Render setear:
+  //   ALLOW_ORIGIN=https://bochile.vercel.app,https://bochile-dashboard-ui.onrender.com,http://localhost:5175
+  allowOrigin: process.env.ALLOW_ORIGIN ?? 'http://localhost:5175,http://localhost:5173,http://localhost:5174',
 };
