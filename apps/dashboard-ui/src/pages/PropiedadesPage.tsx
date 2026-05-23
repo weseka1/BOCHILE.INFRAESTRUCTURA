@@ -3,30 +3,103 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
-import { formatMoney } from '@/lib/utils';
+import { Toolbar, ChipFilter } from '@/components/ui/Toolbar';
+import { Drawer, DrawerField } from '@/components/ui/Drawer';
+import { formatMoney, cn } from '@/lib/utils';
 import type { Propiedad } from '@/types/domain';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ExternalLink, MapPin, Phone, User as UserIcon } from 'lucide-react';
+
+const isVenta = (op?: string) => /vent|sale/i.test(String(op || ''));
+const isAlquiler = (op?: string) => /alquil|rent/i.test(String(op || ''));
+
+type OpFilter = 'todos' | 'venta' | 'alquiler';
 
 export function PropiedadesPage() {
   const { data, isLoading, error } = usePropiedades();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const opFromUrl = (searchParams.get('op') as OpFilter) || 'todos';
+  const [op, setOp] = useState<OpFilter>(['venta', 'alquiler'].includes(opFromUrl) ? opFromUrl : 'todos');
+  const [estado, setEstado] = useState<'todos' | 'publicada' | 'inactiva'>('todos');
+  const [q, setQ] = useState('');
+  const [selected, setSelected] = useState<Propiedad | null>(null);
+
+  const props = data ?? [];
+
+  const counts = useMemo(() => ({
+    todos: props.length,
+    venta: props.filter(p => isVenta(p.operacion)).length,
+    alquiler: props.filter(p => isAlquiler(p.operacion)).length,
+    publicada: props.filter(p => p.publicada).length,
+  }), [props]);
+
+  const filtered = useMemo(() => {
+    let arr = props;
+    if (op === 'venta') arr = arr.filter(p => isVenta(p.operacion));
+    if (op === 'alquiler') arr = arr.filter(p => isAlquiler(p.operacion));
+    if (estado === 'publicada') arr = arr.filter(p => p.publicada);
+    if (estado === 'inactiva') arr = arr.filter(p => !p.publicada);
+    if (q) {
+      const ql = q.toLowerCase();
+      arr = arr.filter(p =>
+        (p.titulo || '').toLowerCase().includes(ql) ||
+        (p.direccion || '').toLowerCase().includes(ql) ||
+        (p.zona || '').toLowerCase().includes(ql) ||
+        (p.tipo || '').toLowerCase().includes(ql) ||
+        (p.prop_id || '').toLowerCase().includes(ql),
+      );
+    }
+    return arr;
+  }, [props, op, estado, q]);
+
+  function syncOp(next: OpFilter) {
+    setOp(next);
+    const p = new URLSearchParams(searchParams);
+    if (next === 'todos') p.delete('op'); else p.set('op', next);
+    setSearchParams(p, { replace: true });
+  }
+
   if (isLoading) return <div className="text-text-muted">Cargando...</div>;
   if (error) return <div className="text-rose-400">Error: {(error as Error).message}</div>;
 
-  const rows = data ?? [];
   return (
     <>
-      <PageHeader title="Propiedades" subtitle="Catálogo de propiedades en cartera" count={rows.length} />
+      <PageHeader title="Propiedades" subtitle="Catálogo de propiedades en cartera" count={filtered.length} />
+
+      <Toolbar search={q} onSearch={setQ} searchPlaceholder="Buscar por título, dirección, zona...">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <ChipFilter label="Todas" active={op === 'todos'} onClick={() => syncOp('todos')} count={counts.todos} />
+          <ChipFilter label="Venta" active={op === 'venta'} onClick={() => syncOp('venta')} count={counts.venta} />
+          <ChipFilter label="Alquiler" active={op === 'alquiler'} onClick={() => syncOp('alquiler')} count={counts.alquiler} />
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <ChipFilter label="Estado: todos" active={estado === 'todos'} onClick={() => setEstado('todos')} />
+          <ChipFilter label="Publicadas" active={estado === 'publicada'} onClick={() => setEstado('publicada')} count={counts.publicada} />
+          <ChipFilter label="Inactivas" active={estado === 'inactiva'} onClick={() => setEstado('inactiva')} />
+        </div>
+      </Toolbar>
+
       <Card>
         <Table<Propiedad>
           rowKey={(r) => r.prop_id}
-          rows={rows}
+          rows={filtered}
+          empty="No hay propiedades con esos filtros"
+          rowOnClick={(r) => setSelected(r)}
           columns={[
-            { key: 'id', header: 'ID', cell: (r) => <span className="font-mono text-xs">{r.prop_id}</span> },
-            { key: 'titulo', header: 'Título', cell: (r) => <span className="font-medium">{r.titulo}</span> },
-            { key: 'op', header: 'Op.', cell: (r) => <Badge className="bg-blue-500/10 text-blue-300">{r.operacion}</Badge> },
-            { key: 'tipo', header: 'Tipo', cell: (r) => r.tipo },
-            { key: 'zona', header: 'Zona', cell: (r) => r.zona },
+            { key: 'id', header: 'ID', cell: (r) => <span className="font-mono text-xs text-text-muted">{r.prop_id}</span> },
+            { key: 'titulo', header: 'Título', cell: (r) => <span className="font-medium text-text">{r.titulo || '-'}</span> },
+            { key: 'op', header: 'Op.', cell: (r) => (
+              <Badge className={cn(
+                isVenta(r.operacion) ? 'bg-emerald-500/10 text-emerald-300' :
+                isAlquiler(r.operacion) ? 'bg-blue-500/10 text-blue-300' :
+                'bg-zinc-500/10 text-zinc-300',
+              )}>{r.operacion}</Badge>
+            ) },
+            { key: 'tipo', header: 'Tipo', cell: (r) => r.tipo || '-' },
+            { key: 'zona', header: 'Zona', cell: (r) => r.zona || '-' },
             { key: 'amb', header: 'Amb', cell: (r) => r.ambientes || '-' },
-            { key: 'precio', header: 'Precio', cell: (r) => formatMoney(r.precio, r.moneda) },
+            { key: 'precio', header: 'Precio', cell: (r) => <span className="font-semibold">{formatMoney(r.precio, r.moneda)}</span> },
             {
               key: 'estado',
               header: 'Estado',
@@ -36,21 +109,62 @@ export function PropiedadesPage() {
                 </Badge>
               ),
             },
-            {
-              key: 'tour',
-              header: 'Tour 360',
-              cell: (r) =>
-                r.tour_360_url ? (
-                  <a href={r.tour_360_url} target="_blank" rel="noreferrer" className="text-accent text-xs hover:underline">
-                    abrir
-                  </a>
-                ) : (
-                  '-'
-                ),
-            },
           ]}
         />
       </Card>
+
+      <Drawer
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected?.titulo || selected?.prop_id || 'Propiedad'}
+        subtitle={selected ? `${selected.prop_id} · ${selected.tipo} · ${selected.zona}` : ''}
+        footer={selected && (
+          <div className="flex gap-2 flex-wrap">
+            {selected.tour_360_url && (
+              <a href={selected.tour_360_url} target="_blank" rel="noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-accent text-accent-fg hover:brightness-110 font-semibold">
+                <ExternalLink className="w-4 h-4" /> Tour 360°
+              </a>
+            )}
+            {selected.propietario_telefono && (
+              <a href={`https://wa.me/${selected.propietario_telefono.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-emerald-600/80 text-white hover:brightness-110">
+                <Phone className="w-4 h-4" /> Propietario
+              </a>
+            )}
+          </div>
+        )}
+      >
+        {selected && (
+          <div className="space-y-1">
+            {selected.foto_principal && (
+              <img src={selected.foto_principal} alt={selected.titulo} className="w-full rounded-lg mb-3 object-cover max-h-64" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            )}
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <Badge className={
+                isVenta(selected.operacion) ? 'bg-emerald-500/10 text-emerald-300' :
+                isAlquiler(selected.operacion) ? 'bg-blue-500/10 text-blue-300' :
+                'bg-zinc-500/10 text-zinc-300'
+              }>{selected.operacion}</Badge>
+              <Badge className={selected.publicada ? 'bg-emerald-500/10 text-emerald-300' : 'bg-zinc-500/10 text-zinc-300'}>
+                {selected.estado || (selected.publicada ? 'publicada' : 'inactiva')}
+              </Badge>
+            </div>
+            <DrawerField label="Precio" value={<span className="font-bold text-lg text-accent">{formatMoney(selected.precio, selected.moneda)}</span>} />
+            {selected.expensas > 0 && <DrawerField label="Expensas" value={formatMoney(selected.expensas, selected.moneda)} />}
+            <DrawerField label="Dirección" value={selected.direccion && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {selected.direccion}</span>} />
+            <DrawerField label="Zona" value={selected.zona} />
+            <DrawerField label="Tipo" value={selected.tipo} />
+            <DrawerField label="Ambientes / Baños" value={`${selected.ambientes || '-'} amb · ${selected.banos || '-'} baños`} />
+            <DrawerField label="Superficie" value={`${selected.superficie_cubierta || '-'} m² cubierta · ${selected.superficie_total || '-'} m² total`} />
+            <DrawerField label="Características" value={selected.caracteristicas} />
+            <DrawerField label="Propietario" value={selected.propietario && <span className="inline-flex items-center gap-1"><UserIcon className="w-3 h-3" /> {selected.propietario}</span>} />
+            <DrawerField label="Tel propietario" value={selected.propietario_telefono} />
+            <DrawerField label="Vendedor a cargo" value={selected.vendedor_a_cargo} />
+            <DrawerField label="Fecha alta" value={selected.fecha_alta} />
+          </div>
+        )}
+      </Drawer>
     </>
   );
 }

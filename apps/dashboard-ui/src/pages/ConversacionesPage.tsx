@@ -1,6 +1,7 @@
 import { useConversaciones } from '@/hooks/useConversaciones';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, ArrowLeft, User as UserIcon, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Conversacion } from '@/types/domain';
@@ -44,9 +45,17 @@ function iniciales(nombre: string): string {
 
 export function ConversacionesPage() {
   const { data, isLoading, error } = useConversaciones();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState('');
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(searchParams.get('lead'));
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Sync ?lead=X param when selection changes
+  useEffect(() => {
+    const p = new URLSearchParams(searchParams);
+    if (selectedLeadId) p.set('lead', selectedLeadId); else p.delete('lead');
+    setSearchParams(p, { replace: true });
+  }, [selectedLeadId]);
 
   // Agrupar por lead_id -> chats
   const chats: Chat[] = useMemo(() => {
