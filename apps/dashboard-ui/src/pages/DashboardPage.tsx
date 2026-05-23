@@ -10,9 +10,10 @@ import { LineChartCard } from '@/components/charts/LineChartCard';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users, Home, Calendar, Clock, Sparkles, AlertCircle, TrendingUp, MessageSquare,
-  ShoppingCart, KeyRound, DollarSign, Award, Activity, Zap, Target, Phone
+  ShoppingCart, KeyRound, DollarSign, Award, Activity, Zap, Target, Phone, ArrowUpRight
 } from 'lucide-react';
 import type { Lead, Propiedad } from '@/types/domain';
 import { cn } from '@/lib/utils';
@@ -68,86 +69,53 @@ export function DashboardPage() {
             <p className="text-sm text-text-muted">Vista ejecutiva integral · ventas + alquileres + operaciones · datos en vivo desde el Sheet</p>
           </div>
           <div className="flex gap-2">
-            <div className="px-4 py-3 bg-surface-2 rounded-xl border border-border min-w-[120px]">
+            <Link to="/acciones" className="px-4 py-3 bg-surface-2 rounded-xl border border-border hover:border-accent/50 hover:-translate-y-0.5 transition-all min-w-[120px] cursor-pointer group">
               <div className="text-[10px] uppercase tracking-widest text-text-muted">Hoy</div>
               <div className="font-display text-2xl text-accent font-bold">{stats.accionesHoy}</div>
-              <div className="text-[10px] text-text-subtle">Acciones IA</div>
-            </div>
-            <div className="px-4 py-3 bg-surface-2 rounded-xl border border-border min-w-[120px]">
+              <div className="text-[10px] text-text-subtle flex items-center gap-1">Acciones IA <ArrowUpRight className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+            </Link>
+            <Link to="/acciones" className="px-4 py-3 bg-surface-2 rounded-xl border border-border hover:border-emerald-400/50 hover:-translate-y-0.5 transition-all min-w-[120px] cursor-pointer group">
               <div className="text-[10px] uppercase tracking-widest text-text-muted">Total</div>
               <div className="font-display text-2xl text-emerald-300 font-bold">{horas}h</div>
-              <div className="text-[10px] text-text-subtle">Tiempo ahorrado</div>
-            </div>
+              <div className="text-[10px] text-text-subtle flex items-center gap-1">Tiempo ahorrado <ArrowUpRight className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
+            </Link>
           </div>
         </div>
       </div>
 
       {/* GLOBAL KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <StatCard label="Leads totales" value={kpis.leadsTotal} icon={Users} accent="blue" to="/leads" />
+        <StatCard label="Leads hoy" value={kpis.leadsHoy} icon={TrendingUp} accent="green" to="/leads" />
+        <StatCard label="Calificados ≥70" value={stats.calificados} icon={Sparkles} accent="pink" to="/leads?score=70" />
+        <StatCard label="Solicitan visita" value={stats.solicVisita} hint="Pendientes humana" icon={Phone} accent="amber" to="/visitas" />
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Leads totales" value={kpis.leadsTotal} icon={Users} accent="blue" />
-        <StatCard label="Leads hoy" value={kpis.leadsHoy} icon={TrendingUp} accent="green" />
-        <StatCard label="Calificados ≥70" value={stats.calificados} icon={Sparkles} accent="pink" />
-        <StatCard label="Solicitan visita" value={stats.solicVisita} hint="Pendientes humana" icon={Phone} accent="amber" />
+        <StatCard label="Propiedades activas" value={kpis.propiedadesActivas ?? 0} icon={Home} accent="gold" to="/propiedades" />
+        <StatCard label="Matches pendientes" value={kpis.matchesPendientes} icon={AlertCircle} accent="amber" to="/acciones" />
+        <StatCard label="Acciones IA (7d)" value={kpis.accionesIaUltimaSemana} icon={MessageSquare} accent="blue" to="/acciones" />
+        <StatCard label="Tiempo ahorrado" value={`${horas}h`} hint={`${stats.tiempoAhorrado} min totales`} icon={Clock} accent="green" to="/acciones" />
       </div>
 
       {/* SPLIT 3 paneles: VENTAS / ALQUILERES / OPERACIONES */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* VENTAS */}
-        <Card className="border-emerald-500/20 hover:border-emerald-500/40 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-300">
-                <ShoppingCart className="w-5 h-5" />
-              </div>
-              <h3 className="font-display text-lg font-semibold text-text">Ventas</h3>
-            </div>
-            <Badge className="bg-emerald-500/10 text-emerald-300">Activo</Badge>
-          </div>
-          <div className="space-y-2.5">
-            <Row label="Leads de venta" value={stats.lv} />
-            <Row label="Propiedades en venta" value={stats.pv} />
-            <Row label="Calificados ≥70" value={leads.filter(l => isVenta(l.operacion) && Number(l.score||0) >= 70).length} />
-          </div>
-          <a href="/ventas" className="mt-4 block text-center text-xs text-emerald-300 hover:underline">Ver dashboard completo →</a>
-        </Card>
+        <PanelLink to="/ventas" color="emerald" icon={ShoppingCart} title="Ventas" badge="Activo">
+          <Row label="Leads de venta" value={stats.lv} />
+          <Row label="Propiedades en venta" value={stats.pv} />
+          <Row label="Calificados ≥70" value={leads.filter(l => isVenta(l.operacion) && Number(l.score||0) >= 70).length} />
+        </PanelLink>
 
-        {/* ALQUILERES */}
-        <Card className="border-blue-500/20 hover:border-blue-500/40 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-300">
-                <KeyRound className="w-5 h-5" />
-              </div>
-              <h3 className="font-display text-lg font-semibold text-text">Alquileres</h3>
-            </div>
-            <Badge className="bg-blue-500/10 text-blue-300">Activo</Badge>
-          </div>
-          <div className="space-y-2.5">
-            <Row label="Leads de alquiler" value={stats.la} />
-            <Row label="Propiedades en alquiler" value={stats.pa} />
-            <Row label="Contratos activos" value={stats.contratos} />
-          </div>
-          <a href="/alquileres" className="mt-4 block text-center text-xs text-blue-300 hover:underline">Ver dashboard completo →</a>
-        </Card>
+        <PanelLink to="/alquileres" color="blue" icon={KeyRound} title="Alquileres" badge="Activo">
+          <Row label="Leads de alquiler" value={stats.la} />
+          <Row label="Propiedades en alquiler" value={stats.pa} />
+          <Row label="Contratos activos" value={stats.contratos} />
+        </PanelLink>
 
-        {/* OPERACIONES IA */}
-        <Card className="border-accent/30 hover:border-accent/60 transition-colors">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-accent/10 text-accent">
-                <Zap className="w-5 h-5" />
-              </div>
-              <h3 className="font-display text-lg font-semibold text-text">Cami IA</h3>
-            </div>
-            <Badge className="bg-accent/10 text-accent">Operando</Badge>
-          </div>
-          <div className="space-y-2.5">
-            <Row label="Acciones (7d)" value={kpis.accionesIaUltimaSemana} />
-            <Row label="Visitas agendadas" value={kpis.visitasAgendadas} />
-            <Row label="Matches pendientes" value={kpis.matchesPendientes} />
-          </div>
-          <a href="/acciones" className="mt-4 block text-center text-xs text-accent hover:underline">Ver acciones detalle →</a>
-        </Card>
+        <PanelLink to="/acciones" color="gold" icon={Zap} title="Cami IA" badge="Operando">
+          <Row label="Acciones (7d)" value={kpis.accionesIaUltimaSemana} />
+          <Row label="Visitas agendadas" value={kpis.visitasAgendadas} />
+          <Row label="Matches pendientes" value={kpis.matchesPendientes} />
+        </PanelLink>
       </div>
 
       {/* CHARTS */}
@@ -177,5 +145,68 @@ function Row({ label, value }: { label: string; value: number | string }) {
       <span className="text-xs text-text-muted">{label}</span>
       <span className="font-display font-semibold text-text">{value}</span>
     </div>
+  );
+}
+
+const panelColors = {
+  emerald: {
+    border: 'border-emerald-500/20 hover:border-emerald-500/60',
+    iconBg: 'bg-emerald-500/10 text-emerald-300',
+    badge: 'bg-emerald-500/10 text-emerald-300',
+    glow: 'hover:shadow-[0_10px_30px_-15px_rgba(16,185,129,0.45)]',
+    link: 'text-emerald-300',
+  },
+  blue: {
+    border: 'border-blue-500/20 hover:border-blue-500/60',
+    iconBg: 'bg-blue-500/10 text-blue-300',
+    badge: 'bg-blue-500/10 text-blue-300',
+    glow: 'hover:shadow-[0_10px_30px_-15px_rgba(59,130,246,0.45)]',
+    link: 'text-blue-300',
+  },
+  gold: {
+    border: 'border-accent/30 hover:border-accent/70',
+    iconBg: 'bg-accent/10 text-accent',
+    badge: 'bg-accent/10 text-accent',
+    glow: 'hover:shadow-[0_10px_30px_-15px_rgba(255,200,80,0.45)]',
+    link: 'text-accent',
+  },
+};
+
+function PanelLink({
+  to, color, icon: Icon, title, badge, children,
+}: {
+  to: string;
+  color: keyof typeof panelColors;
+  icon: any;
+  title: string;
+  badge: string;
+  children: React.ReactNode;
+}) {
+  const c = panelColors[color];
+  return (
+    <Link
+      to={to}
+      className={cn(
+        'card p-5 transition-all group block',
+        c.border, c.glow,
+        'hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60',
+      )}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className={cn('p-2 rounded-lg transition-transform group-hover:scale-110', c.iconBg)}>
+            <Icon className="w-5 h-5" />
+          </div>
+          <h3 className="font-display text-lg font-semibold text-text">{title}</h3>
+        </div>
+        <Badge className={c.badge}>{badge}</Badge>
+      </div>
+      <div className="space-y-2.5">{children}</div>
+      <div className={cn('mt-4 flex items-center justify-center gap-1 text-xs', c.link)}>
+        <span>Ver dashboard completo</span>
+        <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+      </div>
+    </Link>
   );
 }

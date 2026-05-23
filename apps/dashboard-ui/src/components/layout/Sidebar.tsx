@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog, X, ShoppingCart, KeyRound } from 'lucide-react';
+import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog, X, ShoppingCart, KeyRound, CheckSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTareasCount } from '@/hooks/useTareas';
 
-const sections: { title: string | null; links: { to: string; label: string; icon: any }[] }[] = [
+const sections: { title: string | null; links: { to: string; label: string; icon: any; badgeKey?: 'tareas' }[] }[] = [
   {
     title: null,
     links: [
       { to: '/', label: 'Panel Central', icon: LayoutDashboard },
+      { to: '/tareas', label: 'Tareas', icon: CheckSquare, badgeKey: 'tareas' },
     ],
   },
   {
@@ -43,6 +45,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open, onClose }: SidebarProps) {
+  const tareasPendientes = useTareasCount();
   return (
     <>
       {/* Backdrop (solo mobile cuando esta abierto) */}
@@ -102,25 +105,40 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 </div>
               )}
               <div className="space-y-0.5">
-                {section.links.map(({ to, label, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === '/'}
-                    onClick={onClose}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
-                        isActive
-                          ? 'bg-accent text-accent-fg font-semibold shadow-gold'
-                          : 'text-text-muted hover:text-text hover:bg-surface-2',
-                      )
-                    }
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    {label}
-                  </NavLink>
-                ))}
+                {section.links.map(({ to, label, icon: Icon, badgeKey }) => {
+                  const badgeValue = badgeKey === 'tareas' && tareasPendientes > 0 ? tareasPendientes : null;
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === '/'}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                          isActive
+                            ? 'bg-accent text-accent-fg font-semibold shadow-gold'
+                            : 'text-text-muted hover:text-text hover:bg-surface-2',
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <Icon className="w-4 h-4 shrink-0" />
+                          <span className="flex-1">{label}</span>
+                          {badgeValue !== null && (
+                            <span className={cn(
+                              'text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center',
+                              isActive ? 'bg-accent-fg/20 text-accent-fg' : 'bg-accent/20 text-accent',
+                            )}>
+                              {badgeValue}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           ))}
