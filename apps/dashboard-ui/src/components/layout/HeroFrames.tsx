@@ -49,6 +49,9 @@ const DEFAULT_FRAMES = [
   '/hero-frames/frame-8.jpg',
 ];
 
+// Fallback cuando los frames locales no existen (404) - mansion Unsplash
+const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
+
 export function HeroFrames({
   frames = DEFAULT_FRAMES,
   holdMs = 1800,
@@ -61,36 +64,53 @@ export function HeroFrames({
 }: HeroFramesProps) {
   const [current, setCurrent] = useState(0);
   const [allLoaded, setAllLoaded] = useState(false);
+  const [loadedOk, setLoadedOk] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Preload de TODAS las imagenes antes de empezar el loop (evita flickering)
+  // Preload de TODAS las imagenes. Si NINGUNA cargo (404 todas), usamos fallback.
   useEffect(() => {
     let cancelled = false;
     let pending = frames.length;
+    let ok = 0;
     if (pending === 0) { setAllLoaded(true); return; }
     frames.forEach((src) => {
       const img = new Image();
-      const done = () => {
+      img.onload = () => {
+        ok++;
         pending--;
-        if (!cancelled && pending <= 0) setAllLoaded(true);
+        if (!cancelled && pending <= 0) {
+          setLoadedOk(ok);
+          setAllLoaded(true);
+        }
       };
-      img.onload = done;
-      img.onerror = done; // si una falla, seguimos igual
+      img.onerror = () => {
+        pending--;
+        if (!cancelled && pending <= 0) {
+          setLoadedOk(ok);
+          setAllLoaded(true);
+        }
+      };
       img.src = src;
     });
     return () => { cancelled = true; };
   }, [frames]);
 
+  // Si NO cargo ninguna imagen real, usar el fallback poster (no loop)
+  const useFallback = allLoaded && loadedOk === 0;
+  const activeFrames = useFallback ? [FALLBACK_POSTER] : frames;
+
   // Loop: cicla los frames con hold + fade. El ultimo frame se queda mas tiempo.
+  // No loopea si hay solo 1 frame (caso fallback).
   useEffect(() => {
     if (!allLoaded) return;
-    const isLast = current === frames.length - 1;
+    if (activeFrames.length <= 1) return;
+    const isLast = current === activeFrames.length - 1;
     const delay = isLast ? finalHoldMs : holdMs;
     timerRef.current = setTimeout(() => {
-      setCurrent((c) => (c + 1) % frames.length);
+      setCurrent((c) => (c + 1) % activeFrames.length);
     }, delay);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [current, allLoaded, frames.length, holdMs, finalHoldMs]);
+  }, [current, allLoaded, activeFrames.length, holdMs, finalHoldMs]);
 
   // Respeta prefers-reduced-motion -> solo muestra el ultimo frame estatico
   const prefersReducedMotion = typeof window !== 'undefined'
@@ -100,15 +120,26 @@ export function HeroFrames({
     <div className="relative mb-6 rounded-2xl overflow-hidden border border-accent/20 shadow-glow group">
       {/* STACK de frames superpuestos */}
       <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
-        {frames.map((src, i) => {
-          const isActive = prefersReducedMotion ? i === frames.length - 1 : i === current;
+        {/* Mientras carga, mostrar fallback poster con Ken Burns - evita pantalla negra */}
+        {!allLoaded && (
+          <img
+            src={FALLBACK_POSTER}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover hero-kenburns"
+            aria-hidden="true"
+          />
+        )}
+        {activeFrames.map((src, i) => {
+          const isActive = useFallback
+            ? true // fallback siempre visible
+            : prefersReducedMotion ? i === activeFrames.length - 1 : i === current;
           return (
             <img
-              key={src}
+              key={src + '-' + i}
               src={src}
               alt=""
               loading={i === 0 ? 'eager' : 'lazy'}
-              className="absolute inset-0 w-full h-full object-cover"
+              className={`absolute inset-0 w-full h-full object-cover ${useFallback ? 'hero-kenburns' : ''}`}
               style={{
                 opacity: isActive ? 1 : 0,
                 transition: `opacity ${fadeMs}ms ease-in-out`,
@@ -122,16 +153,18 @@ export function HeroFrames({
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/85 pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-r from-accent/15 via-transparent to-transparent pointer-events-none" />
         <div className="absolute inset-0 shadow-[inset_0_0_180px_rgba(0,0,0,0.7)] pointer-events-none" />
-        {/* Progress bar abajo (indica que clip esta sonando) */}
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 pointer-events-none">
-          <div
-            className="h-full bg-accent transition-all"
-            style={{
-              width: `${((current + 1) / frames.length) * 100}%`,
-              transitionDuration: `${fadeMs}ms`,
-            }}
-          />
-        </div>
+        {/* Progress bar abajo (solo cuando hay loop real, no en fallback) */}
+        {!useFallback && activeFrames.length > 1 && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 pointer-events-none">
+            <div
+              className="h-full bg-accent transition-all"
+              style={{
+                width: `${((current + 1) / activeFrames.length) * 100}%`,
+                transitionDuration: `${fadeMs}ms`,
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* CONTENIDO encima */}
