@@ -43,7 +43,7 @@ const ACCENT_BORDER: Record<string, string> = {
 const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
 
 // Bumpear cuando se cambia el video — fuerza al browser a refetchear (evita cache stale).
-const VIDEO_VERSION = 'v5';
+const VIDEO_VERSION = 'v6';
 
 export function HeroVideo({
   videoUrl = `/hero.mp4?${VIDEO_VERSION}`,
@@ -59,22 +59,59 @@ export function HeroVideo({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [videoFailed, setVideoFailed] = useState(false);
   const [posterFailed, setPosterFailed] = useState(false);
+  // Calculamos el src en JS: el attr <source media> NO funciona en Chrome moderno
+  // (siempre agarra el primer source), asi que elegimos el src manualmente.
+  const [activeSrc, setActiveSrc] = useState<string>(() => {
+    if (typeof window === 'undefined') return videoUrl;
+    return window.matchMedia('(max-width: 768px)').matches ? videoUrlMobile : videoUrl;
+  });
 
-  // Autoplay loop. Si el browser bloquea el autoplay (raro con muted), reintentamos
-  // tras el primer click/touch del usuario.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const onChange = () => setActiveSrc(mq.matches ? videoUrlMobile : videoUrl);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [videoUrl, videoUrlMobile]);
+
+  // Autoplay agresivo: intenta play en multiples eventos para sortear bloqueos del browser.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const tryPlay = () => v.play().catch(() => { /* autoplay bloqueado, retry on interact */ });
+    let cancelled = false;
+    const tryPlay = () => {
+      if (cancelled || !v.paused) return;
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => { /* retry en proximo evento */ });
+    };
+    // 1) inmediato
     tryPlay();
-    const onInteract = () => { tryPlay(); document.removeEventListener('click', onInteract); document.removeEventListener('touchstart', onInteract); };
+    // 2) cuando hay datos suficientes
+    v.addEventListener('loadeddata', tryPlay);
+    v.addEventListener('canplay', tryPlay);
+    // 3) cuando el elemento entra al viewport
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) tryPlay();
+    }, { threshold: 0.01 });
+    io.observe(v);
+    // 4) cuando la tab vuelve a estar visible
+    const onVis = () => { if (document.visibilityState === 'visible') tryPlay(); };
+    document.addEventListener('visibilitychange', onVis);
+    // 5) primer interaccion del usuario en cualquier lado de la pagina
+    const onInteract = () => tryPlay();
     document.addEventListener('click', onInteract, { once: true });
     document.addEventListener('touchstart', onInteract, { once: true });
+    document.addEventListener('keydown', onInteract, { once: true });
     return () => {
+      cancelled = true;
+      v.removeEventListener('loadeddata', tryPlay);
+      v.removeEventListener('canplay', tryPlay);
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
       document.removeEventListener('click', onInteract);
       document.removeEventListener('touchstart', onInteract);
+      document.removeEventListener('keydown', onInteract);
     };
-  }, []);
+  }, [activeSrc]);
 
   const activePoster = posterFailed ? FALLBACK_POSTER : posterUrl;
 
@@ -85,6 +122,8 @@ export function HeroVideo({
         {!videoFailed ? (
           <video
             ref={videoRef}
+            key={activeSrc}
+            src={activeSrc}
             className="absolute inset-0 w-full h-full object-cover"
             style={{ objectPosition }}
             poster={activePoster}
@@ -95,11 +134,7 @@ export function HeroVideo({
             preload="auto"
             aria-hidden="true"
             onError={() => setVideoFailed(true)}
-          >
-            {/* Source mobile primero: el browser elige el primer match. */}
-            <source src={videoUrlMobile} type="video/mp4" media="(max-width: 768px)" />
-            <source src={videoUrl} type="video/mp4" />
-          </video>
+          />
         ) : (
           <img
             src={activePoster}
