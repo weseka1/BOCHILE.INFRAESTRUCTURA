@@ -12,6 +12,7 @@ interface TopBarProps {
 
 const routeTitles: Record<string, string> = {
   '/': 'Panel Central',
+  '/tareas': 'Tareas',
   '/ventas': 'Dashboard Ventas',
   '/leads': 'Leads',
   '/propiedades': 'Propiedades',

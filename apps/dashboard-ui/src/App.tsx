@@ -10,6 +10,7 @@ import { VisitasPage } from '@/pages/VisitasPage';
 import { ConversacionesPage } from '@/pages/ConversacionesPage';
 import { AccionesPage } from '@/pages/AccionesPage';
 import { EmpleadosPage } from '@/pages/EmpleadosPage';
+import { TareasPage } from '@/pages/TareasPage';
 
 export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,6 +25,7 @@ export default function App() {
         <div className="p-3 sm:p-6">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/tareas" element={<TareasPage />} />
             <Route path="/ventas" element={<VentasPage />} />
             <Route path="/leads" element={<LeadsPage />} />
             <Route path="/propiedades" element={<PropiedadesPage />} />
