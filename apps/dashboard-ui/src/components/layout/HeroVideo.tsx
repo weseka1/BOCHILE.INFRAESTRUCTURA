@@ -45,8 +45,8 @@ export function HeroVideo({
 }: HeroVideoProps) {
   return (
     <div className="relative mb-6 rounded-2xl overflow-hidden border border-accent/20 shadow-glow group">
-      {/* MEDIA BACKGROUND: video si hay url, sino poster */}
-      <div className="absolute inset-0 w-full h-full">
+      {/* MEDIA BACKGROUND: video si hay url, sino poster con Ken Burns */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden">
         {videoUrl ? (
           <video
             className="w-full h-full object-cover"
@@ -63,14 +63,16 @@ export function HeroVideo({
           <img
             src={posterUrl}
             alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover hero-kenburns"
             aria-hidden="true"
           />
         )}
         {/* Overlay oscuro para legibilidad */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/85" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/85" />
         {/* Overlay dorado sutil */}
         <div className="absolute inset-0 bg-gradient-to-r from-accent/15 via-transparent to-transparent" />
+        {/* Light pulse (simula luces interiores titilando suave) */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_75%,rgba(255,200,120,0.18)_0%,transparent_70%)] hero-pulse pointer-events-none" />
         {/* Vignette */}
         <div className="absolute inset-0 shadow-[inset_0_0_180px_rgba(0,0,0,0.7)]" />
       </div>

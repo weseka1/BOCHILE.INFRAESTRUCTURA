@@ -2,6 +2,25 @@
 
 Prompt master + 5 escenas listas para copiar a Sora 2, Veo 3, Runway Gen-3 o Kling.
 
+## 🏠 CASA DE REFERENCIA (la de la foto que mandó Juani)
+
+> Mansión moderna **dual-gable** de 2 plantas estilo Beverly Hills/Malibu/Pacific Palisades.
+> **Volúmenes principales**: 2 cuerpos verticales gemelos con techo a dos aguas asimétrico,
+> conectados por un volumen central horizontal de menor altura.
+> **Materiales**: cemento oscuro (gris carbón/charcoal) en planta baja, **revestimiento vertical
+> de madera teca premium** color avellana cubriendo los dos cuerpos altos. Carpinterías en
+> aluminio negro mate.
+> **Ventanales**: gigantes de piso a techo, vidriado total en planta baja con apertura
+> corrediza al jardín.
+> **Iluminación**: cálida (2700K) en interior, glow visible a través del vidrio. LED lineales
+> empotrados en el deck recibiendo las escaleras.
+> **Exterior**: deck de cemento + escaleras tipo grada que bajan a la **piscina rectangular
+> infinity** con borde reflejando la casa. Reposeras minimalistas oscuras. Vegetación nativa
+> (palmeras + arbustos low-maintenance). Atardecer purpura-dorado.
+> **Hora del día**: golden hour / dusk transition.
+
+USAR ESTE PÁRRAFO COMO "ARCHITECTURE REFERENCE" EN TODOS LOS PROMPTS.
+
 ---
 
 ## RECOMENDACIÓN POR TOOL
