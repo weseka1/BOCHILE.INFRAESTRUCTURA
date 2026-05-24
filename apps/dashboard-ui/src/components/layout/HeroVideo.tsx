@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Activity } from 'lucide-react';
 
@@ -10,8 +11,15 @@ interface HeroMetric {
 }
 
 interface HeroVideoProps {
+  /** Video desktop (recomendado <8MB, H.264 mp4 con faststart). Default: /hero.mp4 */
   videoUrl?: string;
+  /** Video mobile mas chico (recomendado <4MB). Default: /hero-mobile.mp4 */
+  videoUrlMobile?: string;
+  /** Poster mientras carga el video. Default: /hero-poster.jpg con fallback Unsplash. */
   posterUrl?: string;
+  /** Donde anclar el frame visible cuando el video se recorta por object-cover.
+   *  Por default usamos 'center 70%' para que se vea la casa, NO el cielo. */
+  objectPosition?: string;
   title?: React.ReactNode;
   tagline?: string;
   caption?: string;
@@ -32,49 +40,72 @@ const ACCENT_BORDER: Record<string, string> = {
   pink: 'hover:border-pink-400/60',
 };
 
-// Poster default (foto luxury mansion estilo Bochile, public Unsplash)
-const DEFAULT_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
+const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
 
 export function HeroVideo({
-  videoUrl,
-  posterUrl = DEFAULT_POSTER,
+  videoUrl = '/hero.mp4',
+  videoUrlMobile = '/hero-mobile.mp4',
+  posterUrl = '/hero-poster.jpg',
+  objectPosition = 'center center',
   title,
   tagline = 'WHERE VISION BECOMES REALITY',
   caption = 'Sistema Operativo IA · Bochile Inmobiliaria · 1970',
   metrics = [],
 }: HeroVideoProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const [posterFailed, setPosterFailed] = useState(false);
+
+  // Si el video carga, autoplay; si no, mostramos poster con Ken Burns.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const tryPlay = () => v.play().catch(() => { /* iOS low-power, autoplay bloqueado */ });
+    tryPlay();
+  }, []);
+
+  const activePoster = posterFailed ? FALLBACK_POSTER : posterUrl;
+
   return (
     <div className="relative mb-6 rounded-2xl overflow-hidden border border-accent/20 shadow-glow group">
-      {/* MEDIA BACKGROUND: video si hay url, sino poster con Ken Burns */}
-      <div className="absolute inset-0 w-full h-full overflow-hidden">
-        {videoUrl ? (
+      {/* MEDIA BACKGROUND: video fluido con poster fallback */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
+        {!videoFailed ? (
           <video
-            className="w-full h-full object-cover"
-            src={videoUrl}
-            poster={posterUrl}
+            ref={videoRef}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ objectPosition }}
+            poster={activePoster}
             autoPlay
             loop
             muted
             playsInline
-            preload="metadata"
+            preload="auto"
             aria-hidden="true"
-          />
+            onError={() => setVideoFailed(true)}
+          >
+            {/* Source mobile primero: el browser elige el primer match. */}
+            <source src={videoUrlMobile} type="video/mp4" media="(max-width: 768px)" />
+            <source src={videoUrl} type="video/mp4" />
+          </video>
         ) : (
           <img
-            src={posterUrl}
+            src={activePoster}
             alt=""
-            className="w-full h-full object-cover hero-kenburns"
+            className="absolute inset-0 w-full h-full object-cover hero-kenburns"
+            style={{ objectPosition }}
+            onError={() => setPosterFailed(true)}
             aria-hidden="true"
           />
         )}
         {/* Overlay oscuro para legibilidad */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/85" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/85 pointer-events-none" />
         {/* Overlay dorado sutil */}
-        <div className="absolute inset-0 bg-gradient-to-r from-accent/15 via-transparent to-transparent" />
-        {/* Light pulse (simula luces interiores titilando suave) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-accent/15 via-transparent to-transparent pointer-events-none" />
+        {/* Light pulse (luces interiores) */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_75%,rgba(255,200,120,0.18)_0%,transparent_70%)] hero-pulse pointer-events-none" />
         {/* Vignette */}
-        <div className="absolute inset-0 shadow-[inset_0_0_180px_rgba(0,0,0,0.7)]" />
+        <div className="absolute inset-0 shadow-[inset_0_0_180px_rgba(0,0,0,0.7)] pointer-events-none" />
       </div>
 
       {/* CONTENIDO */}
@@ -106,7 +137,7 @@ export function HeroVideo({
           </p>
         </div>
 
-        {/* BOTTOM: métricas glassmorphism */}
+        {/* BOTTOM: metricas glassmorphism */}
         {metrics.length > 0 && (
           <div className={`grid grid-cols-2 ${metrics.length >= 4 ? 'sm:grid-cols-4' : metrics.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-2 sm:gap-3`}>
             {metrics.map((m, i) => {

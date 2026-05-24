@@ -9,7 +9,6 @@ import { LineChartCard } from '@/components/charts/LineChartCard';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { HeroVideo } from '@/components/layout/HeroVideo';
-import { HeroFrames } from '@/components/layout/HeroFrames';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -50,8 +49,8 @@ export function DashboardPage() {
 
   return (
     <>
-      {/* HERO FRAMES cinematografico (stop-motion 8 frames de construccion) */}
-      <HeroFrames
+      {/* HERO VIDEO fluido (/hero.mp4 + /hero-mobile.mp4 generados por scripts/37_optimizar_video_hero.cjs) */}
+      <HeroVideo
         title={<>Panel <span className="text-accent">Central</span></>}
         tagline="WHERE VISION BECOMES REALITY"
         caption="BOCHILE · 1970 · Sistema Operativo IA"
