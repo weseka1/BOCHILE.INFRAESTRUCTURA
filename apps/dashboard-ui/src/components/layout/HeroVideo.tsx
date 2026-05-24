@@ -43,7 +43,7 @@ const ACCENT_BORDER: Record<string, string> = {
 const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
 
 // Bumpear cuando se cambia el video — fuerza al browser a refetchear (evita cache stale).
-const VIDEO_VERSION = 'v6';
+const VIDEO_VERSION = 'v7';
 
 export function HeroVideo({
   videoUrl = `/hero.mp4?${VIDEO_VERSION}`,
@@ -73,30 +73,35 @@ export function HeroVideo({
     return () => mq.removeEventListener('change', onChange);
   }, [videoUrl, videoUrlMobile]);
 
-  // Autoplay agresivo: intenta play en multiples eventos para sortear bloqueos del browser.
+  // Autoplay agresivo PERO sin reiniciar: una vez que termina, se queda en el frame final
+  // (la mansion completa de noche con pileta). No loop.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     let cancelled = false;
+    let ended = false;
     const tryPlay = () => {
-      if (cancelled || !v.paused) return;
+      if (cancelled || ended || !v.paused) return;
       const p = v.play();
       if (p && typeof p.catch === 'function') p.catch(() => { /* retry en proximo evento */ });
     };
-    // 1) inmediato
+    const onEnded = () => {
+      ended = true;
+      // Quedarse en el ultimo frame (mansion terminada). Sin esto algunos browsers
+      // vuelven al frame 0 o muestran el poster.
+      try { v.currentTime = Math.max(0, v.duration - 0.04); } catch {}
+      v.pause();
+    };
     tryPlay();
-    // 2) cuando hay datos suficientes
     v.addEventListener('loadeddata', tryPlay);
     v.addEventListener('canplay', tryPlay);
-    // 3) cuando el elemento entra al viewport
+    v.addEventListener('ended', onEnded);
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) tryPlay();
     }, { threshold: 0.01 });
     io.observe(v);
-    // 4) cuando la tab vuelve a estar visible
     const onVis = () => { if (document.visibilityState === 'visible') tryPlay(); };
     document.addEventListener('visibilitychange', onVis);
-    // 5) primer interaccion del usuario en cualquier lado de la pagina
     const onInteract = () => tryPlay();
     document.addEventListener('click', onInteract, { once: true });
     document.addEventListener('touchstart', onInteract, { once: true });
@@ -105,6 +110,7 @@ export function HeroVideo({
       cancelled = true;
       v.removeEventListener('loadeddata', tryPlay);
       v.removeEventListener('canplay', tryPlay);
+      v.removeEventListener('ended', onEnded);
       io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
       document.removeEventListener('click', onInteract);
@@ -128,7 +134,6 @@ export function HeroVideo({
             style={{ objectPosition }}
             poster={activePoster}
             autoPlay
-            loop
             muted
             playsInline
             preload="auto"
