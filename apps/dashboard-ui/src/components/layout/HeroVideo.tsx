@@ -42,10 +42,13 @@ const ACCENT_BORDER: Record<string, string> = {
 
 const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
 
+// Bumpear cuando se cambia el video — fuerza al browser a refetchear (evita cache stale).
+const VIDEO_VERSION = 'v3';
+
 export function HeroVideo({
-  videoUrl = '/hero.mp4',
-  videoUrlMobile = '/hero-mobile.mp4',
-  posterUrl = '/hero-poster.jpg',
+  videoUrl = `/hero.mp4?${VIDEO_VERSION}`,
+  videoUrlMobile = `/hero-mobile.mp4?${VIDEO_VERSION}`,
+  posterUrl = `/hero-poster.jpg?${VIDEO_VERSION}`,
   objectPosition = 'center center',
   title,
   tagline = 'WHERE VISION BECOMES REALITY',
@@ -109,7 +112,7 @@ export function HeroVideo({
       </div>
 
       {/* CONTENIDO */}
-      <div className="relative z-10 p-5 sm:p-8 lg:p-10 min-h-[420px] sm:min-h-[460px] flex flex-col justify-between">
+      <div className="relative z-10 p-5 sm:p-8 lg:p-10 min-h-[420px] sm:min-h-[500px] lg:min-h-[600px] xl:min-h-[680px] flex flex-col justify-between">
         {/* TOP: estado + tagline */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-emerald-400/30">
