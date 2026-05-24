@@ -43,7 +43,7 @@ const ACCENT_BORDER: Record<string, string> = {
 const FALLBACK_POSTER = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85';
 
 // Bumpear cuando se cambia el video — fuerza al browser a refetchear (evita cache stale).
-const VIDEO_VERSION = 'v3';
+const VIDEO_VERSION = 'v4';
 
 export function HeroVideo({
   videoUrl = `/hero.mp4?${VIDEO_VERSION}`,
@@ -56,21 +56,66 @@ export function HeroVideo({
   metrics = [],
 }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [videoFailed, setVideoFailed] = useState(false);
   const [posterFailed, setPosterFailed] = useState(false);
 
-  // Si el video carga, autoplay; si no, mostramos poster con Ken Burns.
+  // Scroll-driven: la posicion del video se ata al scroll mientras el hero esta en viewport.
+  // Cuando el usuario llega al fondo del hero, el video llego al final. Va y vuelve con el scroll.
+  // Requiere video codificado con all-keyframes (-g 1) para seek instantaneo (ver scripts/37).
   useEffect(() => {
     const v = videoRef.current;
-    if (!v) return;
-    const tryPlay = () => v.play().catch(() => { /* iOS low-power, autoplay bloqueado */ });
-    tryPlay();
+    const c = containerRef.current;
+    if (!v || !c) return;
+
+    let rafId = 0;
+    let lastProgress = -1;
+
+    const setupScrub = () => {
+      if (!v.duration || !isFinite(v.duration)) return;
+      // Forzar render del primer frame (sino se queda en el poster).
+      const p = v.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => v.pause()).catch(() => { /* autoplay block, seguimos */ });
+      }
+      update();
+    };
+
+    const update = () => {
+      const rect = c.getBoundingClientRect();
+      // Progreso: 0 cuando el TOP del hero esta en el top del viewport,
+      //          1 cuando el BOTTOM del hero llega al top del viewport.
+      // Asi al cargar la pagina (rect.top = 0) el video esta en frame 0.
+      const progress = Math.max(0, Math.min(1, -rect.top / Math.max(1, rect.height)));
+      if (Math.abs(progress - lastProgress) < 0.002) return;
+      lastProgress = progress;
+      if (v.duration && isFinite(v.duration)) {
+        v.currentTime = progress * v.duration;
+      }
+    };
+
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => { rafId = 0; update(); });
+    };
+
+    if (v.readyState >= 1) setupScrub();
+    else v.addEventListener('loadedmetadata', setupScrub, { once: true });
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   const activePoster = posterFailed ? FALLBACK_POSTER : posterUrl;
 
   return (
-    <div className="relative mb-6 rounded-2xl overflow-hidden border border-accent/20 shadow-glow group">
+    <div ref={containerRef} className="relative mb-6 rounded-2xl overflow-hidden border border-accent/20 shadow-glow group">
       {/* MEDIA BACKGROUND: video fluido con poster fallback */}
       <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
         {!videoFailed ? (
@@ -79,8 +124,6 @@ export function HeroVideo({
             className="absolute inset-0 w-full h-full object-cover"
             style={{ objectPosition }}
             poster={activePoster}
-            autoPlay
-            loop
             muted
             playsInline
             preload="auto"
