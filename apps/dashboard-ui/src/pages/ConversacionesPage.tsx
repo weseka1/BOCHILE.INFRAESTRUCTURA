@@ -121,7 +121,7 @@ export function ConversacionesPage() {
       <PageHeader title="Conversaciones" subtitle="Chats con clientes via WhatsApp" count={chats.length} />
 
       {/* Layout WhatsApp: lista a la izq + chat a la der */}
-      <div className="card overflow-hidden h-[calc(100vh-220px)] min-h-[500px] flex">
+      <div className="card overflow-hidden h-[calc(100vh-180px)] sm:h-[calc(100vh-220px)] min-h-[420px] flex">
         {/* COLUMNA: lista de chats */}
         <div className={cn(
           'w-full md:w-80 md:shrink-0 border-r border-border flex flex-col bg-surface-1',

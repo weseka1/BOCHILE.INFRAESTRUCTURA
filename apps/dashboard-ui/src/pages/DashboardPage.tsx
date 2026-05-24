@@ -8,6 +8,7 @@ import { BarChartCard } from '@/components/charts/BarChartCard';
 import { LineChartCard } from '@/components/charts/LineChartCard';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { HeroVideo } from '@/components/layout/HeroVideo';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -48,33 +49,20 @@ export function DashboardPage() {
 
   return (
     <>
-      {/* HERO */}
-      <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-accent/20 via-surface-1 to-surface-1 border border-accent/30">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs uppercase tracking-[0.2em] text-emerald-300 font-semibold">Sistema operando 24/7</span>
-            </div>
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-text mb-1">
-              Panel Central <span className="text-accent">Bochile</span>
-            </h1>
-            <p className="text-sm text-text-muted">Vista ejecutiva integral · ventas + operaciones · información en tiempo real</p>
-          </div>
-          <div className="flex gap-2">
-            <Link to="/acciones" className="px-4 py-3 bg-surface-2 rounded-xl border border-border hover:border-accent/50 hover:-translate-y-0.5 transition-all min-w-[120px] cursor-pointer group">
-              <div className="text-[10px] uppercase tracking-widest text-text-muted">Hoy</div>
-              <div className="font-display text-2xl text-accent font-bold">{stats.accionesHoy}</div>
-              <div className="text-[10px] text-text-subtle flex items-center gap-1">Acciones IA <ArrowUpRight className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-            </Link>
-            <Link to="/acciones" className="px-4 py-3 bg-surface-2 rounded-xl border border-border hover:border-emerald-400/50 hover:-translate-y-0.5 transition-all min-w-[120px] cursor-pointer group">
-              <div className="text-[10px] uppercase tracking-widest text-text-muted">Total</div>
-              <div className="font-display text-2xl text-emerald-300 font-bold">{horas}h</div>
-              <div className="text-[10px] text-text-subtle flex items-center gap-1">Tiempo ahorrado <ArrowUpRight className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
-            </Link>
-          </div>
-        </div>
-      </div>
+      {/* HERO VIDEO cinematografico */}
+      <HeroVideo
+        // videoUrl="https://tu-cdn.com/bochile-hero.mp4"  // pegar URL cuando este el video generado
+        posterUrl="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2400&q=85"
+        title={<>Panel <span className="text-accent">Central</span></>}
+        tagline="WHERE VISION BECOMES REALITY"
+        caption="BOCHILE · 1970 · Sistema Operativo IA"
+        metrics={[
+          { label: 'Acciones IA hoy', value: stats.accionesHoy, hint: 'Tiempo real', accent: 'gold', to: '/acciones' },
+          { label: 'Tiempo ahorrado', value: `${horas}h`, hint: `${stats.tiempoAhorrado} min`, accent: 'emerald', to: '/acciones' },
+          { label: 'Leads totales', value: kpis.leadsTotal, accent: 'blue', to: '/leads' },
+          { label: 'Solicitan visita', value: stats.solicVisita, hint: 'Pendientes humana', accent: 'pink', to: '/visitas' },
+        ]}
+      />
 
       {/* GLOBAL KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">

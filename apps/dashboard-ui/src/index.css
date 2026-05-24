@@ -21,6 +21,13 @@
   }
   /* Click highlight transparente en mobile (sino hace flash gris feo) */
   * { -webkit-tap-highlight-color: transparent; }
+  /* iOS: evitar zoom auto en inputs (font-size >= 16px) */
+  input, select, textarea { font-size: 16px; }
+  @media (min-width: 640px) {
+    input, select, textarea { font-size: inherit; }
+  }
+  /* Mejor scroll mobile */
+  body { overscroll-behavior: contain; }
   /* Scrollbar */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: theme('colors.surface.0'); }
