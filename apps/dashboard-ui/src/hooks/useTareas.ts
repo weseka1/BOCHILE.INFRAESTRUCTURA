@@ -88,7 +88,29 @@ export function useTareas() {
     writeAll(next);
   }, []);
 
-  return { tareas, crear, actualizar, eliminar, toggleCompletada };
+  const eliminarVarios = useCallback((ids: string[]) => {
+    const set = new Set(ids);
+    writeAll(readAll().filter(t => !set.has(t.id)));
+  }, []);
+
+  const actualizarVarios = useCallback((ids: string[], patch: Partial<Tarea>) => {
+    const set = new Set(ids);
+    const isCompleting = patch.estado === 'completada';
+    const isUncompleting = patch.estado && patch.estado !== 'completada';
+    const next = readAll().map(t => {
+      if (!set.has(t.id)) return t;
+      const merged: Tarea = { ...t, ...patch };
+      if (isCompleting && !merged.completada_en) merged.completada_en = new Date().toISOString();
+      if (isUncompleting) {
+        const { completada_en, ...rest } = merged;
+        return rest as Tarea;
+      }
+      return merged;
+    });
+    writeAll(next);
+  }, []);
+
+  return { tareas, crear, actualizar, eliminar, toggleCompletada, eliminarVarios, actualizarVarios };
 }
 
 export function useTareasCount(): number {

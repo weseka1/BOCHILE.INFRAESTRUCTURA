@@ -4,6 +4,10 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        // breakpoint custom para celulares chicos (iPhone SE = 375px)
+        xs: '380px',
+      },
       colors: {
         // Paleta Bochile · navy + champagne + blanco (heredada del demo HTML)
         bochile: {
