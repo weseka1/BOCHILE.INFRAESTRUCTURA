@@ -11,11 +11,11 @@ interface HeroMetric {
 }
 
 interface HeroVideoProps {
-  /** Video desktop (recomendado <8MB, H.264 mp4 con faststart). Default: /hero.mp4 */
+  /** Video desktop (recomendado <8MB, H.264 mp4 con faststart). Default: /hero.mp4 si existe. */
   videoUrl?: string;
-  /** Video mobile mas chico (recomendado <4MB). Default: /hero-mobile.mp4 */
+  /** Video mobile mas chico (recomendado <4MB). Default: /hero-mobile.mp4 si existe. */
   videoUrlMobile?: string;
-  /** Poster mientras carga el video. Default: /hero-poster.jpg con fallback Unsplash. */
+  /** Poster mientras carga el video. Default: Unsplash alta res (mansion moderna). */
   posterUrl?: string;
   /** Donde anclar el frame visible cuando el video se recorta por object-cover.
    *  Por default usamos 'center 70%' para que se vea la casa, NO el cielo. */
