@@ -24,7 +24,7 @@ export function EmptyState({ icon: Icon, title, message, hint }: Props) {
   );
 }
 
-export function LoadingState({ label = 'Cargando datos del Sheet…' }: { label?: string }) {
+export function LoadingState({ label = 'Cargando datos…' }: { label?: string }) {
   return (
     <div className="empty-state">
       <div className="inline-flex items-center gap-2 text-accent">
@@ -43,7 +43,7 @@ export function ErrorState({ error }: { error: Error }) {
       <h3 className="empty-state-title text-rose-300">Algo salió mal</h3>
       <p className="text-sm text-rose-400/80 max-w-md mx-auto">{error.message}</p>
       <p className="text-xs text-text-subtle mt-3 italic">
-        Probá refrescar la página. Si persiste, mirá `08_HANDOFF/04_QUE_PASA_SI.md` para diagnosticarlo.
+        Probá refrescar la página. Si persiste, contactá al soporte técnico.
       </p>
     </div>
   );

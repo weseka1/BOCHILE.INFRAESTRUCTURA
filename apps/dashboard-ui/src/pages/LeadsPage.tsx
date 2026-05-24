@@ -5,16 +5,18 @@ import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Toolbar, ChipFilter } from '@/components/ui/Toolbar';
 import { Drawer, DrawerField } from '@/components/ui/Drawer';
-import { etapaColor, scoreColor, formatMoney, formatDate, cn } from '@/lib/utils';
+import { etapaColor, scoreColor, formatMoney, formatDate } from '@/lib/utils';
 import type { Lead } from '@/types/domain';
 import { useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Phone, MessageSquare, MapPin, ExternalLink } from 'lucide-react';
+import { Phone, MessageSquare, MapPin } from 'lucide-react';
 
-const isVenta = (op?: string) => /vent|sale|compra/i.test(String(op || ''));
-const isAlquiler = (op?: string) => /alquil|rent/i.test(String(op || ''));
+const isVenta = (op?: string) => {
+  const s = String(op || '').toLowerCase();
+  if (!s) return true; // sin operacion definida: incluir
+  return /vent|sale|compra/.test(s);
+};
 
-type OpFilter = 'todos' | 'venta' | 'alquiler';
 type ScoreFilter = 'todos' | 'cali' | 'medio' | 'bajo';
 
 export function LeadsPage() {
@@ -22,26 +24,23 @@ export function LeadsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const opFromUrl = (searchParams.get('op') as OpFilter) || 'todos';
   const scoreFromUrl = searchParams.get('score');
-  const [op, setOp] = useState<OpFilter>(['venta', 'alquiler'].includes(opFromUrl) ? opFromUrl : 'todos');
   const [score, setScore] = useState<ScoreFilter>(scoreFromUrl === '70' ? 'cali' : 'todos');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Lead | null>(null);
 
-  const leads = data ?? [];
+  // Solo ventas (alquileres no se muestran)
+  const leads = useMemo(() => (data ?? []).filter(l => isVenta(l.operacion)), [data]);
 
   const counts = useMemo(() => ({
     todos: leads.length,
-    venta: leads.filter(l => isVenta(l.operacion)).length,
-    alquiler: leads.filter(l => isAlquiler(l.operacion)).length,
     cali: leads.filter(l => Number(l.score || 0) >= 70).length,
+    medio: leads.filter(l => { const s = Number(l.score || 0); return s >= 40 && s < 70; }).length,
+    bajo: leads.filter(l => Number(l.score || 0) < 40).length,
   }), [leads]);
 
   const filtered = useMemo(() => {
     let arr = leads;
-    if (op === 'venta') arr = arr.filter(l => isVenta(l.operacion));
-    if (op === 'alquiler') arr = arr.filter(l => isAlquiler(l.operacion));
     if (score === 'cali') arr = arr.filter(l => Number(l.score || 0) >= 70);
     if (score === 'medio') arr = arr.filter(l => { const s = Number(l.score || 0); return s >= 40 && s < 70; });
     if (score === 'bajo') arr = arr.filter(l => Number(l.score || 0) < 40);
@@ -56,14 +55,8 @@ export function LeadsPage() {
       );
     }
     return arr;
-  }, [leads, op, score, q]);
+  }, [leads, score, q]);
 
-  function syncOp(next: OpFilter) {
-    setOp(next);
-    const p = new URLSearchParams(searchParams);
-    if (next === 'todos') p.delete('op'); else p.set('op', next);
-    setSearchParams(p, { replace: true });
-  }
   function syncScore(next: ScoreFilter) {
     setScore(next);
     const p = new URLSearchParams(searchParams);
@@ -80,15 +73,10 @@ export function LeadsPage() {
 
       <Toolbar search={q} onSearch={setQ} searchPlaceholder="Buscar por nombre, teléfono, zona...">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <ChipFilter label="Todos" active={op === 'todos'} onClick={() => syncOp('todos')} count={counts.todos} />
-          <ChipFilter label="Venta" active={op === 'venta'} onClick={() => syncOp('venta')} count={counts.venta} />
-          <ChipFilter label="Alquiler" active={op === 'alquiler'} onClick={() => syncOp('alquiler')} count={counts.alquiler} />
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <ChipFilter label="Todos scores" active={score === 'todos'} onClick={() => syncScore('todos')} />
+          <ChipFilter label="Todos" active={score === 'todos'} onClick={() => syncScore('todos')} count={counts.todos} />
           <ChipFilter label="Calif ≥70" active={score === 'cali'} onClick={() => syncScore('cali')} count={counts.cali} />
-          <ChipFilter label="Medio 40-70" active={score === 'medio'} onClick={() => syncScore('medio')} />
-          <ChipFilter label="Bajo <40" active={score === 'bajo'} onClick={() => syncScore('bajo')} />
+          <ChipFilter label="Medio 40-70" active={score === 'medio'} onClick={() => syncScore('medio')} count={counts.medio} />
+          <ChipFilter label="Bajo <40" active={score === 'bajo'} onClick={() => syncScore('bajo')} count={counts.bajo} />
         </div>
       </Toolbar>
 
@@ -101,13 +89,6 @@ export function LeadsPage() {
           columns={[
             { key: 'nombre', header: 'Nombre', cell: (r) => <span className="font-medium text-text">{r.nombre || r.lead_id}</span> },
             { key: 'tel', header: 'Teléfono', cell: (r) => <span className="font-mono text-xs">{r.telefono}</span> },
-            { key: 'op', header: 'Op.', cell: (r) => (
-              <Badge className={cn(
-                isVenta(r.operacion) ? 'bg-emerald-500/10 text-emerald-300' :
-                isAlquiler(r.operacion) ? 'bg-blue-500/10 text-blue-300' :
-                'bg-zinc-500/10 text-zinc-300',
-              )}>{r.operacion || '-'}</Badge>
-            ) },
             { key: 'etapa', header: 'Etapa', cell: (r) => <Badge className={etapaColor(r.etapa)}>{r.etapa}</Badge> },
             { key: 'score', header: 'Score', cell: (r) => <Badge className={scoreColor(r.score)}>{r.score}</Badge> },
             { key: 'zona', header: 'Zona', cell: (r) => r.zona_pref || '-' },
@@ -147,11 +128,6 @@ export function LeadsPage() {
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <Badge className={etapaColor(selected.etapa)}>{selected.etapa}</Badge>
               <Badge className={scoreColor(selected.score)}>Score {selected.score}</Badge>
-              <Badge className={
-                isVenta(selected.operacion) ? 'bg-emerald-500/10 text-emerald-300' :
-                isAlquiler(selected.operacion) ? 'bg-blue-500/10 text-blue-300' :
-                'bg-zinc-500/10 text-zinc-300'
-              }>{selected.operacion}</Badge>
             </div>
             <DrawerField label="Email" value={selected.email} />
             <DrawerField label="Canal" value={selected.canal} />

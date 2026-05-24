@@ -1,31 +1,20 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Home, Calendar, FileText, MessageSquare, Sparkles, UserCog, X, ShoppingCart, KeyRound, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Home, Calendar, MessageSquare, Sparkles, UserCog, X, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTareasCount } from '@/hooks/useTareas';
 
-const sections: { title: string | null; links: { to: string; label: string; icon: any; badgeKey?: 'tareas' }[] }[] = [
+const sections: { title: string | null; links: { to: string; label: string; icon: any }[] }[] = [
   {
     title: null,
     links: [
       { to: '/', label: 'Panel Central', icon: LayoutDashboard },
-      { to: '/tareas', label: 'Tareas', icon: CheckSquare, badgeKey: 'tareas' },
     ],
   },
   {
     title: 'Ventas',
     links: [
       { to: '/ventas', label: 'Dashboard Ventas', icon: ShoppingCart },
-      { to: '/leads?op=venta', label: 'Leads de Venta', icon: Users },
-      { to: '/propiedades?op=venta', label: 'Propiedades en Venta', icon: Home },
-    ],
-  },
-  {
-    title: 'Alquileres',
-    links: [
-      { to: '/alquileres', label: 'Dashboard Alquileres', icon: KeyRound },
-      { to: '/leads?op=alquiler', label: 'Leads de Alquiler', icon: Users },
-      { to: '/propiedades?op=alquiler', label: 'Propiedades en Alquiler', icon: Home },
-      { to: '/contratos', label: 'Contratos', icon: FileText },
+      { to: '/leads', label: 'Leads', icon: Users },
+      { to: '/propiedades', label: 'Propiedades', icon: Home },
     ],
   },
   {
@@ -45,7 +34,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({ open, onClose }: SidebarProps) {
-  const tareasPendientes = useTareasCount();
   return (
     <>
       {/* Backdrop (solo mobile cuando esta abierto) */}
@@ -105,8 +93,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 </div>
               )}
               <div className="space-y-0.5">
-                {section.links.map(({ to, label, icon: Icon, badgeKey }) => {
-                  const badgeValue = badgeKey === 'tareas' && tareasPendientes > 0 ? tareasPendientes : null;
+                {section.links.map(({ to, label, icon: Icon }) => {
                   return (
                     <NavLink
                       key={to}
@@ -122,20 +109,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                         )
                       }
                     >
-                      {({ isActive }) => (
-                        <>
-                          <Icon className="w-4 h-4 shrink-0" />
-                          <span className="flex-1">{label}</span>
-                          {badgeValue !== null && (
-                            <span className={cn(
-                              'text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center',
-                              isActive ? 'bg-accent-fg/20 text-accent-fg' : 'bg-accent/20 text-accent',
-                            )}>
-                              {badgeValue}
-                            </span>
-                          )}
-                        </>
-                      )}
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1">{label}</span>
                     </NavLink>
                   );
                 })}

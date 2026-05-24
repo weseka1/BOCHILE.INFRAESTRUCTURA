@@ -5,39 +5,34 @@ import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Toolbar, ChipFilter } from '@/components/ui/Toolbar';
 import { Drawer, DrawerField } from '@/components/ui/Drawer';
-import { formatMoney, cn } from '@/lib/utils';
+import { formatMoney } from '@/lib/utils';
 import type { Propiedad } from '@/types/domain';
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { ExternalLink, MapPin, Phone, User as UserIcon } from 'lucide-react';
 
-const isVenta = (op?: string) => /vent|sale/i.test(String(op || ''));
-const isAlquiler = (op?: string) => /alquil|rent/i.test(String(op || ''));
-
-type OpFilter = 'todos' | 'venta' | 'alquiler';
+const isVenta = (op?: string) => {
+  const s = String(op || '').toLowerCase();
+  if (!s) return true; // sin operacion definida: incluir
+  return /vent|sale/.test(s);
+};
 
 export function PropiedadesPage() {
   const { data, isLoading, error } = usePropiedades();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const opFromUrl = (searchParams.get('op') as OpFilter) || 'todos';
-  const [op, setOp] = useState<OpFilter>(['venta', 'alquiler'].includes(opFromUrl) ? opFromUrl : 'todos');
   const [estado, setEstado] = useState<'todos' | 'publicada' | 'inactiva'>('todos');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Propiedad | null>(null);
 
-  const props = data ?? [];
+  // Solo ventas
+  const props = useMemo(() => (data ?? []).filter(p => isVenta(p.operacion)), [data]);
 
   const counts = useMemo(() => ({
     todos: props.length,
-    venta: props.filter(p => isVenta(p.operacion)).length,
-    alquiler: props.filter(p => isAlquiler(p.operacion)).length,
     publicada: props.filter(p => p.publicada).length,
+    inactiva: props.filter(p => !p.publicada).length,
   }), [props]);
 
   const filtered = useMemo(() => {
     let arr = props;
-    if (op === 'venta') arr = arr.filter(p => isVenta(p.operacion));
-    if (op === 'alquiler') arr = arr.filter(p => isAlquiler(p.operacion));
     if (estado === 'publicada') arr = arr.filter(p => p.publicada);
     if (estado === 'inactiva') arr = arr.filter(p => !p.publicada);
     if (q) {
@@ -51,14 +46,7 @@ export function PropiedadesPage() {
       );
     }
     return arr;
-  }, [props, op, estado, q]);
-
-  function syncOp(next: OpFilter) {
-    setOp(next);
-    const p = new URLSearchParams(searchParams);
-    if (next === 'todos') p.delete('op'); else p.set('op', next);
-    setSearchParams(p, { replace: true });
-  }
+  }, [props, estado, q]);
 
   if (isLoading) return <div className="text-text-muted">Cargando...</div>;
   if (error) return <div className="text-rose-400">Error: {(error as Error).message}</div>;
@@ -69,14 +57,9 @@ export function PropiedadesPage() {
 
       <Toolbar search={q} onSearch={setQ} searchPlaceholder="Buscar por título, dirección, zona...">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <ChipFilter label="Todas" active={op === 'todos'} onClick={() => syncOp('todos')} count={counts.todos} />
-          <ChipFilter label="Venta" active={op === 'venta'} onClick={() => syncOp('venta')} count={counts.venta} />
-          <ChipFilter label="Alquiler" active={op === 'alquiler'} onClick={() => syncOp('alquiler')} count={counts.alquiler} />
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <ChipFilter label="Estado: todos" active={estado === 'todos'} onClick={() => setEstado('todos')} />
+          <ChipFilter label="Todas" active={estado === 'todos'} onClick={() => setEstado('todos')} count={counts.todos} />
           <ChipFilter label="Publicadas" active={estado === 'publicada'} onClick={() => setEstado('publicada')} count={counts.publicada} />
-          <ChipFilter label="Inactivas" active={estado === 'inactiva'} onClick={() => setEstado('inactiva')} />
+          <ChipFilter label="Inactivas" active={estado === 'inactiva'} onClick={() => setEstado('inactiva')} count={counts.inactiva} />
         </div>
       </Toolbar>
 
@@ -89,13 +72,6 @@ export function PropiedadesPage() {
           columns={[
             { key: 'id', header: 'ID', cell: (r) => <span className="font-mono text-xs text-text-muted">{r.prop_id}</span> },
             { key: 'titulo', header: 'Título', cell: (r) => <span className="font-medium text-text">{r.titulo || '-'}</span> },
-            { key: 'op', header: 'Op.', cell: (r) => (
-              <Badge className={cn(
-                isVenta(r.operacion) ? 'bg-emerald-500/10 text-emerald-300' :
-                isAlquiler(r.operacion) ? 'bg-blue-500/10 text-blue-300' :
-                'bg-zinc-500/10 text-zinc-300',
-              )}>{r.operacion}</Badge>
-            ) },
             { key: 'tipo', header: 'Tipo', cell: (r) => r.tipo || '-' },
             { key: 'zona', header: 'Zona', cell: (r) => r.zona || '-' },
             { key: 'amb', header: 'Amb', cell: (r) => r.ambientes || '-' },
@@ -141,11 +117,6 @@ export function PropiedadesPage() {
               <img src={selected.foto_principal} alt={selected.titulo} className="w-full rounded-lg mb-3 object-cover max-h-64" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             )}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <Badge className={
-                isVenta(selected.operacion) ? 'bg-emerald-500/10 text-emerald-300' :
-                isAlquiler(selected.operacion) ? 'bg-blue-500/10 text-blue-300' :
-                'bg-zinc-500/10 text-zinc-300'
-              }>{selected.operacion}</Badge>
               <Badge className={selected.publicada ? 'bg-emerald-500/10 text-emerald-300' : 'bg-zinc-500/10 text-zinc-300'}>
                 {selected.estado || (selected.publicada ? 'publicada' : 'inactiva')}
               </Badge>

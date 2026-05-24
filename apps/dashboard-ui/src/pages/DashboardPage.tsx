@@ -2,7 +2,6 @@ import { useMetrics } from '@/hooks/useMetrics';
 import { useLeads } from '@/hooks/useLeads';
 import { usePropiedades } from '@/hooks/usePropiedades';
 import { useVisitas } from '@/hooks/useVisitas';
-import { useContratos } from '@/hooks/useContratos';
 import { useAcciones } from '@/hooks/useAcciones';
 import { StatCard } from '@/components/charts/StatCard';
 import { BarChartCard } from '@/components/charts/BarChartCard';
@@ -13,40 +12,34 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Home, Calendar, Clock, Sparkles, AlertCircle, TrendingUp, MessageSquare,
-  ShoppingCart, KeyRound, DollarSign, Award, Activity, Zap, Target, Phone, ArrowUpRight
+  ShoppingCart, Activity, Zap, Phone, ArrowUpRight
 } from 'lucide-react';
 import type { Lead, Propiedad } from '@/types/domain';
 import { cn } from '@/lib/utils';
 
 const isVenta = (op?: string) => /vent|sale|compra/i.test(String(op || ''));
-const isAlquiler = (op?: string) => /alquil|rent/i.test(String(op || ''));
 
 export function DashboardPage() {
   const { data: metrics } = useMetrics();
   const { data: leads = [] } = useLeads();
   const { data: props = [] } = usePropiedades();
-  const { data: visitas = [] } = useVisitas();
-  const { data: contratos = [] } = useContratos();
   const { data: acciones = [] } = useAcciones();
 
   const stats = useMemo(() => {
     const lv = leads.filter((l: Lead) => isVenta(l.operacion));
-    const la = leads.filter((l: Lead) => isAlquiler(l.operacion));
     const pv = props.filter((p: Propiedad) => isVenta(p.operacion));
-    const pa = props.filter((p: Propiedad) => isAlquiler(p.operacion));
-    const solicVisita = leads.filter(l => String(l.etapa||'').toLowerCase().replace(/[\s_]/g,'') === 'solicitovisita').length;
-    const calificados = leads.filter(l => Number(l.score || 0) >= 70).length;
+    const solicVisita = lv.filter(l => String(l.etapa||'').toLowerCase().replace(/[\s_]/g,'') === 'solicitovisita').length;
+    const calificados = lv.filter(l => Number(l.score || 0) >= 70).length;
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const accionesHoy = acciones.filter((a: any) => {
       const t = new Date(a.timestamp || 0); return t >= hoy;
     }).length;
     return {
-      lv: lv.length, la: la.length, pv: pv.length, pa: pa.length,
+      lv: lv.length, pv: pv.length,
       solicVisita, calificados, accionesHoy,
-      contratos: contratos.length,
       tiempoAhorrado: metrics?.kpis?.tiempoAhorradoTotalMin || 0,
     };
-  }, [leads, props, contratos, acciones, metrics]);
+  }, [leads, props, acciones, metrics]);
 
   const horas = Math.round(stats.tiempoAhorrado / 60);
 
@@ -66,7 +59,7 @@ export function DashboardPage() {
             <h1 className="font-display text-3xl md:text-4xl font-bold text-text mb-1">
               Panel Central <span className="text-accent">Bochile</span>
             </h1>
-            <p className="text-sm text-text-muted">Vista ejecutiva integral · ventas + alquileres + operaciones · datos en vivo desde el Sheet</p>
+            <p className="text-sm text-text-muted">Vista ejecutiva integral · ventas + operaciones · información en tiempo real</p>
           </div>
           <div className="flex gap-2">
             <Link to="/acciones" className="px-4 py-3 bg-surface-2 rounded-xl border border-border hover:border-accent/50 hover:-translate-y-0.5 transition-all min-w-[120px] cursor-pointer group">
@@ -97,18 +90,12 @@ export function DashboardPage() {
         <StatCard label="Tiempo ahorrado" value={`${horas}h`} hint={`${stats.tiempoAhorrado} min totales`} icon={Clock} accent="green" to="/acciones" />
       </div>
 
-      {/* SPLIT 3 paneles: VENTAS / ALQUILERES / OPERACIONES */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      {/* SPLIT 2 paneles: VENTAS / OPERACIONES IA */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <PanelLink to="/ventas" color="emerald" icon={ShoppingCart} title="Ventas" badge="Activo">
           <Row label="Leads de venta" value={stats.lv} />
           <Row label="Propiedades en venta" value={stats.pv} />
-          <Row label="Calificados ≥70" value={leads.filter(l => isVenta(l.operacion) && Number(l.score||0) >= 70).length} />
-        </PanelLink>
-
-        <PanelLink to="/alquileres" color="blue" icon={KeyRound} title="Alquileres" badge="Activo">
-          <Row label="Leads de alquiler" value={stats.la} />
-          <Row label="Propiedades en alquiler" value={stats.pa} />
-          <Row label="Contratos activos" value={stats.contratos} />
+          <Row label="Calificados ≥70" value={stats.calificados} />
         </PanelLink>
 
         <PanelLink to="/acciones" color="gold" icon={Zap} title="Cami IA" badge="Operando">

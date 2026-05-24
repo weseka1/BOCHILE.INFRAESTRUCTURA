@@ -16,11 +16,26 @@ async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`API ${res.status}: ${txt}`);
+  }
+  return (await res.json()) as T;
+}
+
 export const api = {
   health: () => getJson<{ status: string }>(`/health`),
   leads: () => getJson<import('@/types/domain').Lead[]>(`/leads`),
   propiedades: () => getJson<import('@/types/domain').Propiedad[]>(`/propiedades`),
   visitas: () => getJson<import('@/types/domain').Visita[]>(`/visitas`),
+  createVisita: (v: Partial<import('@/types/domain').Visita>) =>
+    postJson<import('@/types/domain').Visita>(`/visitas`, v),
   contratos: () => getJson<import('@/types/domain').Contrato[]>(`/contratos`),
   empleados: () => getJson<import('@/types/domain').Empleado[]>(`/empleados`),
   matches: () => getJson<import('@/types/domain').MatchPendiente[]>(`/matches`),

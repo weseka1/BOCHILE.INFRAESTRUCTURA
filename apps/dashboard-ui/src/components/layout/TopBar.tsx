@@ -1,10 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { RefreshCw, Activity, Menu, Search, Users, Home, MessageSquare, FileText } from 'lucide-react';
+import { RefreshCw, Activity, Menu, Search, Users, Home } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useLeads } from '@/hooks/useLeads';
 import { usePropiedades } from '@/hooks/usePropiedades';
-import { useContratos } from '@/hooks/useContratos';
 import { cn } from '@/lib/utils';
 
 interface TopBarProps {
@@ -13,20 +12,17 @@ interface TopBarProps {
 
 const routeTitles: Record<string, string> = {
   '/': 'Panel Central',
-  '/tareas': 'Tareas',
   '/ventas': 'Dashboard Ventas',
-  '/alquileres': 'Dashboard Alquileres',
   '/leads': 'Leads',
   '/propiedades': 'Propiedades',
   '/visitas': 'Visitas',
-  '/contratos': 'Contratos',
   '/conversaciones': 'Conversaciones',
   '/acciones': 'Acciones IA',
   '/empleados': 'Empleados',
 };
 
 interface SearchResult {
-  kind: 'lead' | 'propiedad' | 'contrato';
+  kind: 'lead' | 'propiedad';
   id: string;
   title: string;
   subtitle: string;
@@ -45,7 +41,6 @@ export function TopBar({ onMenu }: TopBarProps) {
 
   const { data: leads = [] } = useLeads();
   const { data: props = [] } = usePropiedades();
-  const { data: contratos = [] } = useContratos();
 
   useEffect(() => {
     const i = setInterval(() => setNow(new Date()), 60_000);
@@ -124,24 +119,8 @@ export function TopBar({ onMenu }: TopBarProps) {
         if (r.length >= 30) break;
       }
     }
-    for (const c of contratos) {
-      if (
-        (c.inquilino_nombre || '').toLowerCase().includes(q) ||
-        (c.direccion || '').toLowerCase().includes(q) ||
-        (c.contrato_id || '').toLowerCase().includes(q)
-      ) {
-        r.push({
-          kind: 'contrato',
-          id: c.contrato_id,
-          title: c.inquilino_nombre || c.contrato_id,
-          subtitle: `${c.direccion || ''} · ${c.estado || ''}`,
-          href: `/contratos`,
-        });
-        if (r.length >= 40) break;
-      }
-    }
     return r.slice(0, 12);
-  }, [searchQ, leads, props, contratos]);
+  }, [searchQ, leads, props]);
 
   const fechaCorta = now.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
   const fechaLarga = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -179,7 +158,7 @@ export function TopBar({ onMenu }: TopBarProps) {
             value={searchQ}
             onChange={(e) => { setSearchQ(e.target.value); setSearchOpen(true); }}
             onFocus={() => setSearchOpen(true)}
-            placeholder="Buscar leads, propiedades, contratos..."
+            placeholder="Buscar leads o propiedades..."
             className="w-full pl-9 pr-12 py-2 rounded-lg bg-surface-1 border border-border text-sm placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
           />
           <kbd className="hidden md:inline-flex absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-subtle bg-surface-2 border border-border rounded px-1.5 py-0.5 font-mono">
@@ -205,11 +184,9 @@ export function TopBar({ onMenu }: TopBarProps) {
                         'p-1.5 rounded-md shrink-0',
                         r.kind === 'lead' && 'bg-blue-500/10 text-blue-300',
                         r.kind === 'propiedad' && 'bg-accent/10 text-accent',
-                        r.kind === 'contrato' && 'bg-emerald-500/10 text-emerald-300',
                       )}>
                         {r.kind === 'lead' && <Users className="w-3.5 h-3.5" />}
                         {r.kind === 'propiedad' && <Home className="w-3.5 h-3.5" />}
-                        {r.kind === 'contrato' && <FileText className="w-3.5 h-3.5" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-text truncate">{r.title}</div>
@@ -234,7 +211,7 @@ export function TopBar({ onMenu }: TopBarProps) {
         <button
           onClick={() => qc.invalidateQueries()}
           className="btn-ghost text-xs px-2.5 sm:px-3 py-1.5"
-          title="Refrescar datos del Sheet"
+          title="Actualizar datos"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Refrescar</span>

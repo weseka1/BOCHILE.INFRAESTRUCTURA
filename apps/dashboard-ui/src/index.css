@@ -8,7 +8,20 @@
     font-feature-settings: 'cv11', 'ss01';
     background: radial-gradient(ellipse at top, #1a2332 0%, #0f1620 60%);
     background-attachment: fixed;
+    /* mejor renderizado de fuentes */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
+  /* Focus visible global: anillo dorado consistente al navegar con teclado */
+  :focus-visible {
+    outline: 2px solid theme('colors.accent.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Click highlight transparente en mobile (sino hace flash gris feo) */
+  * { -webkit-tap-highlight-color: transparent; }
+  /* Scrollbar */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: theme('colors.surface.0'); }
   ::-webkit-scrollbar-thumb { background: theme('colors.surface.3'); border-radius: 4px; }
@@ -40,5 +53,8 @@
   }
   .empty-state-title {
     @apply font-display text-lg text-text mb-2;
+  }
+  .input {
+    @apply w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm placeholder:text-text-subtle text-text focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 transition-colors;
   }
 }
