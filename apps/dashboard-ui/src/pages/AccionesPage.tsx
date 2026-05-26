@@ -41,10 +41,10 @@ export function AccionesPage() {
     if (q) {
       const ql = q.toLowerCase();
       arr = arr.filter(a =>
-        (a.resumen || '').toLowerCase().includes(ql) ||
-        (a.tipo || '').toLowerCase().includes(ql) ||
-        (a.lead_id || '').toLowerCase().includes(ql) ||
-        (a.detalle || '').toLowerCase().includes(ql),
+        String(a.resumen || '').toLowerCase().includes(ql) ||
+        String(a.tipo || '').toLowerCase().includes(ql) ||
+        String(a.lead_id || '').toLowerCase().includes(ql) ||
+        String(a.detalle || '').toLowerCase().includes(ql),
       );
     }
     return arr.slice(0, 500);

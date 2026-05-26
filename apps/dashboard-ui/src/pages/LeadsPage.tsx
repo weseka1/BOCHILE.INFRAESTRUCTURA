@@ -47,11 +47,11 @@ export function LeadsPage() {
     if (q) {
       const ql = q.toLowerCase();
       arr = arr.filter(l =>
-        (l.nombre || '').toLowerCase().includes(ql) ||
+        String(l.nombre || '').toLowerCase().includes(ql) ||
         String(l.telefono || '').includes(q) ||
-        (l.email || '').toLowerCase().includes(ql) ||
-        (l.zona_pref || '').toLowerCase().includes(ql) ||
-        (l.lead_id || '').toLowerCase().includes(ql),
+        String(l.email || '').toLowerCase().includes(ql) ||
+        String(l.zona_pref || '').toLowerCase().includes(ql) ||
+        String(l.lead_id || '').toLowerCase().includes(ql),
       );
     }
     return arr;

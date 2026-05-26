@@ -88,10 +88,10 @@ export function TopBar({ onMenu }: TopBarProps) {
     const r: SearchResult[] = [];
     for (const l of leads) {
       if (
-        (l.nombre || '').toLowerCase().includes(q) ||
+        String(l.nombre || '').toLowerCase().includes(q) ||
         String(l.telefono || '').includes(searchQ) ||
-        (l.email || '').toLowerCase().includes(q) ||
-        (l.lead_id || '').toLowerCase().includes(q)
+        String(l.email || '').toLowerCase().includes(q) ||
+        String(l.lead_id || '').toLowerCase().includes(q)
       ) {
         r.push({
           kind: 'lead',
@@ -105,10 +105,10 @@ export function TopBar({ onMenu }: TopBarProps) {
     }
     for (const p of props) {
       if (
-        (p.titulo || '').toLowerCase().includes(q) ||
-        (p.direccion || '').toLowerCase().includes(q) ||
-        (p.zona || '').toLowerCase().includes(q) ||
-        (p.prop_id || '').toLowerCase().includes(q)
+        String(p.titulo || '').toLowerCase().includes(q) ||
+        String(p.direccion || '').toLowerCase().includes(q) ||
+        String(p.zona || '').toLowerCase().includes(q) ||
+        String(p.prop_id || '').toLowerCase().includes(q)
       ) {
         r.push({
           kind: 'propiedad',

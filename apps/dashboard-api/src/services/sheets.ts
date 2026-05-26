@@ -53,7 +53,7 @@ export async function readSheet<T extends Record<string, unknown>>(
   const data = dataRows.map((row) => {
     const obj: Record<string, unknown> = {};
     headers.forEach((header, idx) => {
-      obj[header as string] = parseValue(row[idx]);
+      obj[header as string] = parseValue(row[idx], header as string);
     });
     return obj;
   });
@@ -65,12 +65,32 @@ export async function readSheet<T extends Record<string, unknown>>(
   return data as T[];
 }
 
+// Campos que SIEMPRE deben quedar como string, aunque luzcan numericos.
+// Sino: telefono "5492915512515" se convierte a int -> .includes()/.replace()/.toLowerCase()
+// crashean en el frontend = "pantalla azul".
+const ALWAYS_STRING_FIELDS = new Set([
+  'prop_id', 'lead_id', 'empleado_id', 'visita_id', 'contrato_id',
+  'match_id', 'msg_id', 'accion_id', 'tarea_id',
+  'telefono', 'tel', 'phone', 'whatsapp',
+  'cmid', 'channelMessageId',
+  'codigo_postal', 'cp',
+]);
+
 /**
  * Parser de valores: convierte strings "TRUE"/"FALSE" a boolean,
  * numeros guardados como strings a number, etc.
+ * IDs y telefonos siempre quedan como string (ver ALWAYS_STRING_FIELDS).
  */
-function parseValue(v: unknown): unknown {
+function parseValue(v: unknown, header?: string): unknown {
   if (v === undefined || v === null || v === '') return '';
+  // ID-like / telefono / etc: forzar string siempre
+  if (header && ALWAYS_STRING_FIELDS.has(header)) {
+    return String(v);
+  }
+  // Heuristica: cualquier header que termine en _id -> string
+  if (header && /_id$/.test(header)) {
+    return String(v);
+  }
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v;
   const s = String(v).trim();
