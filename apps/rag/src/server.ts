@@ -177,6 +177,148 @@ app.get('/api/stats', async (_req, res, next) => {
   }
 });
 
+// ============================================================
+// Geo search: busca por proximidad a un punto (lat/lng) con radio.
+// Usado por Cami cuando un cliente menciona un LANDMARK conocido
+// (ej "la olla", "el faro", "cerca de la UNS") - n8n traduce el
+// landmark a coordenadas y llama aca con radius.
+//
+// Solo devuelve propiedades que tienen geo (lat/lng en payload).
+// 188 de las 239 props del catalogo (Mayo 2026).
+// ============================================================
+const SearchByGeoSchema = z.object({
+  lat: z.number().gte(-90).lte(90),
+  lng: z.number().gte(-180).lte(180),
+  radius_km: z.number().positive().max(50).default(2),
+  limit: z.number().int().positive().max(20).default(5),
+  query: z.string().optional(), // opcional: re-rank por semantica si viene
+  filters: z
+    .object({
+      operation: z.enum(['sale', 'rent', 'other']).optional(),
+      property_type: z.string().optional(),
+      price_currency: z.enum(['USD', 'ARS']).optional(),
+      price_max: z.number().positive().optional(),
+      price_min: z.number().positive().optional(),
+      bedrooms_min: z.number().int().nonnegative().optional(),
+    })
+    .default({}),
+});
+
+app.post('/api/search-by-geo', async (req, res, next) => {
+  try {
+    const body = SearchByGeoSchema.parse(req.body);
+
+    // Build geo_radius filter
+    const must: unknown[] = [{
+      key: 'location',
+      geo_radius: {
+        center: { lat: body.lat, lon: body.lng },
+        radius: body.radius_km * 1000, // Qdrant geo_radius en metros
+      },
+    }];
+    if (body.filters.operation) must.push({ key: 'operation', match: { value: body.filters.operation } });
+    if (body.filters.property_type) must.push({ key: 'property_type', match: { value: body.filters.property_type } });
+    if (body.filters.price_currency) must.push({ key: 'price_currency', match: { value: body.filters.price_currency } });
+    if (body.filters.price_max !== undefined) must.push({ key: 'price', range: { lte: body.filters.price_max } });
+    if (body.filters.price_min !== undefined) must.push({ key: 'price', range: { gte: body.filters.price_min } });
+    if (body.filters.bedrooms_min !== undefined) must.push({ key: 'bedrooms', range: { gte: body.filters.bedrooms_min } });
+
+    const filter = { must };
+
+    // Si vino query, hacemos search semantico CON el filtro geo
+    // Si no, scroll por geo (sin ordering semantico, solo proximidad)
+    let points: Array<{ id: string | number; payload: Record<string, unknown> | undefined; score?: number }>;
+    if (body.query && body.query.trim().length > 0) {
+      const embRes = await openai.embeddings.create({
+        model: config.embedModel,
+        input: body.query.trim(),
+      });
+      const vector = embRes.data[0]!.embedding;
+      const r = await qdrant.search(config.qdrantCollection, {
+        vector,
+        limit: body.limit * 3, // sobre-recolectamos para post-filter de distancia
+        filter: filter as never,
+        with_payload: true,
+      });
+      points = r.map((p) => ({ id: p.id, payload: p.payload as Record<string, unknown>, score: p.score }));
+    } else {
+      const sc = await qdrant.scroll(config.qdrantCollection, {
+        filter: filter as never,
+        limit: body.limit * 3,
+        with_payload: true,
+      });
+      points = sc.points.map((p) => ({ id: p.id, payload: p.payload as Record<string, unknown> }));
+    }
+
+    // Calcular distancia exacta (Haversine) y ordenar por proximidad
+    function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const R = 6371;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    const withDistance = points
+      .map((p) => {
+        const plat = Number(p.payload?.lat);
+        const plng = Number(p.payload?.lng);
+        const dist_km = isFinite(plat) && isFinite(plng) ? distanceKm(body.lat, body.lng, plat, plng) : null;
+        return { ...p, dist_km };
+      })
+      .filter((p) => p.dist_km !== null && p.dist_km <= body.radius_km)
+      .sort((a, b) => {
+        // Si hay query semantica, mezcla score + distancia. Si no, solo distancia.
+        if (body.query) {
+          // hybrid: 0.6 * (1 - dist_normalizada) + 0.4 * score_semantico
+          const aDistN = (a.dist_km ?? 0) / body.radius_km;
+          const bDistN = (b.dist_km ?? 0) / body.radius_km;
+          const aHybrid = 0.6 * (1 - aDistN) + 0.4 * (a.score ?? 0);
+          const bHybrid = 0.6 * (1 - bDistN) + 0.4 * (b.score ?? 0);
+          return bHybrid - aHybrid;
+        }
+        return (a.dist_km ?? 0) - (b.dist_km ?? 0);
+      })
+      .slice(0, body.limit);
+
+    // Shape consistente con /api/search
+    const items = withDistance.map((p) => ({
+      prop_id: p.payload?.prop_id ?? String(p.id),
+      dist_km: p.dist_km ? Number(p.dist_km.toFixed(3)) : null,
+      score: p.score ? Number(p.score.toFixed(4)) : null,
+      title: p.payload?.title ?? null,
+      url: p.payload?.url ?? null,
+      operation: p.payload?.operation ?? null,
+      property_type: p.payload?.property_type ?? null,
+      zona: p.payload?.zona ?? null,
+      barrio: p.payload?.barrio ?? null,
+      address: p.payload?.address ?? null,
+      price: p.payload?.price ?? null,
+      price_currency: p.payload?.price_currency ?? null,
+      price_text: p.payload?.price_text ?? null,
+      bedrooms: p.payload?.bedrooms ?? null,
+      bathrooms: p.payload?.bathrooms ?? null,
+      area_m2: p.payload?.area_m2 ?? null,
+      features: p.payload?.features ?? [],
+      image_main: p.payload?.image_main ?? null,
+      lat: p.payload?.lat ?? null,
+      lng: p.payload?.lng ?? null,
+    }));
+
+    res.json({
+      center: { lat: body.lat, lng: body.lng },
+      radius_km: body.radius_km,
+      query: body.query ?? null,
+      filters: body.filters,
+      count: items.length,
+      items,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post('/api/search', async (req, res, next) => {
   try {
     const body = SearchBodySchema.parse(req.body);
