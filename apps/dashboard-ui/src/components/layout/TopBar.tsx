@@ -89,7 +89,7 @@ export function TopBar({ onMenu }: TopBarProps) {
     for (const l of leads) {
       if (
         (l.nombre || '').toLowerCase().includes(q) ||
-        (l.telefono || '').includes(searchQ) ||
+        String(l.telefono || '').includes(searchQ) ||
         (l.email || '').toLowerCase().includes(q) ||
         (l.lead_id || '').toLowerCase().includes(q)
       ) {

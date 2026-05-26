@@ -9,7 +9,18 @@ const router = Router();
 // ====================================================================
 
 interface Issue {
-  type: 'rule_zero_violation' | 'premature_pivot' | 'tech_leak' | 'weak_decline' | 'context_loss';
+  type:
+    | 'rule_zero_violation'
+    | 'premature_pivot'
+    | 'tech_leak'
+    | 'weak_decline'
+    | 'context_loss'
+    | 'excessive_emojis'
+    | 'robot_tone'
+    | 'repeated_greeting'
+    | 'leak_lead_id'
+    | 'long_message'
+    | 'invented_property';
   severity: 'critical' | 'warning' | 'info';
   lead_id: string;
   nombre: string;
@@ -66,6 +77,19 @@ const TECH_LEAK_PATTERNS = [
 ];
 
 const WEAK_DECLINE_LOCALIDADES = ['Punta Alta', 'Pehu', 'Sierra', 'Villarino'];
+
+// Tono robotico / IA: frases que NO deberia decir Cami
+const ROBOT_PATTERNS = [
+  /sin\s+duda(\s+alguna)?/i,
+  /por\s+supuesto\s+que/i,
+  /estoy\s+aqu[íi]\s+para\s+ayudar/i,
+  /con\s+gusto\s+te\s+(ayudo|asisto)/i,
+  /no\s+dudes\s+en\s+(consultar|preguntar)/i,
+  /quedo\s+a\s+(tu|su)\s+disposici[óo]n/i,
+];
+
+// Lead_id leak (prefijo interno que NO debe llegar al cliente)
+const LEAD_ID_LEAK = /\[lead_id\s*=\s*L-[\d]+/i;
 
 // Detecta si un mensaje OUT del cliente menciona una prop especifica que el cliente trae
 function clientReferencesPriorProp(msg: string): boolean {
@@ -161,6 +185,93 @@ router.get('/audit', async (_req, res, next) => {
                 break;
               }
             }
+          }
+        }
+
+        // ============= EXCESSIVE EMOJIS: 2+ emojis en la misma respuesta =============
+        // Regex sencillo: cuenta emojis usuales. Si hay 2+ -> issue.
+        const emojiMatches = msgText.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F900}-\u{1F9FF}]/gu);
+        if (emojiMatches && emojiMatches.length >= 2) {
+          issues.push({
+            type: 'excessive_emojis',
+            severity: 'info',
+            lead_id: leadId,
+            nombre: String(m.nombre || ''),
+            telefono: String(m.telefono || ''),
+            timestamp: String(m.timestamp || ''),
+            snippet: msgText.slice(0, 200).replace(/\n/g, ' '),
+            full_message: msgText,
+            recomendacion: `Cami uso ${emojiMatches.length} emojis (${emojiMatches.join(' ')}). Regla v2.8: max 1 por respuesta completa.`,
+          });
+        }
+
+        // ============= ROBOT TONE =============
+        for (const re of ROBOT_PATTERNS) {
+          if (re.test(msgText)) {
+            issues.push({
+              type: 'robot_tone',
+              severity: 'warning',
+              lead_id: leadId,
+              nombre: String(m.nombre || ''),
+              telefono: String(m.telefono || ''),
+              timestamp: String(m.timestamp || ''),
+              snippet: msgText.slice(0, 200).replace(/\n/g, ' '),
+              full_message: msgText,
+              recomendacion: 'Frase tipo ChatGPT detectada. Cami debe sonar argentina y comercial, no formal/robotic.',
+            });
+            break;
+          }
+        }
+
+        // ============= LEAD_ID LEAK al cliente =============
+        if (LEAD_ID_LEAK.test(msgText)) {
+          issues.push({
+            type: 'leak_lead_id',
+            severity: 'critical',
+            lead_id: leadId,
+            nombre: String(m.nombre || ''),
+            telefono: String(m.telefono || ''),
+            timestamp: String(m.timestamp || ''),
+            snippet: msgText.slice(0, 200).replace(/\n/g, ' '),
+            full_message: msgText,
+            recomendacion: 'Cami leakeo el prefijo interno [lead_id=...] al cliente. Reforzar prompt.',
+          });
+        }
+
+        // ============= LONG MESSAGE: >5 burbujas o >800 chars =============
+        const burbujas = msgText.split('||').length;
+        if (burbujas > 5 || msgText.length > 800) {
+          issues.push({
+            type: 'long_message',
+            severity: 'info',
+            lead_id: leadId,
+            nombre: String(m.nombre || ''),
+            telefono: String(m.telefono || ''),
+            timestamp: String(m.timestamp || ''),
+            snippet: msgText.slice(0, 200).replace(/\n/g, ' '),
+            full_message: msgText,
+            recomendacion: `Respuesta larga: ${burbujas} burbujas / ${msgText.length} chars. Regla: max 4 burbujas, 4 lineas cada una.`,
+          });
+        }
+
+        // ============= REPEATED GREETING: saluda 2+ veces en mismo lead =============
+        if (i > 5 && /^¡?(hola|buenas|buen\s+d[íi]a|buenas\s+tardes)[\s,!]+\w/i.test(msgText)) {
+          // ver si ya hubo un saludo anterior en este lead
+          const prevGreets = conv.slice(0, i).filter(p =>
+            p.direccion === 'out' && /^¡?(hola|buenas|buen\s+d[íi]a)/i.test(String(p.mensaje || ''))
+          ).length;
+          if (prevGreets >= 1) {
+            issues.push({
+              type: 'repeated_greeting',
+              severity: 'info',
+              lead_id: leadId,
+              nombre: String(m.nombre || ''),
+              telefono: String(m.telefono || ''),
+              timestamp: String(m.timestamp || ''),
+              snippet: msgText.slice(0, 200).replace(/\n/g, ' '),
+              full_message: msgText,
+              recomendacion: `Cami volvio a saludar (ya saludo ${prevGreets}x). Regla: saluda solo en el primer mensaje.`,
+            });
           }
         }
 

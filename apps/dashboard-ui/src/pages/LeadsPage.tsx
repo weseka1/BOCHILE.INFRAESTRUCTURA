@@ -48,7 +48,7 @@ export function LeadsPage() {
       const ql = q.toLowerCase();
       arr = arr.filter(l =>
         (l.nombre || '').toLowerCase().includes(ql) ||
-        (l.telefono || '').includes(q) ||
+        String(l.telefono || '').includes(q) ||
         (l.email || '').toLowerCase().includes(ql) ||
         (l.zona_pref || '').toLowerCase().includes(ql) ||
         (l.lead_id || '').toLowerCase().includes(ql),

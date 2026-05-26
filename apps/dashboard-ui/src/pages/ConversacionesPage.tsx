@@ -94,10 +94,10 @@ export function ConversacionesPage() {
     if (!q) return chats;
     const ql = q.toLowerCase();
     return chats.filter(c =>
-      c.nombre.toLowerCase().includes(ql) ||
-      c.telefono.includes(q) ||
-      c.lead_id.toLowerCase().includes(ql) ||
-      c.ultimo.mensaje?.toLowerCase().includes(ql),
+      String(c.nombre || '').toLowerCase().includes(ql) ||
+      String(c.telefono || '').includes(q) ||
+      String(c.lead_id || '').toLowerCase().includes(ql) ||
+      String(c.ultimo.mensaje || '').toLowerCase().includes(ql),
     );
   }, [chats, q]);
 

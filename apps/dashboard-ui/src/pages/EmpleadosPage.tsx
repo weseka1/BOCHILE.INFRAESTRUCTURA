@@ -34,7 +34,7 @@ export function EmpleadosPage() {
         (r.nombre || '').toLowerCase().includes(ql) ||
         (r.rol || '').toLowerCase().includes(ql) ||
         (r.zona_especialidad || '').toLowerCase().includes(ql) ||
-        (r.telefono || '').includes(q) ||
+        String(r.telefono || '').includes(q) ||
         (r.email || '').toLowerCase().includes(ql),
       );
     }
@@ -92,7 +92,7 @@ export function EmpleadosPage() {
         footer={selected && (
           <div className="flex gap-2">
             {selected.telefono && (
-              <a href={`https://wa.me/${selected.telefono.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+              <a href={`https://wa.me/${String(selected.telefono).replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-emerald-600/80 text-white hover:brightness-110">
                 <Phone className="w-4 h-4" /> WhatsApp
               </a>
