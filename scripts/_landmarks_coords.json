@@ -1,0 +1,212 @@
+{
+  "_meta": {
+    "description": "Diccionario de landmarks -> coordenadas. Usado por Cami para traducir slang del cliente a una query geografica precisa. Inyectado en el workflow n8n como nodo Set previo a Vendedor CORE.",
+    "format": "landmark_key -> { lat, lng, radius_km_default, localidad, descripcion, aliases }",
+    "ultima_actualizacion": "2026-05-26",
+    "owner": "Yamil / Juani"
+  },
+  "bahia_blanca": {
+    "centro": {
+      "lat": -38.7191, "lng": -62.2724, "radius_km": 1.0,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Plaza Rivadavia y entorno (corazon del centro)",
+      "aliases": ["el centro", "el micro", "microcentro", "plaza rivadavia", "la plaza", "centro bb"]
+    },
+    "uns": {
+      "lat": -38.6996, "lng": -62.2649, "radius_km": 0.8,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Universidad Nacional del Sur, Av. Alem 1253-1700",
+      "aliases": ["la uns", "la universidad", "universitario", "uns", "barrio universitario"]
+    },
+    "shopping_bahia_plaza": {
+      "lat": -38.7167, "lng": -62.2540, "radius_km": 0.7,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Bahia Blanca Plaza Shopping (Sarmiento y Castelar)",
+      "aliases": ["el shopping", "el plaza", "bahia plaza", "el bahia plaza"]
+    },
+    "hospital_penna": {
+      "lat": -38.7188, "lng": -62.2670, "radius_km": 0.6,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Hospital Penna, Estomba 968",
+      "aliases": ["el penna", "hospital penna", "el penna de bahia"]
+    },
+    "hospital_italiano": {
+      "lat": -38.7163, "lng": -62.2666, "radius_km": 0.6,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Hospital Italiano Regional del Sur",
+      "aliases": ["el italiano", "hospital italiano"]
+    },
+    "teatro_municipal": {
+      "lat": -38.7150, "lng": -62.2683, "radius_km": 0.5,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Teatro Municipal, Alsina 425",
+      "aliases": ["el teatro", "teatro municipal"]
+    },
+    "parque_de_mayo": {
+      "lat": -38.7325, "lng": -62.2615, "radius_km": 1.0,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Parque de Mayo (pulmon SE, cerca Palihue)",
+      "aliases": ["el parque", "parque de mayo", "el parque de mayo"]
+    },
+    "palihue": {
+      "lat": -38.7398, "lng": -62.2552, "radius_km": 1.2,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Palihue (Chico y Grande), residencial alta SE",
+      "aliases": ["palihue", "palihue chico", "palihue grande"]
+    },
+    "villa_mitre": {
+      "lat": -38.7136, "lng": -62.2845, "radius_km": 1.0,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Villa Mitre, calle Pueyrredon, Sixto Laspiur",
+      "aliases": ["villa mitre", "v. mitre", "barrio mitre"]
+    },
+    "villa_belgrano": {
+      "lat": -38.7233, "lng": -62.2785, "radius_km": 1.0,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Villa Belgrano, calles Avellaneda, Charlone",
+      "aliases": ["villa belgrano", "v. belgrano"]
+    },
+    "patagonia": {
+      "lat": -38.7000, "lng": -62.3000, "radius_km": 1.0,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Barrio Patagonia (popular, norte)",
+      "aliases": ["patagonia", "barrio patagonia"]
+    },
+    "estacion_sud": {
+      "lat": -38.7331, "lng": -62.2740, "radius_km": 0.6,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Estacion Sud (Villa Don Bosco)",
+      "aliases": ["estacion sud", "la estacion", "villa don bosco"]
+    },
+    "hipodromo": {
+      "lat": -38.7081, "lng": -62.3007, "radius_km": 0.8,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Hipodromo Argentino (oeste)",
+      "aliases": ["el hipodromo", "hipodromo"]
+    },
+    "ingeniero_white_puerto": {
+      "lat": -38.7806, "lng": -62.2664, "radius_km": 1.5,
+      "localidad": "Bahia Blanca",
+      "descripcion": "Ingeniero White - Puerto de Bahia Blanca",
+      "aliases": ["ingeniero white", "ing white", "el puerto", "puerto"]
+    }
+  },
+  "monte_hermoso": {
+    "centro": {
+      "lat": -38.9881, "lng": -61.2970, "radius_km": 1.5,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Centro Monte Hermoso (Av. Argentina + Costanera). Coord real de prop 23248.",
+      "aliases": ["centro monte hermoso", "el centro de monte", "av argentina", "la principal", "monte centro"]
+    },
+    "costanera": {
+      "lat": -38.9881, "lng": -61.2970, "radius_km": 2.5,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Av. Costanera, paralela al mar (mismo eje que centro)",
+      "aliases": ["la costanera", "costanera monte hermoso", "frente al mar"]
+    },
+    "las_dunas_complejo": {
+      "lat": -38.9796, "lng": -61.3257, "radius_km": 1.5,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Complejo Las Dunas - coord real de prop 25653 (Los Delfines y Del Calamar). Es el residencial mas pegado del lado de la olla.",
+      "aliases": ["las dunas", "las dunas monte hermoso", "complejo las dunas"]
+    },
+    "la_olla": {
+      "lat": -38.9800, "lng": -61.3400, "radius_km": 3.0,
+      "localidad": "Monte Hermoso",
+      "descripcion": "La Olla - zona dunaria deportiva (moto/cuatri/sandboard) al oeste de Las Dunas. NO residencial - son medanos. Radio amplio para recoger props residenciales cercanas (Las Dunas, Camping Americano).",
+      "aliases": ["la olla", "la olla de monte", "la olla de mh"]
+    },
+    "camping_americano": {
+      "lat": -38.9810, "lng": -61.3300, "radius_km": 2.5,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Camping Americano - mismo extremo de la olla, lindero a Las Dunas. Lado opuesto a Sauce Grande.",
+      "aliases": ["camping americano", "el americano", "camping"]
+    },
+    "faro_recalada": {
+      "lat": -38.9881, "lng": -61.2970, "radius_km": 2.0,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Faro Recalada - hito divisor entre lado oeste (la olla/Las Dunas/Camping Americano) y lado este (Sauce Grande)",
+      "aliases": ["el faro", "faro recalada", "faro"]
+    },
+    "sauce_grande": {
+      "lat": -38.9803, "lng": -61.1500, "radius_km": 3.0,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Balneario Sauce Grande - residencial al ESTE del faro. Lado OPUESTO a la olla ('Sauce Grande es Boca, la olla es River'). OJO: props del catalogo con 'Sauce Grande' suelen tener address ambigua y a veces geocodean mal - radio amplio.",
+      "aliases": ["sauce grande", "el sauce", "balneario sauce grande"]
+    },
+    "monte_del_este": {
+      "lat": -38.9810, "lng": -61.2580, "radius_km": 2.0,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Monte del Este - sector residencial al este, antes de Sauce Grande",
+      "aliases": ["monte del este", "el este", "terrazas del este"]
+    },
+    "punto_blanco": {
+      "lat": -38.9881, "lng": -61.2970, "radius_km": 1.5,
+      "localidad": "Monte Hermoso",
+      "descripcion": "Bajada Punto Blanco (cerca centro MH)",
+      "aliases": ["punto blanco", "la bajada"]
+    }
+  },
+  "punta_alta": {
+    "centro": {
+      "lat": -38.8775, "lng": -62.0731, "radius_km": 1.0,
+      "localidad": "Punta Alta",
+      "descripcion": "Centro Punta Alta, Plaza Belgrano",
+      "aliases": ["centro punta alta", "punta", "pa centro", "plaza belgrano pa"]
+    },
+    "base_naval": {
+      "lat": -38.8956, "lng": -62.0894, "radius_km": 1.0,
+      "localidad": "Punta Alta",
+      "descripcion": "Base Naval Puerto Belgrano",
+      "aliases": ["base naval", "puerto belgrano", "la base"]
+    }
+  },
+  "pehuen_co": {
+    "centro": {
+      "lat": -38.9979, "lng": -61.5454, "radius_km": 1.5,
+      "localidad": "Pehuen Co",
+      "descripcion": "Balneario Pehuen Co - tranquilo, sur del partido Coronel Rosales",
+      "aliases": ["pehuen co", "pehuenco", "pehuen"]
+    }
+  },
+  "sierras": {
+    "sierra_de_la_ventana": {
+      "lat": -38.1500, "lng": -61.7964, "radius_km": 2.0,
+      "localidad": "Sierras / Tornquist",
+      "descripcion": "Sierra de la Ventana - pueblo turistico serrano",
+      "aliases": ["sierra de la ventana", "la ventana", "sierras"]
+    },
+    "tornquist": {
+      "lat": -38.0976, "lng": -62.2236, "radius_km": 1.5,
+      "localidad": "Sierras / Tornquist",
+      "descripcion": "Tornquist - capital del partido",
+      "aliases": ["tornquist"]
+    },
+    "villa_ventana": {
+      "lat": -38.0700, "lng": -61.8200, "radius_km": 1.5,
+      "localidad": "Sierras / Tornquist",
+      "descripcion": "Villa Ventana - turistico, casas de fin de semana",
+      "aliases": ["villa ventana", "v. ventana"]
+    }
+  },
+  "villarino": {
+    "medanos": {
+      "lat": -38.8267, "lng": -62.6914, "radius_km": 2.0,
+      "localidad": "Villarino",
+      "descripcion": "Medanos - capital del partido Villarino (NO confundir con los medanos costeros de Monte Hermoso)",
+      "aliases": ["medanos", "medanos villarino", "pueblo medanos"]
+    },
+    "pedro_luro": {
+      "lat": -39.4889, "lng": -62.6797, "radius_km": 1.5,
+      "localidad": "Villarino",
+      "descripcion": "Pedro Luro - sur de Villarino",
+      "aliases": ["pedro luro", "luro"]
+    },
+    "cabildo": {
+      "lat": -38.4900, "lng": -61.8736, "radius_km": 1.5,
+      "localidad": "Villarino",
+      "descripcion": "Cabildo - limita con BB",
+      "aliases": ["cabildo"]
+    }
+  }
+}

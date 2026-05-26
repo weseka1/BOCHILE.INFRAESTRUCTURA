@@ -1,0 +1,84 @@
+{
+  "name": "SUB - Buscar Por Proximidad Geo",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {"name": "landmark_key", "type": "string"},
+            {"name": "lat", "type": "number"},
+            {"name": "lng", "type": "number"},
+            {"name": "radius_km", "type": "number"},
+            {"name": "query", "type": "string"},
+            {"name": "operation", "type": "string"},
+            {"name": "property_type", "type": "string"},
+            {"name": "price_max", "type": "number"}
+          ]
+        }
+      },
+      "id": "trigger-input",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Traduce un landmark_key a coordenadas usando el diccionario inline.\n// Si vienen lat/lng directos, los usa. Si vienen ambos, prioriza landmark_key.\n//\n// Output: { lat, lng, radius_km, query, filters }\n\nconst LANDMARKS = {\n  // BAHIA BLANCA\n  'centro_bb': { lat: -38.7191, lng: -62.2724, radius_km: 1.0 },\n  'uns': { lat: -38.6996, lng: -62.2649, radius_km: 0.8 },\n  'shopping_bahia_plaza': { lat: -38.7167, lng: -62.2540, radius_km: 0.7 },\n  'hospital_penna': { lat: -38.7188, lng: -62.2670, radius_km: 0.6 },\n  'hospital_italiano': { lat: -38.7163, lng: -62.2666, radius_km: 0.6 },\n  'teatro_municipal': { lat: -38.7150, lng: -62.2683, radius_km: 0.5 },\n  'parque_de_mayo': { lat: -38.7325, lng: -62.2615, radius_km: 1.0 },\n  'palihue': { lat: -38.7398, lng: -62.2552, radius_km: 1.2 },\n  'villa_mitre': { lat: -38.7136, lng: -62.2845, radius_km: 1.0 },\n  'villa_belgrano': { lat: -38.7233, lng: -62.2785, radius_km: 1.0 },\n  'patagonia': { lat: -38.7000, lng: -62.3000, radius_km: 1.0 },\n  'estacion_sud': { lat: -38.7331, lng: -62.2740, radius_km: 0.6 },\n  'hipodromo': { lat: -38.7081, lng: -62.3007, radius_km: 0.8 },\n  'ingeniero_white_puerto': { lat: -38.7806, lng: -62.2664, radius_km: 1.5 },\n  // MONTE HERMOSO\n  'centro_mh': { lat: -38.9881, lng: -61.2970, radius_km: 1.5 },\n  'costanera_mh': { lat: -38.9881, lng: -61.2970, radius_km: 2.5 },\n  'las_dunas_complejo': { lat: -38.9796, lng: -61.3257, radius_km: 1.5 },\n  'la_olla': { lat: -38.9800, lng: -61.3400, radius_km: 3.0 },\n  'camping_americano': { lat: -38.9810, lng: -61.3300, radius_km: 2.5 },\n  'faro_recalada': { lat: -38.9881, lng: -61.2970, radius_km: 2.0 },\n  'sauce_grande': { lat: -38.9803, lng: -61.1500, radius_km: 3.0 },\n  'monte_del_este': { lat: -38.9810, lng: -61.2580, radius_km: 2.0 },\n  'punto_blanco': { lat: -38.9881, lng: -61.2970, radius_km: 1.5 },\n  // PUNTA ALTA\n  'centro_pa': { lat: -38.8775, lng: -62.0731, radius_km: 1.0 },\n  'base_naval': { lat: -38.8956, lng: -62.0894, radius_km: 1.0 },\n  // PEHUEN CO\n  'pehuen_co': { lat: -38.9979, lng: -61.5454, radius_km: 1.5 },\n  // SIERRAS\n  'sierra_de_la_ventana': { lat: -38.1500, lng: -61.7964, radius_km: 2.0 },\n  'tornquist': { lat: -38.0976, lng: -62.2236, radius_km: 1.5 },\n  'villa_ventana': { lat: -38.0700, lng: -61.8200, radius_km: 1.5 },\n  // VILLARINO\n  'medanos_villarino': { lat: -38.8267, lng: -62.6914, radius_km: 2.0 },\n  'pedro_luro': { lat: -39.4889, lng: -62.6797, radius_km: 1.5 },\n  'cabildo': { lat: -38.4900, lng: -61.8736, radius_km: 1.5 },\n};\n\nconst inp = $input.first().json || {};\n\nlet lat, lng, radius_km;\n\n// 1) Si vino landmark_key, usar ese\nif (inp.landmark_key && LANDMARKS[inp.landmark_key]) {\n  const lm = LANDMARKS[inp.landmark_key];\n  lat = lm.lat; lng = lm.lng;\n  radius_km = Number(inp.radius_km) > 0 ? Number(inp.radius_km) : lm.radius_km;\n}\n// 2) Si vinieron lat/lng directos\nelse if (Number(inp.lat) && Number(inp.lng)) {\n  lat = Number(inp.lat); lng = Number(inp.lng);\n  radius_km = Number(inp.radius_km) > 0 ? Number(inp.radius_km) : 2.0;\n}\n// 3) Error\nelse {\n  return [{ json: { error: 'Debe pasar landmark_key conocido o lat+lng directos. Landmarks: ' + Object.keys(LANDMARKS).join(', ') } }];\n}\n\n// Filtros opcionales\nconst filters = {};\nif (inp.operation === 'sale' || inp.operation === 'rent') filters.operation = inp.operation;\nif (inp.property_type) filters.property_type = String(inp.property_type);\nif (Number(inp.price_max) > 0) filters.price_max = Number(inp.price_max);\n\nreturn [{\n  json: {\n    lat, lng, radius_km,\n    query: inp.query ? String(inp.query) : undefined,\n    filters,\n    limit: 5,\n  }\n}];"
+      },
+      "id": "resolve-landmark",
+      "name": "Resolve Landmark → Coords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rag-bochile.onrender.com/api/search-by-geo",
+        "options": {
+          "timeout": 25000,
+          "response": {
+            "response": { "neverError": true }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-rag",
+      "name": "Call RAG /search-by-geo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Formatear respuesta del RAG para el agente CORE.\n// Devuelve string con las props encontradas + sus distancias.\n\nconst inp = $input.first().json || {};\nconst orig = $('Resolve Landmark → Coords').first().json;\n\nif (inp.error) {\n  return [{ json: { result: 'ERROR_GEO: ' + (inp.error || '').slice(0, 200) } }];\n}\n\nif (!inp.items || inp.items.length === 0) {\n  return [{ json: { result: 'SIN_PROPIEDADES_GEO | centro=(' + orig.lat + ',' + orig.lng + ') radio=' + orig.radius_km + 'km. Probar con radio mayor o text search clasico.' } }];\n}\n\nconst lines = inp.items.map((p, i) => {\n  const precio = p.price ? p.price + ' ' + (p.price_currency || '') : (p.price_text || 'Consultar');\n  const ubic = (p.barrio && p.barrio !== 'unknown') ? p.barrio : (p.zona || 'Bahia Blanca');\n  return (i+1) + '. [' + p.prop_id + '] ' + (p.title || '?')\n    + ' | ' + (p.property_type || '?')\n    + ' | ' + ubic\n    + ' | ' + (p.bedrooms ? p.bedrooms + ' amb' : 'amb ?')\n    + ' | ' + (p.area_m2 ? p.area_m2 + ' m2' : 'm2 ?')\n    + ' | ' + precio\n    + ' | a ' + (p.dist_km !== null ? p.dist_km.toFixed(2) + ' km' : '? km')\n    + ' | URL: ' + p.url;\n});\n\nconst header = 'PROPIEDADES_CERCANAS (' + inp.items.length + ', centro=' + orig.lat.toFixed(4) + ',' + orig.lng.toFixed(4) + ', radio=' + orig.radius_km + 'km):';\n\nreturn [{ json: { result: header + '\\n' + lines.join('\\n') } }];"
+      },
+      "id": "format-response",
+      "name": "Formatear Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [[{ "node": "Resolve Landmark → Coords", "type": "main", "index": 0 }]]
+    },
+    "Resolve Landmark → Coords": {
+      "main": [[{ "node": "Call RAG /search-by-geo", "type": "main", "index": 0 }]]
+    },
+    "Call RAG /search-by-geo": {
+      "main": [[{ "node": "Formatear Respuesta", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "tags": []
+}
