@@ -14,7 +14,8 @@ async function getClient(): Promise<sheets_v4.Sheets> {
   if (sheetsClient) return sheetsClient;
   const auth = new google.auth.GoogleAuth({
     ...config.googleCreds,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    // Lectura + escritura (necesario para appendRow). Si solo lee, sigue funcionando.
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
   const client = await auth.getClient();
   sheetsClient = google.sheets({ version: 'v4', auth: client as any });
@@ -87,4 +88,51 @@ function parseValue(v: unknown): unknown {
 export function invalidateCache(tab?: SheetTab): void {
   if (tab) cache.delete(tab);
   else cache.clear();
+}
+
+/**
+ * Devuelve los headers (fila 1) de una pestana, respetando el orden exacto.
+ */
+async function getHeaders(tab: SheetTab): Promise<string[]> {
+  const sheets = await getClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: config.sheetId,
+    range: `${tab}!1:1`,
+  });
+  const row = (res.data.values && res.data.values[0]) || [];
+  return row.map((v) => String(v));
+}
+
+/**
+ * Agrega una fila al final de una pestana. Recibe un objeto y lo mapea
+ * a las columnas usando los headers reales del Sheet (cualquier campo
+ * que no exista en los headers se ignora). Invalida el cache de esa tab.
+ */
+export async function appendRow(
+  tab: SheetTab,
+  payload: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const headers = await getHeaders(tab);
+  if (headers.length === 0) {
+    throw new Error(`Pestana "${tab}" no tiene headers en la fila 1`);
+  }
+  const row = headers.map((h) => {
+    const v = payload[h];
+    if (v === undefined || v === null) return '';
+    if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+    return v;
+  });
+  const sheets = await getClient();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: config.sheetId,
+    range: `${tab}!A:ZZ`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [row] },
+  });
+  invalidateCache(tab);
+  // devolver el objeto normalizado
+  const saved: Record<string, unknown> = {};
+  headers.forEach((h, i) => { saved[h] = row[i]; });
+  return saved;
 }
