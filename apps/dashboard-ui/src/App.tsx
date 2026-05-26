@@ -11,6 +11,7 @@ import { ConversacionesPage } from '@/pages/ConversacionesPage';
 import { AccionesPage } from '@/pages/AccionesPage';
 import { EmpleadosPage } from '@/pages/EmpleadosPage';
 import { TareasPage } from '@/pages/TareasPage';
+import { CalidadIaPage } from '@/pages/CalidadIaPage';
 
 export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/conversaciones" element={<ConversacionesPage />} />
             <Route path="/acciones" element={<AccionesPage />} />
             <Route path="/empleados" element={<EmpleadosPage />} />
+            <Route path="/calidad-ia" element={<CalidadIaPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

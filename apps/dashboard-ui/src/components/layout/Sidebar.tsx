@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Home, Calendar, MessageSquare, Sparkles, UserCog, X, ShoppingCart, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Users, Home, Calendar, MessageSquare, Sparkles, UserCog, X, ShoppingCart, CheckSquare, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTareasCount } from '@/hooks/useTareas';
 
@@ -26,6 +26,12 @@ const sections: { title: string | null; links: { to: string; label: string; icon
       { to: '/conversaciones', label: 'Conversaciones', icon: MessageSquare },
       { to: '/acciones', label: 'Acciones IA', icon: Sparkles },
       { to: '/empleados', label: 'Empleados', icon: UserCog },
+    ],
+  },
+  {
+    title: 'IA',
+    links: [
+      { to: '/calidad-ia', label: 'Calidad IA', icon: ShieldCheck },
     ],
   },
 ];

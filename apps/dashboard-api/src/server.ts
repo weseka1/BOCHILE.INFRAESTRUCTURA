@@ -12,6 +12,7 @@ import matches from './routes/matches';
 import conversaciones from './routes/conversaciones';
 import acciones from './routes/acciones';
 import metrics from './routes/metrics';
+import calidadIa from './routes/calidad_ia';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/matches', matches);
 app.use('/api/conversaciones', conversaciones);
 app.use('/api/acciones', acciones);
 app.use('/api/metrics', metrics);
+app.use('/api/calidad-ia', calidadIa);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[ERROR]', err);

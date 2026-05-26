@@ -42,4 +42,40 @@ export const api = {
   conversaciones: () => getJson<import('@/types/domain').Conversacion[]>(`/conversaciones`),
   acciones: () => getJson<import('@/types/domain').AccionIA[]>(`/acciones`),
   metrics: () => getJson<import('@/types/domain').Metrics>(`/metrics`),
+  calidadIa: () => getJson<CalidadIaAudit>(`/calidad-ia/audit`),
 };
+
+// ====== CALIDAD IA TYPES ======
+export interface CalidadIaIssue {
+  type: 'rule_zero_violation' | 'premature_pivot' | 'tech_leak' | 'weak_decline' | 'context_loss';
+  severity: 'critical' | 'warning' | 'info';
+  lead_id: string;
+  nombre: string;
+  telefono: string;
+  timestamp: string;
+  snippet: string;
+  full_message?: string;
+  context_before?: string;
+  recomendacion: string;
+}
+
+export interface CalidadIaKpis {
+  total_mensajes: number;
+  total_leads: number;
+  mensajes_in: number;
+  mensajes_out: number;
+  fails_totales: number;
+  fails_criticos: number;
+  fails_warning: number;
+  fails_info: number;
+  fail_rate_pct: number;
+  tasa_humano_pct: number;
+  ultima_actualizacion: string;
+}
+
+export interface CalidadIaAudit {
+  kpis: CalidadIaKpis;
+  issues_by_type: Record<string, number>;
+  issues: CalidadIaIssue[];
+  total_issues: number;
+}
