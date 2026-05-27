@@ -58,11 +58,20 @@ function iniciales(nombre: string): string {
   return (nombre || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || '?';
 }
 
+const chatKey = (leadId: string, channel: string) => `${leadId}::${channel}`;
+
 export function ConversacionesPage() {
   const { data, isLoading, error } = useConversaciones();
   const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState('');
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(searchParams.get('lead'));
+  // selectedKey: 'lead_id::channel'. Soporta retrocompat con ?lead=X (sin canal).
+  const initialKey = (() => {
+    const lead = searchParams.get('lead');
+    const ch = searchParams.get('canal');
+    if (!lead) return null;
+    return ch ? chatKey(lead, ch) : lead; // si no hay canal, dejamos solo lead (se resuelve abajo)
+  })();
+  const [selectedKey, setSelectedKey] = useState<string | null>(initialKey);
   const [tab, setTab] = useState<ChannelKey>((searchParams.get('tab') as ChannelKey) || 'ventas');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -73,23 +82,37 @@ export function ConversacionesPage() {
     setSearchParams(p, { replace: true });
   }, [tab]);
 
-  // Sync ?lead=X param when selection changes
+  // Sync ?lead=X&canal=Y cuando cambia la seleccion
   useEffect(() => {
     const p = new URLSearchParams(searchParams);
-    if (selectedLeadId) p.set('lead', selectedLeadId); else p.delete('lead');
+    if (selectedKey && selectedKey.includes('::')) {
+      const [lead, ch] = selectedKey.split('::');
+      p.set('lead', lead);
+      p.set('canal', ch);
+    } else if (selectedKey) {
+      p.set('lead', selectedKey);
+      p.delete('canal');
+    } else {
+      p.delete('lead');
+      p.delete('canal');
+    }
     setSearchParams(p, { replace: true });
-  }, [selectedLeadId]);
+  }, [selectedKey]);
 
-  // Agrupar por lead_id -> chats. Channel del chat = el del primer mensaje con channel_id no vacio.
+  // Agrupar por (lead_id, channel). Cada combinacion es un chat distinto:
+  // un mismo cliente que escribio al WA de Ventas Y al de Alquileres aparece
+  // como dos chats separados — los canales NO se mezclan jamas. En particular,
+  // los mensajes de Cami (Ventas) nunca aparecen en el chat de Alquileres.
   const chats: Chat[] = useMemo(() => {
     const all = (data ?? []) as Conversacion[];
     const map = new Map<string, Chat>();
     for (const m of all) {
       if (!m.lead_id) continue;
       const ch = classifyChannel((m as any).channel_id);
-      const c = map.get(m.lead_id);
+      const key = `${m.lead_id}::${ch}`;
+      const c = map.get(key);
       if (!c) {
-        map.set(m.lead_id, {
+        map.set(key, {
           lead_id: m.lead_id,
           nombre: (m as any).nombre || m.lead_id,
           telefono: m.telefono || '',
@@ -105,8 +128,6 @@ export function ConversacionesPage() {
         if (m.direccion === 'in') c.unread_in++;
         if ((m as any).nombre && !c.nombre.match(/[a-zA-Z]/)) c.nombre = (m as any).nombre;
         if (m.telefono && !c.telefono) c.telefono = m.telefono;
-        // Si el chat aun era sin_clasificar y aparece un msg con channel real, lo seteamos
-        if (c.channel === 'sin_clasificar' && ch !== 'sin_clasificar') c.channel = ch;
         if (tsToMs(m.timestamp) > tsToMs(c.ultimo.timestamp)) c.ultimo = m;
       }
     }
@@ -139,17 +160,30 @@ export function ConversacionesPage() {
     return arr;
   }, [chats, q, tab]);
 
-  const selected = useMemo(
-    () => chats.find(c => c.lead_id === selectedLeadId) || null,
-    [chats, selectedLeadId],
-  );
+  // Buscamos el chat por la clave compuesta (lead_id::channel).
+  // Si la URL trae solo ?lead (retrocompat o link viejo), resolvemos al chat
+  // mas reciente para ese lead que matchee el tab activo.
+  const selected = useMemo(() => {
+    if (!selectedKey) return null;
+    if (selectedKey.includes('::')) {
+      const [lead, ch] = selectedKey.split('::');
+      return chats.find(c => c.lead_id === lead && c.channel === ch) || null;
+    }
+    const matches = chats.filter(c => c.lead_id === selectedKey);
+    if (matches.length === 0) return null;
+    if (tab !== 'todos') {
+      const m = matches.find(c => c.channel === tab);
+      if (m) return m;
+    }
+    return matches[0];
+  }, [chats, selectedKey, tab]);
 
   // Auto-scroll al final cuando abre un chat
   useEffect(() => {
     if (selected) {
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100);
     }
-  }, [selectedLeadId]);
+  }, [selectedKey]);
 
   if (isLoading) return <div className="text-text-muted">Cargando...</div>;
   if (error) return <div className="text-rose-400">Error: {(error as Error).message}</div>;
@@ -160,12 +194,12 @@ export function ConversacionesPage() {
 
       {/* Tabs por canal */}
       <div className="flex gap-1.5 mb-3 flex-wrap">
-        <TabButton k="ventas" tab={tab} setTab={setTab} count={tabCounts.ventas} setSelected={setSelectedLeadId} />
-        <TabButton k="alquileres" tab={tab} setTab={setTab} count={tabCounts.alquileres} setSelected={setSelectedLeadId} />
+        <TabButton k="ventas" tab={tab} setTab={setTab} count={tabCounts.ventas} setSelected={setSelectedKey} />
+        <TabButton k="alquileres" tab={tab} setTab={setTab} count={tabCounts.alquileres} setSelected={setSelectedKey} />
         {tabCounts.sin_clasificar > 0 && (
-          <TabButton k="sin_clasificar" tab={tab} setTab={setTab} count={tabCounts.sin_clasificar} setSelected={setSelectedLeadId} />
+          <TabButton k="sin_clasificar" tab={tab} setTab={setTab} count={tabCounts.sin_clasificar} setSelected={setSelectedKey} />
         )}
-        <TabButton k="todos" tab={tab} setTab={setTab} count={tabCounts.todos} setSelected={setSelectedLeadId} />
+        <TabButton k="todos" tab={tab} setTab={setTab} count={tabCounts.todos} setSelected={setSelectedKey} />
       </div>
 
       {/* Layout WhatsApp: lista a la izq + chat a la der */}
@@ -191,13 +225,15 @@ export function ConversacionesPage() {
           <div className="flex-1 overflow-y-auto">
             {filteredChats.length === 0 ? (
               <p className="text-text-muted text-sm py-8 text-center">Sin chats</p>
-            ) : filteredChats.map((c) => (
+            ) : filteredChats.map((c) => {
+              const ck = chatKey(c.lead_id, c.channel);
+              return (
               <button
-                key={c.lead_id}
-                onClick={() => setSelectedLeadId(c.lead_id)}
+                key={ck}
+                onClick={() => setSelectedKey(ck)}
                 className={cn(
                   'w-full text-left px-3 py-3 border-b border-border/50 hover:bg-surface-2 transition-colors flex gap-3 items-start',
-                  selectedLeadId === c.lead_id && 'bg-surface-2',
+                  selectedKey === ck && 'bg-surface-2',
                 )}
               >
                 {/* avatar */}
@@ -225,7 +261,8 @@ export function ConversacionesPage() {
                   </div>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -247,7 +284,7 @@ export function ConversacionesPage() {
               <div className="px-4 py-3 border-b border-border bg-surface-1 flex items-center gap-3">
                 {/* back en mobile */}
                 <button
-                  onClick={() => setSelectedLeadId(null)}
+                  onClick={() => setSelectedKey(null)}
                   className="md:hidden p-1 text-text-muted hover:text-text"
                   aria-label="Volver"
                 >
