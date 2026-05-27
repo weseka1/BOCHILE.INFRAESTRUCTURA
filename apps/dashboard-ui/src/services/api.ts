@@ -29,6 +29,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function patchJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`API ${res.status}: ${txt}`);
+  }
+  return (await res.json()) as T;
+}
+
 export const api = {
   health: () => getJson<{ status: string }>(`/health`),
   leads: () => getJson<import('@/types/domain').Lead[]>(`/leads`),
@@ -36,6 +49,8 @@ export const api = {
   visitas: () => getJson<import('@/types/domain').Visita[]>(`/visitas`),
   createVisita: (v: Partial<import('@/types/domain').Visita>) =>
     postJson<import('@/types/domain').Visita>(`/visitas`, v),
+  updateVisita: (visita_id: string, patch: Partial<import('@/types/domain').Visita>) =>
+    patchJson<import('@/types/domain').Visita>(`/visitas/${encodeURIComponent(visita_id)}`, patch),
   contratos: () => getJson<import('@/types/domain').Contrato[]>(`/contratos`),
   empleados: () => getJson<import('@/types/domain').Empleado[]>(`/empleados`),
   matches: () => getJson<import('@/types/domain').MatchPendiente[]>(`/matches`),

@@ -1,7 +1,7 @@
-import { useLeads } from '@/hooks/useLeads';
-import { useVisitas, useCreateVisita } from '@/hooks/useVisitas';
+import { useVisitas, useCreateVisita, useUpdateVisita } from '@/hooks/useVisitas';
 import { useEmpleados } from '@/hooks/useEmpleados';
 import { usePropiedades } from '@/hooks/usePropiedades';
+import { useLeads } from '@/hooks/useLeads';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
@@ -10,20 +10,33 @@ import { Drawer } from '@/components/ui/Drawer';
 import { formatFechaVisita, formatHora, cn } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Visita, Lead } from '@/types/domain';
+import type { Visita } from '@/types/domain';
 import {
-  Phone, MapPin, Clock, User as UserIcon, MessageSquare, ArrowUpRight,
-  CheckCircle2, Plus, X, Loader2, AlertCircle, CalendarPlus, Calendar as CalendarIcon,
+  Phone, MapPin, Clock, User as UserIcon, MessageSquare,
+  CheckCircle2, Loader2, AlertCircle, CalendarPlus, Calendar as CalendarIcon, Sparkles,
 } from 'lucide-react';
 
+// Estados normalizados:
+// - 'pendiente': el bot registro interes pero falta coordinar fecha/hora
+// - 'confirmada' | 'agendada': ya hay fecha+hora+vendedor (a confirmar manualmente o detectada del chat humano)
+// - 'realizada': la visita se hizo
+// - 'cancelada': se cancelo
 const estadoColor = (estado: string) => {
-  switch (estado) {
-    case 'agendada': return 'bg-blue-500/10 text-blue-300';
+  switch (String(estado || '').toLowerCase()) {
+    case 'pendiente': return 'bg-amber-500/10 text-amber-300';
+    case 'agendada':
+    case 'confirmada': return 'bg-blue-500/10 text-blue-300';
     case 'realizada': return 'bg-emerald-500/10 text-emerald-300';
     case 'cancelada': return 'bg-rose-500/10 text-rose-300';
     default: return 'bg-zinc-500/10 text-zinc-300';
   }
 };
+
+function esPendiente(v: Visita) { return String(v.estado || '').toLowerCase() === 'pendiente'; }
+function esConfirmada(v: Visita) {
+  const e = String(v.estado || '').toLowerCase();
+  return e === 'confirmada' || e === 'agendada' || e === 'realizada';
+}
 
 interface FormState {
   lead_id: string;
@@ -41,47 +54,61 @@ interface FormState {
 
 const emptyForm: FormState = {
   lead_id: '', cliente_nombre: '', telefono: '', prop_id: '', direccion: '',
-  fecha: '', hora: '', vendedor_id: '', vendedor_nombre: '', estado: 'agendada', observaciones: '',
+  fecha: '', hora: '', vendedor_id: '', vendedor_nombre: '', estado: 'confirmada', observaciones: '',
 };
 
 export function VisitasPage() {
   const navigate = useNavigate();
-  const { data: leads, isLoading: loadingLeads } = useLeads();
   const { data: visitas, isLoading: loadingVisitas } = useVisitas();
+  const { data: leads } = useLeads();
   const { data: empleados = [] } = useEmpleados();
   const { data: props = [] } = usePropiedades();
   const create = useCreateVisita();
+  const update = useUpdateVisita();
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [sourceLead, setSourceLead] = useState<Lead | null>(null);
+  // modo del form: confirmar una pendiente (con visita_id) o crear manual
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
-  const solicitudes = useMemo(() => {
-    const all = leads ?? [];
-    return all
-      .filter((l: Lead) => String(l.etapa || '').toLowerCase().replace(/[\s_]/g, '') === 'solicitovisita')
-      .sort((a, b) => String(b.actualizado_en || '').localeCompare(String(a.actualizado_en || '')));
-  }, [leads]);
+  const all = (visitas ?? []) as Visita[];
+  const pendientes = useMemo(
+    () => all.filter(esPendiente).sort((a, b) => String(b.creada_en || '').localeCompare(String(a.creada_en || ''))),
+    [all],
+  );
+  const confirmadas = useMemo(
+    () => all.filter(esConfirmada).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || ''))),
+    [all],
+  );
 
-  const visitasAgendadas = (visitas ?? []) as Visita[];
+  function leadOf(visita: Visita) {
+    return (leads ?? []).find(l => l.lead_id === visita.lead_id);
+  }
 
-  function openFromLead(l: Lead) {
-    setSourceLead(l);
+  function openConfirm(v: Visita) {
+    const lead = leadOf(v);
+    setConfirmingId(v.visita_id);
     setForm({
-      ...emptyForm,
-      lead_id: l.lead_id,
-      cliente_nombre: l.nombre || l.lead_id,
-      telefono: l.telefono || '',
-      direccion: l.zona_pref || '',
+      lead_id: v.lead_id || '',
+      cliente_nombre: v.cliente_nombre || lead?.nombre || '',
+      telefono: lead?.telefono || '',
+      prop_id: v.prop_id || '',
+      direccion: v.direccion || '',
+      fecha: v.fecha || '',
+      hora: v.hora || '',
+      vendedor_id: v.vendedor_id || '',
+      vendedor_nombre: v.vendedor_nombre || '',
+      estado: 'confirmada',
+      observaciones: v.observaciones || '',
     });
     setSubmitError(null);
     setFormOpen(true);
   }
 
   function openManual() {
-    setSourceLead(null);
+    setConfirmingId(null);
     setForm(emptyForm);
     setSubmitError(null);
     setFormOpen(true);
@@ -89,7 +116,7 @@ export function VisitasPage() {
 
   function close() {
     setFormOpen(false);
-    setSourceLead(null);
+    setConfirmingId(null);
     setSubmitError(null);
     setForm(emptyForm);
   }
@@ -117,7 +144,7 @@ export function VisitasPage() {
       return;
     }
     try {
-      const saved = await create.mutateAsync({
+      const payload: Partial<Visita> = {
         lead_id: form.lead_id || undefined,
         cliente_nombre: form.cliente_nombre.trim(),
         prop_id: form.prop_id || undefined,
@@ -128,11 +155,20 @@ export function VisitasPage() {
         vendedor_nombre: form.vendedor_nombre,
         estado: form.estado,
         observaciones: form.observaciones,
-        confirmada_cliente: false,
-        notificada_vendedor: false,
+        confirmada_cliente: true,
+        notificada_vendedor: true,
         recordatorio_enviado: false,
-      });
-      setJustSavedId(saved.visita_id || null);
+      };
+
+      let savedId: string | null = null;
+      if (confirmingId) {
+        const saved = await update.mutateAsync({ visita_id: confirmingId, patch: payload });
+        savedId = saved.visita_id || confirmingId;
+      } else {
+        const saved = await create.mutateAsync(payload);
+        savedId = saved.visita_id || null;
+      }
+      setJustSavedId(savedId);
       setTimeout(() => setJustSavedId(null), 4000);
       close();
     } catch (err: any) {
@@ -140,30 +176,39 @@ export function VisitasPage() {
     }
   }
 
-  if (loadingLeads || loadingVisitas) return <div className="text-text-muted">Cargando...</div>;
+  async function cancelarPendiente(v: Visita) {
+    if (!confirm(`Cancelar la solicitud de visita de ${v.cliente_nombre || v.lead_id}?`)) return;
+    try {
+      await update.mutateAsync({ visita_id: v.visita_id, patch: { estado: 'cancelada' } });
+    } catch (e: any) {
+      alert('Error: ' + (e?.message || 'no se pudo cancelar'));
+    }
+  }
+
+  if (loadingVisitas) return <div className="text-text-muted">Cargando...</div>;
 
   return (
     <>
       <PageHeader
         title="Visitas"
-        subtitle="Solicitudes pendientes y visitas agendadas"
-        count={solicitudes.length + visitasAgendadas.length}
+        subtitle="Solicitudes pendientes y visitas coordinadas"
+        count={pendientes.length + confirmadas.length}
       />
 
       {/* Banner success */}
       {justSavedId && (
         <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-emerald-300 text-sm">
           <CheckCircle2 className="w-4 h-4" />
-          <span>Visita <span className="font-mono">{justSavedId}</span> registrada correctamente ✓</span>
+          <span>Visita <span className="font-mono">{justSavedId}</span> guardada correctamente ✓</span>
         </div>
       )}
 
       {/* Action bar */}
       <div className="mb-5 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3 text-xs">
-          <span className="text-text-muted">Pendientes: <strong className="text-amber-400">{solicitudes.length}</strong></span>
+          <span className="text-text-muted">Pendientes: <strong className="text-amber-400">{pendientes.length}</strong></span>
           <span className="text-text-subtle">·</span>
-          <span className="text-text-muted">Confirmadas: <strong className="text-blue-400">{visitasAgendadas.length}</strong></span>
+          <span className="text-text-muted">Confirmadas: <strong className="text-blue-400">{confirmadas.length}</strong></span>
         </div>
         <button
           type="button"
@@ -178,71 +223,82 @@ export function VisitasPage() {
       <div className="mb-6">
         <h3 className="text-sm uppercase tracking-wider text-amber-400 mb-3 flex items-center gap-2">
           <Clock className="w-4 h-4" />
-          Pendientes de coordinar ({solicitudes.length})
+          Pendientes de coordinar ({pendientes.length})
+          <span className="ml-2 text-[10px] normal-case text-text-subtle tracking-normal">
+            <Sparkles className="w-3 h-3 inline" /> registradas por Cami cuando el cliente pide visita
+          </span>
         </h3>
-        {solicitudes.length === 0 ? (
+        {pendientes.length === 0 ? (
           <Card>
             <p className="text-text-muted text-sm py-6 text-center">
-              Sin solicitudes pendientes. Cuando Cami detecte un lead que pida visita o llamada, va a aparecer acá.
+              Sin solicitudes pendientes. Cuando un cliente pida visita por WhatsApp va a aparecer acá.
             </p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {solicitudes.map((l) => (
-              <Card key={l.lead_id} className="border-amber-500/30 hover:border-amber-500/60 hover:-translate-y-0.5 transition-all group">
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <UserIcon className="w-4 h-4 text-amber-400" />
-                      <span className="font-semibold text-text">{l.nombre || l.lead_id}</span>
-                      <Badge className="bg-amber-500/10 text-amber-300 text-[10px]">Solicitó visita/llamado</Badge>
+            {pendientes.map((v) => {
+              const lead = leadOf(v);
+              const tel = lead?.telefono || '';
+              return (
+                <Card key={v.visita_id} className="border-amber-500/30 hover:border-amber-500/60 hover:-translate-y-0.5 transition-all group">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <UserIcon className="w-4 h-4 text-amber-400" />
+                        <span className="font-semibold text-text">{v.cliente_nombre || lead?.nombre || v.lead_id || '-'}</span>
+                        <Badge className="bg-amber-500/10 text-amber-300 text-[10px]">Quiere coordinar visita</Badge>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap mt-1.5">
+                        {tel && (
+                          <a
+                            href={`https://wa.me/${String(tel).replace(/\D/g, '')}`}
+                            target="_blank" rel="noreferrer"
+                            className="text-xs text-emerald-400 hover:underline flex items-center gap-1"
+                          >
+                            <Phone className="w-3 h-3" /> {tel}
+                          </a>
+                        )}
+                        {v.lead_id && (
+                          <button type="button" onClick={() => navigate(`/conversaciones?lead=${v.lead_id}`)}
+                            className="text-xs text-text-muted hover:text-accent flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3" /> Ver chat
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap mt-1.5">
-                      <a
-                        href={`https://wa.me/${String(l.telefono || '').replace(/\D/g, '')}`}
-                        target="_blank" rel="noreferrer"
-                        className="text-xs text-emerald-400 hover:underline flex items-center gap-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Phone className="w-3 h-3" /> {l.telefono}
-                      </a>
-                      <button type="button" onClick={() => navigate(`/conversaciones?lead=${l.lead_id}`)}
-                        className="text-xs text-text-muted hover:text-accent flex items-center gap-1">
-                        <MessageSquare className="w-3 h-3" /> Ver chat
-                      </button>
+                    <span className="text-[10px] text-text-muted shrink-0 font-mono">{v.visita_id}</span>
+                  </div>
+
+                  {v.prop_id && (
+                    <div className="text-xs text-text-muted mb-1 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3" /> Propiedad: <span className="font-mono">{v.prop_id}</span> {v.direccion && `· ${v.direccion}`}
                     </div>
-                  </div>
-                  <span className="text-[10px] text-text-muted shrink-0">Score: {l.score || '-'}</span>
-                </div>
+                  )}
+                  {v.observaciones && (
+                    <div className="text-xs text-text mt-2 italic border-l-2 border-amber-500/40 pl-2 line-clamp-3">
+                      "{v.observaciones}"
+                    </div>
+                  )}
 
-                {l.zona_pref && (
-                  <div className="text-xs text-text-muted mb-1 flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3" /> Zona pref: {l.zona_pref}
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openConfirm(v)}
+                      className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600/80 text-white hover:brightness-110 active:scale-[0.98] transition-all"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Confirmar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cancelarPendiente(v)}
+                      className="px-3 py-2 rounded-lg text-sm bg-surface-2 border border-border text-text-muted hover:text-rose-300 hover:border-rose-500/50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
                   </div>
-                )}
-                {(l.tipo_propiedad || l.ambientes || l.presupuesto_max) && (
-                  <div className="text-xs text-text-muted mb-1">
-                    {[l.tipo_propiedad, l.ambientes ? `${l.ambientes} dorm` : '', l.presupuesto_max ? `${l.presupuesto_max} ${l.moneda || ''}` : ''].filter(Boolean).join(' · ')}
-                  </div>
-                )}
-                {l.ultima_intencion && (
-                  <div className="text-xs text-text mt-2 italic border-l-2 border-amber-500/40 pl-2">
-                    "{l.ultima_intencion}"
-                  </div>
-                )}
-                {l.notas && (
-                  <div className="text-[11px] text-text-muted mt-2 line-clamp-2">{l.notas}</div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => openFromLead(l)}
-                  className="mt-4 w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600/80 text-white hover:brightness-110 active:scale-[0.98] transition-all"
-                >
-                  <CheckCircle2 className="w-4 h-4" /> Confirmar visita
-                </button>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -251,17 +307,17 @@ export function VisitasPage() {
       <div>
         <h3 className="text-sm uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-2">
           <CalendarIcon className="w-4 h-4" />
-          Visitas confirmadas ({visitasAgendadas.length})
+          Visitas confirmadas ({confirmadas.length})
         </h3>
-        {visitasAgendadas.length === 0 ? (
+        {confirmadas.length === 0 ? (
           <Card>
-            <p className="text-text-muted text-sm py-6 text-center">Sin visitas agendadas todavía. Confirmá una pendiente o agregá una manual.</p>
+            <p className="text-text-muted text-sm py-6 text-center">Sin visitas confirmadas todavía. Confirmá una pendiente o agregá una manual.</p>
           </Card>
         ) : (
           <Card>
             <Table<Visita>
               rowKey={(r) => r.visita_id}
-              rows={visitasAgendadas}
+              rows={confirmadas}
               rowOnClick={(r) => r.lead_id && navigate(`/conversaciones?lead=${r.lead_id}`)}
               columns={[
                 { key: 'fecha', header: 'Fecha', cell: (r) => formatFechaVisita(r.fecha) },
@@ -281,8 +337,8 @@ export function VisitasPage() {
       <Drawer
         open={formOpen}
         onClose={close}
-        title={sourceLead ? `Confirmar visita: ${sourceLead.nombre || sourceLead.lead_id}` : 'Nueva visita manual'}
-        subtitle={sourceLead ? `Lead ${sourceLead.lead_id}` : 'Registrar una visita que se haya agendado fuera del sistema'}
+        title={confirmingId ? `Confirmar visita: ${form.cliente_nombre || form.lead_id}` : 'Nueva visita manual'}
+        subtitle={confirmingId ? `Solicitud ${confirmingId}` : 'Registrar una visita coordinada fuera del sistema'}
         footer={
           <div className="flex items-center gap-2">
             <button type="button" onClick={close}
@@ -404,7 +460,7 @@ export function VisitasPage() {
               onChange={e => setForm({ ...form, estado: e.target.value })}
               className="input"
             >
-              <option value="agendada">Agendada</option>
+              <option value="confirmada">Confirmada</option>
               <option value="realizada">Realizada</option>
               <option value="cancelada">Cancelada</option>
             </select>
