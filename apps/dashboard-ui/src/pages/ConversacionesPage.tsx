@@ -7,15 +7,20 @@ import { cn } from '@/lib/utils';
 import type { Conversacion } from '@/types/domain';
 
 // ====== Channels respond.io ======
+// VENTAS_IDS son canales que mappean al tab "Ventas" del dashboard: cualquier
+// numero de WA donde Cami responda como vendedora. 508111 es el WA personal
+// de Yamil conectado para que el equipo Bochile (Camila + Yamil) pueda probar
+// el bot como cliente — funciona identico a Ventas.
+const VENTAS_IDS = ['506217', '508111'];
 const CHANNELS = {
-  ventas: { id: '506217', label: 'Ventas', icon: ShoppingBag, color: 'text-emerald-300', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
+  ventas: { id: VENTAS_IDS[0], label: 'Ventas', icon: ShoppingBag, color: 'text-emerald-300', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
   alquileres: { id: '508045', label: 'Alquileres', icon: Key, color: 'text-blue-300', bg: 'bg-blue-500/15', border: 'border-blue-500/30' },
 } as const;
 type ChannelKey = keyof typeof CHANNELS | 'sin_clasificar' | 'todos';
 
 function classifyChannel(id: string | undefined | number): Exclude<ChannelKey, 'todos'> {
   const s = String(id || '').trim();
-  if (s === CHANNELS.ventas.id) return 'ventas';
+  if (VENTAS_IDS.includes(s)) return 'ventas';
   if (s === CHANNELS.alquileres.id) return 'alquileres';
   return 'sin_clasificar';
 }
