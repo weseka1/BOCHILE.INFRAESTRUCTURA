@@ -1,0 +1,73 @@
+// Revierte el modo TEST del n8n workflow:
+//   - Quita el nodo "Detect Test"
+//   - Reconecta "Parsear Mensaje" -> directo al nodo siguiente original
+//
+// Idempotente. Hace backup antes.
+
+const https = require('node:https');
+const fs = require('node:fs');
+const path = require('node:path');
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNTk4NGQwMC1hODE4LTRjMWUtOGMzYi02ZDEzM2YwODM3NzQiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMTRhMjA5NTgtZTE5Zi00YWM2LThlY2QtOWVmZGU5ZjcwNzgwIiwiaWF0IjoxNzc5MjUzODIyLCJleHAiOjE3ODE4MzgwMDB9.kCrbnDhCGLf5-_jq0IhrWxudhKU5noQXFxrI_OzAy_A';
+const MAIN_WF = 'TEdlfSBCc5ENVslp';
+
+function req(m, p, body) {
+  return new Promise(r => {
+    const d = body ? JSON.stringify(body) : null;
+    const h = { 'X-N8N-API-KEY': KEY };
+    if (d) { h['Content-Type'] = 'application/json'; h['Content-Length'] = Buffer.byteLength(d); }
+    const buf = [];
+    const x = https.request({ host: 'weseka.onrender.com', port: 443, path: p, method: m, headers: h, timeout: 25000 }, rsp => {
+      rsp.on('data', c => buf.push(c));
+      rsp.on('end', () => r({ s: rsp.statusCode, b: Buffer.concat(buf).toString('utf8') }));
+    });
+    x.on('timeout', () => { x.destroy(); r({ s: 0, b: 'TIMEOUT' }); });
+    x.on('error', e => r({ s: 0, b: e.message }));
+    if (d) x.write(d);
+    x.end();
+  });
+}
+
+(async () => {
+  const r = await req('GET', `/api/v1/workflows/${MAIN_WF}`);
+  if (r.s !== 200) { console.error('GET fallo:', r.s); process.exit(1); }
+  const w = JSON.parse(r.b);
+
+  const bkpDir = path.resolve(__dirname, '_workflow_backups');
+  if (!fs.existsSync(bkpDir)) fs.mkdirSync(bkpDir, { recursive: true });
+  const bkpPath = path.join(bkpDir, `${MAIN_WF}_pre_revert_test_${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+  fs.writeFileSync(bkpPath, JSON.stringify(w, null, 2));
+  console.log('Backup en:', bkpPath);
+
+  // 1. Reconectar Parsear Mensaje -> lo que sigue despues de Detect Test
+  const dtConns = w.connections['Detect Test'];
+  const nextOfDt = dtConns?.main?.[0] || [];
+
+  if (nextOfDt.length === 0) {
+    console.log('ℹ️  No habia nodo Detect Test conectado, nada que revertir.');
+  } else {
+    w.connections['Parsear Mensaje'].main[0] = nextOfDt;
+    console.log('✅ Reconectado: Parsear Mensaje -> ' + nextOfDt.map(n => n.node).join(', '));
+  }
+
+  // 2. Eliminar la conexion saliente del nodo Detect Test
+  delete w.connections['Detect Test'];
+
+  // 3. Eliminar el nodo Detect Test del array de nodes
+  const before = w.nodes.length;
+  w.nodes = w.nodes.filter(n => n.name !== 'Detect Test');
+  console.log(`✅ Nodos: ${before} -> ${w.nodes.length} (Detect Test removido)`);
+
+  // 4. PUT + activate
+  const A = ['saveExecutionProgress','saveManualExecutions','saveDataErrorExecution','saveDataSuccessExecution','executionTimeout','errorWorkflow','timezone','executionOrder'];
+  const s = {};
+  if (w.settings) for (const k of A) if (w.settings[k] !== undefined) s[k] = w.settings[k];
+  if (!s.executionOrder) s.executionOrder = 'v1';
+  s.timezone = 'America/Argentina/Buenos_Aires';
+
+  const upd = await req('PUT', `/api/v1/workflows/${MAIN_WF}`, { name: w.name, nodes: w.nodes, connections: w.connections, settings: s });
+  console.log('PUT:', upd.s);
+  const act = await req('POST', `/api/v1/workflows/${MAIN_WF}/activate`);
+  console.log('Activate:', act.s);
+
+  console.log('\nLISTO. Workflow vuelve al flow original sin Detect Test.');
+})().catch(e => { console.error('FATAL:', e.message); process.exit(1); });
