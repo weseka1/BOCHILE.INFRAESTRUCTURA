@@ -5,7 +5,8 @@ export function useConversaciones() {
   return useQuery({
     queryKey: ['conversaciones'],
     queryFn: api.conversaciones,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 15_000, // near-realtime: refresca cada 15s mientras la tab esta abierta
+    refetchIntervalInBackground: false, // no consume cuota si la tab no esta visible
   });
 }

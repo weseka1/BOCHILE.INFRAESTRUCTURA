@@ -2,14 +2,29 @@ import { useConversaciones } from '@/hooks/useConversaciones';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ArrowLeft, User as UserIcon, Bot } from 'lucide-react';
+import { Search, ArrowLeft, User as UserIcon, Bot, ShoppingBag, Key, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Conversacion } from '@/types/domain';
+
+// ====== Channels respond.io ======
+const CHANNELS = {
+  ventas: { id: '506217', label: 'Ventas', icon: ShoppingBag, color: 'text-emerald-300', bg: 'bg-emerald-500/15', border: 'border-emerald-500/30' },
+  alquileres: { id: '508045', label: 'Alquileres', icon: Key, color: 'text-blue-300', bg: 'bg-blue-500/15', border: 'border-blue-500/30' },
+} as const;
+type ChannelKey = keyof typeof CHANNELS | 'sin_clasificar' | 'todos';
+
+function classifyChannel(id: string | undefined | number): Exclude<ChannelKey, 'todos'> {
+  const s = String(id || '').trim();
+  if (s === CHANNELS.ventas.id) return 'ventas';
+  if (s === CHANNELS.alquileres.id) return 'alquileres';
+  return 'sin_clasificar';
+}
 
 interface Chat {
   lead_id: string;
   nombre: string;
   telefono: string;
+  channel: Exclude<ChannelKey, 'todos'>;
   ultimo: Conversacion;
   unread_in: number;
   total: number;
@@ -48,7 +63,15 @@ export function ConversacionesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [q, setQ] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(searchParams.get('lead'));
+  const [tab, setTab] = useState<ChannelKey>((searchParams.get('tab') as ChannelKey) || 'ventas');
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Sync ?tab=X
+  useEffect(() => {
+    const p = new URLSearchParams(searchParams);
+    if (tab && tab !== 'todos') p.set('tab', tab); else p.delete('tab');
+    setSearchParams(p, { replace: true });
+  }, [tab]);
 
   // Sync ?lead=X param when selection changes
   useEffect(() => {
@@ -57,18 +80,20 @@ export function ConversacionesPage() {
     setSearchParams(p, { replace: true });
   }, [selectedLeadId]);
 
-  // Agrupar por lead_id -> chats
+  // Agrupar por lead_id -> chats. Channel del chat = el del primer mensaje con channel_id no vacio.
   const chats: Chat[] = useMemo(() => {
     const all = (data ?? []) as Conversacion[];
     const map = new Map<string, Chat>();
     for (const m of all) {
       if (!m.lead_id) continue;
+      const ch = classifyChannel((m as any).channel_id);
       const c = map.get(m.lead_id);
       if (!c) {
         map.set(m.lead_id, {
           lead_id: m.lead_id,
           nombre: (m as any).nombre || m.lead_id,
           telefono: m.telefono || '',
+          channel: ch,
           ultimo: m,
           unread_in: m.direccion === 'in' ? 1 : 0,
           total: 1,
@@ -80,26 +105,39 @@ export function ConversacionesPage() {
         if (m.direccion === 'in') c.unread_in++;
         if ((m as any).nombre && !c.nombre.match(/[a-zA-Z]/)) c.nombre = (m as any).nombre;
         if (m.telefono && !c.telefono) c.telefono = m.telefono;
+        // Si el chat aun era sin_clasificar y aparece un msg con channel real, lo seteamos
+        if (c.channel === 'sin_clasificar' && ch !== 'sin_clasificar') c.channel = ch;
         if (tsToMs(m.timestamp) > tsToMs(c.ultimo.timestamp)) c.ultimo = m;
       }
     }
-    // ordenar mensajes de cada chat por timestamp asc
     for (const c of map.values()) {
       c.mensajes.sort((a, b) => tsToMs(a.timestamp) - tsToMs(b.timestamp));
     }
     return Array.from(map.values()).sort((a, b) => tsToMs(b.ultimo.timestamp) - tsToMs(a.ultimo.timestamp));
   }, [data]);
 
+  // Contadores por channel para los tabs
+  const tabCounts = useMemo(() => ({
+    todos: chats.length,
+    ventas: chats.filter(c => c.channel === 'ventas').length,
+    alquileres: chats.filter(c => c.channel === 'alquileres').length,
+    sin_clasificar: chats.filter(c => c.channel === 'sin_clasificar').length,
+  }), [chats]);
+
+  // Filtro: por tab + por busqueda
   const filteredChats = useMemo(() => {
-    if (!q) return chats;
-    const ql = q.toLowerCase();
-    return chats.filter(c =>
-      String(c.nombre || '').toLowerCase().includes(ql) ||
-      String(c.telefono || '').includes(q) ||
-      String(c.lead_id || '').toLowerCase().includes(ql) ||
-      String(c.ultimo.mensaje || '').toLowerCase().includes(ql),
-    );
-  }, [chats, q]);
+    let arr = tab === 'todos' ? chats : chats.filter(c => c.channel === tab);
+    if (q) {
+      const ql = q.toLowerCase();
+      arr = arr.filter(c =>
+        String(c.nombre || '').toLowerCase().includes(ql) ||
+        String(c.telefono || '').includes(q) ||
+        String(c.lead_id || '').toLowerCase().includes(ql) ||
+        String(c.ultimo.mensaje || '').toLowerCase().includes(ql),
+      );
+    }
+    return arr;
+  }, [chats, q, tab]);
 
   const selected = useMemo(
     () => chats.find(c => c.lead_id === selectedLeadId) || null,
@@ -118,10 +156,20 @@ export function ConversacionesPage() {
 
   return (
     <>
-      <PageHeader title="Conversaciones" subtitle="Chats con clientes via WhatsApp" count={chats.length} />
+      <PageHeader title="Conversaciones" subtitle="Chats con clientes via WhatsApp" count={filteredChats.length} />
+
+      {/* Tabs por canal */}
+      <div className="flex gap-1.5 mb-3 flex-wrap">
+        <TabButton k="ventas" tab={tab} setTab={setTab} count={tabCounts.ventas} setSelected={setSelectedLeadId} />
+        <TabButton k="alquileres" tab={tab} setTab={setTab} count={tabCounts.alquileres} setSelected={setSelectedLeadId} />
+        {tabCounts.sin_clasificar > 0 && (
+          <TabButton k="sin_clasificar" tab={tab} setTab={setTab} count={tabCounts.sin_clasificar} setSelected={setSelectedLeadId} />
+        )}
+        <TabButton k="todos" tab={tab} setTab={setTab} count={tabCounts.todos} setSelected={setSelectedLeadId} />
+      </div>
 
       {/* Layout WhatsApp: lista a la izq + chat a la der */}
-      <div className="card overflow-hidden h-[calc(100vh-180px)] sm:h-[calc(100vh-220px)] min-h-[420px] flex">
+      <div className="card overflow-hidden h-[calc(100vh-220px)] sm:h-[calc(100vh-260px)] min-h-[420px] flex">
         {/* COLUMNA: lista de chats */}
         <div className={cn(
           'w-full md:w-80 md:shrink-0 border-r border-border flex flex-col bg-surface-1',
@@ -171,7 +219,10 @@ export function ConversacionesPage() {
                       <span className="text-[10px] text-text-subtle font-mono shrink-0">{c.total}</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-text-subtle font-mono mt-0.5 truncate">{c.telefono}</div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className="text-[10px] text-text-subtle font-mono truncate">{c.telefono}</span>
+                    {c.channel !== 'sin_clasificar' && <ChannelChip channel={c.channel} small />}
+                  </div>
                 </div>
               </button>
             ))}
@@ -206,7 +257,10 @@ export function ConversacionesPage() {
                   {iniciales(selected.nombre)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-text truncate">{selected.nombre}</div>
+                  <div className="font-medium text-text truncate flex items-center gap-2">
+                    <span>{selected.nombre}</span>
+                    {selected.channel !== 'sin_clasificar' && <ChannelChip channel={selected.channel} />}
+                  </div>
                   <div className="text-xs text-text-muted font-mono">{selected.telefono} · {selected.lead_id}</div>
                 </div>
               </div>
@@ -217,17 +271,20 @@ export function ConversacionesPage() {
                   const isIn = m.direccion === 'in';
                   const tipo = (m as any).msg_type || 'text';
                   const mediaUrl = (m as any).media_url || '';
+                  const esHumano = !isIn && (m.canal === 'whatsapp_humano' || /humana/i.test(m.agente_que_respondio || ''));
                   return (
                     <div key={m.msg_id} className={cn('flex', isIn ? 'justify-start' : 'justify-end')}>
                       <div className={cn(
                         'max-w-[80%] sm:max-w-md px-3 py-2 rounded-2xl shadow-sm',
                         isIn
                           ? 'bg-surface-2 text-text rounded-bl-md'
-                          : 'bg-emerald-600/80 text-white rounded-br-md',
+                          : esHumano
+                            ? 'bg-purple-600/80 text-white rounded-br-md'
+                            : 'bg-emerald-600/80 text-white rounded-br-md',
                       )}>
                         <div className="flex items-center gap-1.5 text-[10px] opacity-70 mb-1">
                           {isIn ? <UserIcon className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
-                          <span>{isIn ? 'Cliente' : 'Cami'}</span>
+                          <span>{isIn ? 'Cliente' : esHumano ? 'Humana' : 'Cami'}</span>
                           {tipo !== 'text' && (
                             <>
                               <span>·</span>
@@ -295,5 +352,65 @@ export function ConversacionesPage() {
         </div>
       </div>
     </>
+  );
+}
+
+// ====== Tab por canal ======
+function TabButton({
+  k, tab, setTab, count, setSelected,
+}: {
+  k: ChannelKey; tab: ChannelKey;
+  setTab: (k: ChannelKey) => void;
+  count: number;
+  setSelected: (id: string | null) => void;
+}) {
+  const isActive = tab === k;
+  const label =
+    k === 'ventas' ? 'Ventas' :
+    k === 'alquileres' ? 'Alquileres' :
+    k === 'sin_clasificar' ? 'Sin clasificar' :
+    'Todos';
+  const Icon =
+    k === 'ventas' ? ShoppingBag :
+    k === 'alquileres' ? Key :
+    Inbox;
+  const colorClass =
+    k === 'ventas' ? 'border-emerald-500/50 text-emerald-300 bg-emerald-500/10' :
+    k === 'alquileres' ? 'border-blue-500/50 text-blue-300 bg-blue-500/10' :
+    'border-accent/50 text-accent bg-accent/10';
+  return (
+    <button
+      type="button"
+      onClick={() => { setTab(k); setSelected(null); }}
+      className={cn(
+        'inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-all',
+        isActive
+          ? colorClass
+          : 'border-border text-text-muted hover:text-text hover:bg-surface-2',
+      )}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span className="font-medium">{label}</span>
+      <span className={cn(
+        'text-[10px] font-mono px-1.5 py-0.5 rounded',
+        isActive ? 'bg-black/30' : 'bg-surface-2',
+      )}>{count}</span>
+    </button>
+  );
+}
+
+// ====== Chip badge de canal en lista ======
+function ChannelChip({ channel, small }: { channel: 'ventas' | 'alquileres'; small?: boolean }) {
+  const c = CHANNELS[channel];
+  const Icon = c.icon;
+  return (
+    <span className={cn(
+      'inline-flex items-center gap-0.5 rounded font-medium border',
+      c.color, c.bg, c.border,
+      small ? 'text-[9px] px-1 py-0' : 'text-[10px] px-1.5 py-0.5',
+    )}>
+      <Icon className={small ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+      <span className="uppercase tracking-wider">{c.label}</span>
+    </span>
   );
 }

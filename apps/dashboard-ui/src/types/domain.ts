@@ -127,6 +127,8 @@ export interface Conversacion {
   agente_que_respondio: string;
   requiere_humano: boolean;
   timestamp: string;
+  /** ID de canal respond.io. Ventas=506217, Alquileres=508045. Vacio en mensajes pre-2026-05-27. */
+  channel_id?: string;
 }
 
 export interface AccionIA {
