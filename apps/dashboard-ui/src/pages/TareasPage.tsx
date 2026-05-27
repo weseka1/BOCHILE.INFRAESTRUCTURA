@@ -129,9 +129,21 @@ export function TareasPage() {
   }, [empleados]);
 
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  // Parsea "2026-05-30" como fecha LOCAL (no UTC) para evitar off-by-one por timezone.
+  // Sin esto, new Date("2026-05-30") es UTC midnight = ART 21:00 del dia anterior.
+  function parseDateLocal(s: string | undefined): Date | null {
+    if (!s) return null;
+    // Si viene full ISO con T, usar Date directo (es timestamp UTC, OK)
+    if (s.includes('T')) return new Date(s);
+    // Si viene solo "YYYY-MM-DD", parsear como local midnight
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return new Date(s);
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
   function esVencida(t: Tarea) {
     if (!t.vencimiento || t.estado === 'completada') return false;
-    return new Date(t.vencimiento) < hoy;
+    const d = parseDateLocal(t.vencimiento);
+    return d ? d < hoy : false;
   }
 
   return (
@@ -356,7 +368,7 @@ export function TareasPage() {
                       {t.vencimiento && (
                         <span className={cn('inline-flex items-center gap-1', vencida ? 'text-rose-300' : 'text-text-muted')}>
                           <CalendarIcon className="w-3 h-3" />
-                          {new Date(t.vencimiento).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                          {(parseDateLocal(t.vencimiento) || new Date()).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                         </span>
                       )}
                     </div>

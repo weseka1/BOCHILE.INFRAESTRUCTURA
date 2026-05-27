@@ -4,10 +4,39 @@ import type { Tarea } from '../types/domain';
 
 const router = Router();
 
+// ============================================================
+// Helper: convertir fecha "Sheets serial number" a ISO string.
+// Google Sheets auto-convierte strings tipo "2026-05-30" a numero
+// serial (dias desde 1899-12-30). Cuando lo leemos con UNFORMATTED_VALUE,
+// volvemos a recibir el numero. JS sin convertir lo interpreta como ms
+// desde epoch -> aparece como 31 dic 1969. Bug "fecha cualquiera + VENCIDA".
+// ============================================================
+function sheetDateToISO(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '';
+  // Si ya es ISO string (ej "2026-05-30T..." o "2026-05-30"), devolver tal cual
+  if (typeof v === 'string') return v;
+  if (typeof v !== 'number') return String(v);
+  // Numero pequeño (< 100000) y positivo: es un Sheets serial day count.
+  // 25569 = 1970-01-01 en Sheets. Antes de eso son fechas pre-Unix.
+  if (v < 1 || v > 100000) return String(v);
+  const ms = (v - 25569) * 86400000;
+  return new Date(ms).toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function normalizeTarea(t: Tarea): Tarea {
+  return {
+    ...t,
+    vencimiento: sheetDateToISO(t.vencimiento),
+    creada_en: typeof t.creada_en === 'number' ? sheetDateToISO(t.creada_en) : String(t.creada_en || ''),
+    completada_en: typeof t.completada_en === 'number' ? sheetDateToISO(t.completada_en) : String(t.completada_en || ''),
+  };
+}
+
 // GET /api/tareas - lista todas, ordenadas por creada_en desc
 router.get('/', async (_req, res, next) => {
   try {
-    const data = await readSheet<Tarea>('tareas');
+    const raw = await readSheet<Tarea>('tareas');
+    const data = raw.map(normalizeTarea);
     data.sort((a, b) => (b.creada_en ?? '').localeCompare(a.creada_en ?? ''));
     res.json(data);
   } catch (e) {
@@ -36,7 +65,7 @@ router.post('/', async (req, res, next) => {
       completada_en: String(b.completada_en || ''),
     };
     const saved = await appendRow('tareas', payload as unknown as Record<string, unknown>);
-    res.status(201).json(saved);
+    res.status(201).json(normalizeTarea(saved as unknown as Tarea));
   } catch (e) {
     next(e);
   }
@@ -60,7 +89,7 @@ router.patch('/:id', async (req, res, next) => {
 
     const updated = await updateRow('tareas', 'tarea_id', id, patch as Record<string, unknown>);
     if (!updated) return res.status(404).json({ error: 'tarea no encontrada' });
-    res.json(updated);
+    res.json(normalizeTarea(updated as unknown as Tarea));
   } catch (e) {
     next(e);
   }
