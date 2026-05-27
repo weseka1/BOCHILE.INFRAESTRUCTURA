@@ -91,6 +91,18 @@ const ROBOT_PATTERNS = [
 // Lead_id leak (prefijo interno que NO debe llegar al cliente)
 const LEAD_ID_LEAK = /\[lead_id\s*=\s*L-[\d]+/i;
 
+// Phones de TEST: estos se filtran del audit (deben matchear con whitelist n8n del workflow)
+const TEST_PHONES = (process.env.TEST_PHONES || '5492915512515')
+  .split(',')
+  .map(s => s.trim().replace(/\D/g, ''))
+  .filter(Boolean);
+
+function isTestPhone(tel: unknown): boolean {
+  const t = String(tel || '').replace(/\D/g, '');
+  if (!t) return false;
+  return TEST_PHONES.some(p => t.endsWith(p) || p.endsWith(t));
+}
+
 // Detecta si un mensaje OUT del cliente menciona una prop especifica que el cliente trae
 function clientReferencesPriorProp(msg: string): boolean {
   const m = msg.toLowerCase();
@@ -103,7 +115,9 @@ function clientReferencesPriorProp(msg: string): boolean {
 
 router.get('/audit', async (_req, res, next) => {
   try {
-    const msgs = await readSheet<Conversacion>('conversaciones');
+    const msgsAll = await readSheet<Conversacion>('conversaciones');
+    // Filtramos out conversaciones desde/hacia phones de TEST (no contaminar metricas reales)
+    const msgs = msgsAll.filter(m => !isTestPhone(m.telefono));
     msgs.sort((a, b) => (a.timestamp ?? '').localeCompare(b.timestamp ?? ''));
 
     // Agrupar por lead para tener contexto del turno previo

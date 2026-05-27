@@ -157,6 +157,18 @@ export interface Metrics {
   };
 }
 
+export interface Tarea {
+  tarea_id: string;
+  titulo: string;
+  descripcion: string;
+  prioridad: 'alta' | 'media' | 'baja' | string;
+  estado: 'pendiente' | 'en_curso' | 'completada' | string;
+  asignado_a: string;
+  vencimiento: string;
+  creada_en: string;
+  completada_en: string;
+}
+
 export type SheetTab =
   | 'leads'
   | 'propiedades'
@@ -165,4 +177,5 @@ export type SheetTab =
   | 'empleados'
   | 'matches_pendientes'
   | 'conversaciones'
-  | 'acciones_ia';
+  | 'acciones_ia'
+  | 'tareas';

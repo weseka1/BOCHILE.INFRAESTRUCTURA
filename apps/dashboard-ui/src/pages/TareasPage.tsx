@@ -380,7 +380,7 @@ export function TareasPage() {
       </Card>
 
       <div className="mt-4 text-[11px] text-text-subtle text-center">
-        Tareas persistidas localmente · sincronizacion con backend proximamente
+        Tareas sincronizadas con Google Sheets · las completadas se archivan automaticamente en 3 seg
       </div>
     </>
   );
