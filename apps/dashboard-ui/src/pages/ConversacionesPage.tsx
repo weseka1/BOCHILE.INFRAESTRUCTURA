@@ -156,7 +156,7 @@ export function ConversacionesPage() {
 
   return (
     <>
-      <PageHeader title="Conversaciones" subtitle="Chats con clientes via WhatsApp" count={filteredChats.length} />
+      <PageHeader title="Mensajes" subtitle="Chats por WhatsApp" count={filteredChats.length} />
 
       {/* Tabs por canal */}
       <div className="flex gap-1.5 mb-3 flex-wrap">

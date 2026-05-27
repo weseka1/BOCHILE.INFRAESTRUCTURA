@@ -7,31 +7,24 @@ const sections: { title: string | null; links: { to: string; label: string; icon
   {
     title: null,
     links: [
-      { to: '/', label: 'Panel Central', icon: LayoutDashboard },
+      { to: '/', label: 'Inicio', icon: LayoutDashboard },
       { to: '/tareas', label: 'Tareas', icon: CheckSquare, badgeKey: 'tareas' },
     ],
   },
   {
-    title: 'Ventas',
+    title: 'Negocio',
     links: [
-      { to: '/ventas', label: 'Dashboard Ventas', icon: ShoppingCart },
-      { to: '/leads', label: 'Leads', icon: Users },
+      { to: '/ventas', label: 'Ventas', icon: ShoppingCart },
+      { to: '/leads', label: 'Clientes', icon: Users },
       { to: '/propiedades', label: 'Propiedades', icon: Home },
     ],
   },
   {
-    title: 'Operaciones',
+    title: 'Operacion',
     links: [
       { to: '/visitas', label: 'Visitas', icon: Calendar },
-      { to: '/conversaciones', label: 'Conversaciones', icon: MessageSquare },
-      { to: '/acciones', label: 'Acciones IA', icon: Sparkles },
-      { to: '/empleados', label: 'Empleados', icon: UserCog },
-    ],
-  },
-  {
-    title: 'IA',
-    links: [
-      { to: '/calidad-ia', label: 'Calidad IA', icon: ShieldCheck },
+      { to: '/conversaciones', label: 'Mensajes', icon: MessageSquare },
+      { to: '/empleados', label: 'Equipo', icon: UserCog },
     ],
   },
 ];
@@ -90,7 +83,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
         <div className="px-5 pb-3 text-xs text-text-muted italic border-b border-border">
-          Sistema Operativo IA
+          Bochile · Desde 1970
         </div>
 
         <nav className="flex-1 py-3 px-2 overflow-y-auto">

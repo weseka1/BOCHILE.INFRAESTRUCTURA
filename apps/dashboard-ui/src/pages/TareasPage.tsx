@@ -117,9 +117,8 @@ export function TareasPage() {
     setShowForm(false);
   }
 
-  // Opción fija: WESEKA.IA siempre asignable como "agente IA" externo,
-  // independiente de los empleados del Sheet del cliente.
-  const WESEKA_AGENT = { empleado_id: 'weseka_ia', nombre: 'WESEKA.IA', rol: 'agente IA' } as const;
+  // Opcion fija para asignar tareas internas a un proceso automatico.
+  const WESEKA_AGENT = { empleado_id: 'weseka_ia', nombre: 'Asistente', rol: 'automatico' } as const;
 
   const nombrePorId = useMemo(() => {
     const m = new Map<string, string>();

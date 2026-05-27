@@ -11,15 +11,14 @@ interface TopBarProps {
 }
 
 const routeTitles: Record<string, string> = {
-  '/': 'Panel Central',
+  '/': 'Inicio',
   '/tareas': 'Tareas',
-  '/ventas': 'Dashboard Ventas',
-  '/leads': 'Leads',
+  '/ventas': 'Ventas',
+  '/leads': 'Clientes',
   '/propiedades': 'Propiedades',
   '/visitas': 'Visitas',
-  '/conversaciones': 'Conversaciones',
-  '/acciones': 'Acciones IA',
-  '/empleados': 'Empleados',
+  '/conversaciones': 'Mensajes',
+  '/empleados': 'Equipo',
 };
 
 interface SearchResult {
@@ -159,7 +158,7 @@ export function TopBar({ onMenu }: TopBarProps) {
             value={searchQ}
             onChange={(e) => { setSearchQ(e.target.value); setSearchOpen(true); }}
             onFocus={() => setSearchOpen(true)}
-            placeholder="Buscar leads o propiedades..."
+            placeholder="Buscar clientes o propiedades..."
             className="w-full pl-9 pr-12 py-2 rounded-lg bg-surface-1 border border-border text-sm placeholder:text-text-subtle focus:outline-none focus:border-accent transition-colors"
           />
           <kbd className="hidden md:inline-flex absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-subtle bg-surface-2 border border-border rounded px-1.5 py-0.5 font-mono">

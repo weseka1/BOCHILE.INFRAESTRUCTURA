@@ -53,7 +53,7 @@ export function PropiedadesPage() {
 
   return (
     <>
-      <PageHeader title="Propiedades" subtitle="Catálogo de propiedades en cartera" count={filtered.length} />
+      <PageHeader title="Propiedades" subtitle="Todas las propiedades publicadas" count={filtered.length} />
 
       <Toolbar search={q} onSearch={setQ} searchPlaceholder="Buscar por título, dirección, zona...">
         <div className="flex items-center gap-1.5 flex-wrap">

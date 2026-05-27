@@ -46,7 +46,7 @@ export function EmpleadosPage() {
 
   return (
     <>
-      <PageHeader title="Empleados" subtitle="Equipo de Bochile (vendedores + admins)" count={filtered.length} />
+      <PageHeader title="Equipo" subtitle="Vendedores y administracion de Bochile" count={filtered.length} />
 
       <Toolbar search={q} onSearch={setQ} searchPlaceholder="Buscar por nombre, rol, zona...">
         <div className="flex items-center gap-1.5 flex-wrap">

@@ -1,8 +1,6 @@
 import { useMetrics } from '@/hooks/useMetrics';
 import { useLeads } from '@/hooks/useLeads';
 import { usePropiedades } from '@/hooks/usePropiedades';
-import { useVisitas } from '@/hooks/useVisitas';
-import { useAcciones } from '@/hooks/useAcciones';
 import { StatCard } from '@/components/charts/StatCard';
 import { BarChartCard } from '@/components/charts/BarChartCard';
 import { LineChartCard } from '@/components/charts/LineChartCard';
@@ -12,8 +10,8 @@ import { HeroVideo } from '@/components/layout/HeroVideo';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Users, Home, Calendar, Clock, Sparkles, AlertCircle, TrendingUp, MessageSquare,
-  ShoppingCart, Activity, Zap, Phone, ArrowUpRight
+  Users, Home, Calendar, TrendingUp, MessageSquare,
+  ShoppingCart, Phone, ArrowUpRight
 } from 'lucide-react';
 import type { Lead, Propiedad } from '@/types/domain';
 import { cn } from '@/lib/utils';
@@ -24,89 +22,73 @@ export function DashboardPage() {
   const { data: metrics } = useMetrics();
   const { data: leads = [] } = useLeads();
   const { data: props = [] } = usePropiedades();
-  const { data: acciones = [] } = useAcciones();
 
   const stats = useMemo(() => {
     const lv = leads.filter((l: Lead) => isVenta(l.operacion));
     const pv = props.filter((p: Propiedad) => isVenta(p.operacion));
     const solicVisita = lv.filter(l => String(l.etapa||'').toLowerCase().replace(/[\s_]/g,'') === 'solicitovisita').length;
-    const calificados = lv.filter(l => Number(l.score || 0) >= 70).length;
-    const hoy = new Date(); hoy.setHours(0,0,0,0);
-    const accionesHoy = acciones.filter((a: any) => {
-      const t = new Date(a.timestamp || 0); return t >= hoy;
-    }).length;
-    return {
-      lv: lv.length, pv: pv.length,
-      solicVisita, calificados, accionesHoy,
-      tiempoAhorrado: metrics?.kpis?.tiempoAhorradoTotalMin || 0,
-    };
-  }, [leads, props, acciones, metrics]);
+    return { lv: lv.length, pv: pv.length, solicVisita };
+  }, [leads, props]);
 
-  const horas = Math.round(stats.tiempoAhorrado / 60);
-
-  if (!metrics) return <div className="text-text-muted">Cargando panel central...</div>;
+  if (!metrics) return <div className="text-text-muted">Cargando...</div>;
   const { kpis, charts } = metrics;
 
   return (
     <>
-      {/* HERO VIDEO fluido (/hero.mp4 + /hero-mobile.mp4 generados por scripts/37_optimizar_video_hero.cjs) */}
+      {/* HERO con metricas de negocio (sin jerga IA) */}
       <HeroVideo
-        title={<>Panel <span className="text-accent">Central</span></>}
-        tagline="WHERE VISION BECOMES REALITY"
-        caption="BOCHILE · 1970 · Sistema Operativo IA"
+        title={<>Bochile <span className="text-accent">Inmobiliaria</span></>}
+        tagline="DESDE 1970"
+        caption="Bahia Blanca y region"
         metrics={[
-          { label: 'Acciones IA hoy', value: stats.accionesHoy, hint: 'Tiempo real', accent: 'gold', to: '/acciones' },
-          { label: 'Tiempo ahorrado', value: `${horas}h`, hint: `${stats.tiempoAhorrado} min`, accent: 'emerald', to: '/acciones' },
-          { label: 'Leads totales', value: kpis.leadsTotal, accent: 'blue', to: '/leads' },
-          { label: 'Solicitan visita', value: stats.solicVisita, hint: 'Pendientes humana', accent: 'pink', to: '/visitas' },
+          { label: 'Clientes hoy', value: kpis.leadsHoy, hint: 'Nuevos contactos', accent: 'gold', to: '/leads' },
+          { label: 'Clientes total', value: kpis.leadsTotal, accent: 'blue', to: '/leads' },
+          { label: 'Quieren visitar', value: stats.solicVisita, hint: 'Pendientes', accent: 'pink', to: '/visitas' },
+          { label: 'Visitas agendadas', value: kpis.visitasAgendadas, accent: 'emerald', to: '/visitas' },
         ]}
       />
 
-      {/* GLOBAL KPIs */}
+      {/* KPIs principales en idioma de negocio */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-        <StatCard label="Leads totales" value={kpis.leadsTotal} icon={Users} accent="blue" to="/leads" />
-        <StatCard label="Leads hoy" value={kpis.leadsHoy} icon={TrendingUp} accent="green" to="/leads" />
-        <StatCard label="Calificados ≥70" value={stats.calificados} icon={Sparkles} accent="pink" to="/leads?score=70" />
-        <StatCard label="Solicitan visita" value={stats.solicVisita} hint="Pendientes humana" icon={Phone} accent="amber" to="/visitas" />
+        <StatCard label="Clientes total" value={kpis.leadsTotal} icon={Users} accent="blue" to="/leads" />
+        <StatCard label="Clientes nuevos hoy" value={kpis.leadsHoy} icon={TrendingUp} accent="green" to="/leads" />
+        <StatCard label="Quieren visitar" value={stats.solicVisita} hint="Pendientes" icon={Phone} accent="amber" to="/visitas" />
+        <StatCard label="Visitas agendadas" value={kpis.visitasAgendadas} icon={Calendar} accent="pink" to="/visitas" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Propiedades activas" value={kpis.propiedadesActivas ?? 0} icon={Home} accent="gold" to="/propiedades" />
-        <StatCard label="Matches pendientes" value={kpis.matchesPendientes} icon={AlertCircle} accent="amber" to="/acciones" />
-        <StatCard label="Acciones IA (7d)" value={kpis.accionesIaUltimaSemana} icon={MessageSquare} accent="blue" to="/acciones" />
-        <StatCard label="Tiempo ahorrado" value={`${horas}h`} hint={`${stats.tiempoAhorrado} min totales`} icon={Clock} accent="green" to="/acciones" />
+        <StatCard label="Propiedades publicadas" value={kpis.propiedadesActivas ?? 0} icon={Home} accent="gold" to="/propiedades" />
+        <StatCard label="Clientes en venta" value={stats.lv} icon={ShoppingCart} accent="green" to="/leads" />
+        <StatCard label="Propiedades en venta" value={stats.pv} icon={Home} accent="blue" to="/propiedades" />
+        <StatCard label="Mensajes (7d)" value={kpis.accionesIaUltimaSemana} icon={MessageSquare} accent="amber" to="/conversaciones" />
       </div>
 
-      {/* SPLIT 2 paneles: VENTAS / OPERACIONES IA */}
+      {/* SPLIT 2 paneles de negocio */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <PanelLink to="/ventas" color="emerald" icon={ShoppingCart} title="Ventas" badge="Activo">
-          <Row label="Leads de venta" value={stats.lv} />
+          <Row label="Clientes en venta" value={stats.lv} />
           <Row label="Propiedades en venta" value={stats.pv} />
-          <Row label="Calificados ≥70" value={stats.calificados} />
+          <Row label="Visitas agendadas" value={kpis.visitasAgendadas} />
         </PanelLink>
 
-        <PanelLink to="/acciones" color="gold" icon={Zap} title="Cami IA" badge="Operando">
-          <Row label="Acciones (7d)" value={kpis.accionesIaUltimaSemana} />
-          <Row label="Visitas agendadas" value={kpis.visitasAgendadas} />
-          <Row label="Matches pendientes" value={kpis.matchesPendientes} />
+        <PanelLink to="/conversaciones" color="blue" icon={MessageSquare} title="Mensajes" badge="En vivo">
+          <Row label="Mensajes ultimos 7 dias" value={kpis.accionesIaUltimaSemana} />
+          <Row label="Quieren visitar" value={stats.solicVisita} />
+          <Row label="Clientes nuevos hoy" value={kpis.leadsHoy} />
         </PanelLink>
       </div>
 
-      {/* CHARTS */}
+      {/* CHARTS en idioma claro */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <BarChartCard title="Leads por etapa" data={charts.leadsPorEtapa} xKey="etapa" yKey="count" />
-        <BarChartCard title="Leads por zona" data={charts.leadsPorZona} xKey="zona" yKey="count" color="#3b82f6" />
+        <BarChartCard title="Clientes por etapa" data={charts.leadsPorEtapa} xKey="etapa" yKey="count" />
+        <BarChartCard title="Clientes por zona" data={charts.leadsPorZona} xKey="zona" yKey="count" color="#3b82f6" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <LineChartCard title="Mensajes por día (últimos 14 días)" data={charts.mensajesPorDia} xKey="fecha" yKey="count" />
-        <BarChartCard title="Acciones por agente" data={charts.accionesPorAgente} xKey="agente" yKey="count" color="#ec4899" />
+        <LineChartCard title="Mensajes por dia (ultimos 14 dias)" data={charts.mensajesPorDia} xKey="fecha" yKey="count" />
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER limpio */}
       <div className="mt-8 p-4 rounded-xl bg-surface-1 border border-border text-center">
-        <div className="flex items-center justify-center gap-2 text-xs text-text-muted">
-          <Activity className="w-3 h-3 text-emerald-400 animate-pulse" />
-          <span>Sistema Operativo IA · Powered by WESEKA · Camila Pomerich respondiendo en tiempo real</span>
-        </div>
+        <span className="text-xs text-text-muted">Bochile Inmobiliaria · Desde 1970 · Bahia Blanca</span>
       </div>
     </>
   );

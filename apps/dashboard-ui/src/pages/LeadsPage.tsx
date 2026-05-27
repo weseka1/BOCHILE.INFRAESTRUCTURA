@@ -69,7 +69,7 @@ export function LeadsPage() {
 
   return (
     <>
-      <PageHeader title="Leads" subtitle="Clientes captados por Camila" count={filtered.length} />
+      <PageHeader title="Clientes" subtitle="Personas que contactaron con Bochile" count={filtered.length} />
 
       <Toolbar search={q} onSearch={setQ} searchPlaceholder="Buscar por nombre, teléfono, zona...">
         <div className="flex items-center gap-1.5 flex-wrap">

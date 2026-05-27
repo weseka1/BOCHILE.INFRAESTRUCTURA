@@ -52,7 +52,7 @@ export function HeroVideo({
   objectPosition = 'center center',
   title,
   tagline = 'WHERE VISION BECOMES REALITY',
-  caption = 'Sistema Operativo IA · Bochile Inmobiliaria · 1970',
+  caption = 'Bochile Inmobiliaria · Desde 1970 · Bahia Blanca',
   metrics = [],
 }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
