@@ -278,3 +278,54 @@ export async function deleteRow(
   invalidateCache(tab);
   return true;
 }
+
+/**
+ * Elimina TODAS las filas de una pestana donde `whereKey == whereValue`.
+ * Procesa los indices en orden descendente para no invalidar offsets.
+ * Util para reset de un lead (borrar todas sus conversaciones, visitas, etc).
+ */
+export async function deleteRows(
+  tab: SheetTab,
+  whereKey: string,
+  whereValue: string,
+): Promise<number> {
+  const sheets = await getClient();
+  const all = await sheets.spreadsheets.values.get({
+    spreadsheetId: config.sheetId,
+    range: `${tab}!A:ZZ`,
+  });
+  const rows = all.data.values ?? [];
+  if (rows.length === 0) return 0;
+  const headers = rows[0] as string[];
+  const colIdx = headers.indexOf(whereKey);
+  if (colIdx === -1) return 0;
+
+  // Recolectar indices (1-based, fila 1 = headers)
+  const toDelete: number[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i]?.[colIdx] ?? '') === whereValue) {
+      toDelete.push(i + 1);
+    }
+  }
+  if (toDelete.length === 0) return 0;
+
+  const sheetId = await getSheetId(tab);
+  // Procesar en orden descendente para no romper offsets
+  toDelete.sort((a, b) => b - a);
+  const requests = toDelete.map(rowIdx1 => ({
+    deleteDimension: {
+      range: {
+        sheetId,
+        dimension: 'ROWS',
+        startIndex: rowIdx1 - 1,
+        endIndex: rowIdx1,
+      },
+    },
+  }));
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: config.sheetId,
+    requestBody: { requests },
+  });
+  invalidateCache(tab);
+  return toDelete.length;
+}
