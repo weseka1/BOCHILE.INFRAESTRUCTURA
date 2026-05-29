@@ -26,7 +26,7 @@ const estadoStyles: Record<TareaEstado, { badge: string; label: string }> = {
 };
 
 export function TareasPage() {
-  const { tareas, crear, actualizar, eliminar, eliminarVarios, actualizarVarios } = useTareas();
+  const { tareas, crear, actualizar, eliminar, eliminarVarios, actualizarVarios, limpiarCompletadas } = useTareas();
   const { data: empleados = [] } = useEmpleados();
 
   const [filtro, setFiltro] = useState<Filtro>('pendiente');
@@ -97,6 +97,12 @@ export function TareasPage() {
     if (!window.confirm(`Eliminar ${selected.size} tarea${selected.size > 1 ? 's' : ''}? Esta accion no se puede deshacer.`)) return;
     eliminarVarios(Array.from(selected));
     clearSelection();
+  }
+
+  async function handleLimpiarCompletadas() {
+    if (counts.completada === 0) return;
+    if (!window.confirm(`Eliminar las ${counts.completada} tarea${counts.completada > 1 ? 's completadas' : ' completada'}? Esta accion no se puede deshacer.`)) return;
+    await limpiarCompletadas();
   }
 
   function resetForm() {
@@ -172,15 +178,28 @@ export function TareasPage() {
               : <Square className="w-3.5 h-3.5" />}
           <span>{allSelected ? 'Deseleccionar todo' : someSelected ? `${selected.size} seleccionada${selected.size > 1 ? 's' : ''}` : 'Seleccionar todo'}</span>
         </button>
-        <button
-          type="button"
-          onClick={() => setShowForm(v => !v)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] transition-all"
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          <span className="hidden xs:inline">{showForm ? 'Cancelar' : 'Nueva tarea'}</span>
-          <span className="xs:hidden">{showForm ? 'Cerrar' : 'Nueva'}</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {filtro === 'completada' && counts.completada > 0 && (
+            <button
+              type="button"
+              onClick={handleLimpiarCompletadas}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Limpiar {counts.completada} completada{counts.completada > 1 ? 's' : ''}</span>
+              <span className="sm:hidden">Limpiar</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowForm(v => !v)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] transition-all"
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            <span className="hidden xs:inline">{showForm ? 'Cancelar' : 'Nueva tarea'}</span>
+            <span className="xs:hidden">{showForm ? 'Cerrar' : 'Nueva'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Bulk actions sticky bar */}
@@ -391,7 +410,7 @@ export function TareasPage() {
       </Card>
 
       <div className="mt-4 text-[11px] text-text-subtle text-center">
-        Tareas sincronizadas con Google Sheets · las completadas se archivan automaticamente en 3 seg
+        Tareas sincronizadas con Google Sheets · las completadas se mantienen hasta que las elimines
       </div>
     </>
   );

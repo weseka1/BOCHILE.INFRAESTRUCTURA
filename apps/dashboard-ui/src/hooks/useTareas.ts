@@ -90,29 +90,9 @@ function toApi(t: Partial<Tarea>): Partial<TareaApi> {
   return out;
 }
 
-// ====== Auto-clean: cuando una tarea pasa a "completada", la borramos del Sheet
-// despues de 3 segundos. UI ya la oculta inmediatamente del listado activo
-// (en TareasPage el filtro default es != completada).
-const AUTOCLEAN_DELAY_MS = 3000;
-const pendingCleanups = new Map<string, ReturnType<typeof setTimeout>>();
-
-function scheduleAutoClean(id: string, qc: ReturnType<typeof useQueryClient>) {
-  const existing = pendingCleanups.get(id);
-  if (existing) clearTimeout(existing);
-  const timer = setTimeout(async () => {
-    try {
-      await delReq(`/tareas/${encodeURIComponent(id)}`);
-    } catch { /* ignore - puede haber sido borrada manual */ }
-    pendingCleanups.delete(id);
-    qc.invalidateQueries({ queryKey: ['tareas'] });
-  }, AUTOCLEAN_DELAY_MS);
-  pendingCleanups.set(id, timer);
-}
-
-function cancelAutoClean(id: string) {
-  const t = pendingCleanups.get(id);
-  if (t) { clearTimeout(t); pendingCleanups.delete(id); }
-}
+// Antes habia auto-clean que borraba las completadas 3s despues. Quitado:
+// las completadas persisten en el Sheet hasta que el usuario las elimine
+// manualmente (boton trash individual, bulk "Eliminar", o "Limpiar completadas").
 
 // ====== Hook principal ======
 export function useTareas() {
@@ -146,16 +126,11 @@ export function useTareas() {
   }, [qc]);
 
   const actualizar = useCallback(async (id: string, patch: Partial<Tarea>) => {
-    const wasCompleting = patch.estado === 'completada';
-    const wasUncompleting = patch.estado && patch.estado !== 'completada';
     await patchJson(`/tareas/${encodeURIComponent(id)}`, toApi(patch));
     qc.invalidateQueries({ queryKey: ['tareas'] });
-    if (wasCompleting) scheduleAutoClean(id, qc);
-    if (wasUncompleting) cancelAutoClean(id);
   }, [qc]);
 
   const eliminar = useCallback(async (id: string) => {
-    cancelAutoClean(id);
     await delReq(`/tareas/${encodeURIComponent(id)}`);
     qc.invalidateQueries({ queryKey: ['tareas'] });
   }, [qc]);
@@ -171,22 +146,29 @@ export function useTareas() {
   }, [tareas, actualizar]);
 
   const eliminarVarios = useCallback(async (ids: string[]) => {
-    await Promise.all(ids.map(id => { cancelAutoClean(id); return delReq(`/tareas/${encodeURIComponent(id)}`); }));
+    await Promise.all(ids.map(id => delReq(`/tareas/${encodeURIComponent(id)}`)));
     qc.invalidateQueries({ queryKey: ['tareas'] });
   }, [qc]);
 
   const actualizarVarios = useCallback(async (ids: string[], patch: Partial<Tarea>) => {
     await Promise.all(ids.map(id => patchJson(`/tareas/${encodeURIComponent(id)}`, toApi(patch))));
     qc.invalidateQueries({ queryKey: ['tareas'] });
-    if (patch.estado === 'completada') ids.forEach(id => scheduleAutoClean(id, qc));
-    if (patch.estado && patch.estado !== 'completada') ids.forEach(cancelAutoClean);
   }, [qc]);
+
+  // Atajo: borrar todas las tareas en estado completada del Sheet
+  const limpiarCompletadas = useCallback(async () => {
+    const ids = tareas.filter(t => t.estado === 'completada').map(t => t.id);
+    if (ids.length === 0) return 0;
+    await Promise.all(ids.map(id => delReq(`/tareas/${encodeURIComponent(id)}`)));
+    qc.invalidateQueries({ queryKey: ['tareas'] });
+    return ids.length;
+  }, [tareas, qc]);
 
   return {
     tareas,
     isLoading: query.isLoading,
     error: query.error,
-    crear, actualizar, eliminar, toggleCompletada, eliminarVarios, actualizarVarios,
+    crear, actualizar, eliminar, toggleCompletada, eliminarVarios, actualizarVarios, limpiarCompletadas,
   };
 }
 
