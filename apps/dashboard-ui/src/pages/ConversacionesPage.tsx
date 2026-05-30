@@ -142,17 +142,25 @@ export function ConversacionesPage() {
     return Array.from(map.values()).sort((a, b) => tsToMs(b.ultimo.timestamp) - tsToMs(a.ultimo.timestamp));
   }, [data]);
 
-  // Contadores por channel para los tabs
+  // Contadores por channel — Alquileres oculto del dashboard a pedido del cliente.
+  // El conteo "todos" excluye alquileres para que no infle la vista diaria.
   const tabCounts = useMemo(() => ({
-    todos: chats.length,
+    todos: chats.filter(c => c.channel !== 'alquileres').length,
     ventas: chats.filter(c => c.channel === 'ventas').length,
     alquileres: chats.filter(c => c.channel === 'alquileres').length,
     sin_clasificar: chats.filter(c => c.channel === 'sin_clasificar').length,
   }), [chats]);
 
-  // Filtro: por tab + por busqueda
+  // Si el tab guardado en URL es 'alquileres' (tab oculto), forzar 'ventas'.
+  useEffect(() => {
+    if (tab === 'alquileres') setTab('ventas');
+  }, [tab]);
+
+  // Filtro: por tab + por busqueda. En "todos" excluimos alquileres tambien.
   const filteredChats = useMemo(() => {
-    let arr = tab === 'todos' ? chats : chats.filter(c => c.channel === tab);
+    let arr = tab === 'todos'
+      ? chats.filter(c => c.channel !== 'alquileres')
+      : chats.filter(c => c.channel === tab);
     if (q) {
       const ql = q.toLowerCase();
       arr = arr.filter(c =>
@@ -197,10 +205,11 @@ export function ConversacionesPage() {
     <>
       <PageHeader title="Mensajes" subtitle="Chats por WhatsApp" count={filteredChats.length} />
 
-      {/* Tabs por canal */}
+      {/* Tabs por canal — Alquileres ocultado del dashboard a pedido del cliente.
+          Los mensajes siguen logueandose al Sheet (no se pierde data), solo
+          no se ven aca para no saturar la vista diaria. */}
       <div className="flex gap-1.5 mb-3 flex-wrap">
         <TabButton k="ventas" tab={tab} setTab={setTab} count={tabCounts.ventas} setSelected={setSelectedKey} />
-        <TabButton k="alquileres" tab={tab} setTab={setTab} count={tabCounts.alquileres} setSelected={setSelectedKey} />
         {tabCounts.sin_clasificar > 0 && (
           <TabButton k="sin_clasificar" tab={tab} setTab={setTab} count={tabCounts.sin_clasificar} setSelected={setSelectedKey} />
         )}
