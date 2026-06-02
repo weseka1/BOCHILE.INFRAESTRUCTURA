@@ -174,6 +174,15 @@ export interface Tarea {
   completada_en: string;
 }
 
+export interface User {
+  email: string;
+  password_hash: string;
+  nombre: string;
+  rol: string;
+  creado_en: string;
+  activo: boolean;
+}
+
 export type SheetTab =
   | 'leads'
   | 'propiedades'
@@ -183,4 +192,5 @@ export type SheetTab =
   | 'matches_pendientes'
   | 'conversaciones'
   | 'acciones_ia'
-  | 'tareas';
+  | 'tareas'
+  | 'users';

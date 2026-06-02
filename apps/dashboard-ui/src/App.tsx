@@ -12,8 +12,11 @@ import { AccionesPage } from '@/pages/AccionesPage';
 import { EmpleadosPage } from '@/pages/EmpleadosPage';
 import { TareasPage } from '@/pages/TareasPage';
 import { CalidadIaPage } from '@/pages/CalidadIaPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { AuthProvider } from '@/auth/AuthContext';
+import { ProtectedRoute } from '@/auth/ProtectedRoute';
 
-export default function App() {
+function ProtectedShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
@@ -40,5 +43,25 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        {/* Ruta publica */}
+        <Route path="/login" element={<LoginPage />} />
+        {/* Resto: protegido */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <ProtectedShell />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }

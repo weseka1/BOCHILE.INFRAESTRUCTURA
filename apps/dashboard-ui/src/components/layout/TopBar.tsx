@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { RefreshCw, Activity, Menu, Search, Users, Home } from 'lucide-react';
+import { RefreshCw, Activity, Menu, Search, Users, Home, LogOut } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useLeads } from '@/hooks/useLeads';
 import { usePropiedades } from '@/hooks/usePropiedades';
+import { useAuth } from '@/auth/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface TopBarProps {
@@ -33,7 +34,21 @@ export function TopBar({ onMenu }: TopBarProps) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [now, setNow] = useState(new Date());
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const onLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      qc.clear();
+      navigate('/login', { replace: true });
+    } finally {
+      setLoggingOut(false);
+    }
+  };
   const [searchQ, setSearchQ] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -215,6 +230,20 @@ export function TopBar({ onMenu }: TopBarProps) {
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Refrescar</span>
+        </button>
+        {user && (
+          <span className="hidden lg:inline text-xs text-text-muted truncate max-w-[140px]" title={user.email}>
+            {user.nombre || user.email}
+          </span>
+        )}
+        <button
+          onClick={onLogout}
+          disabled={loggingOut}
+          className="btn-ghost text-xs px-2.5 sm:px-3 py-1.5 disabled:opacity-50"
+          title="Cerrar sesion"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">{loggingOut ? 'Saliendo...' : 'Cerrar sesion'}</span>
         </button>
       </div>
     </div>

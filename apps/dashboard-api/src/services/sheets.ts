@@ -29,7 +29,7 @@ const cache = new Map<SheetTab, { data: Record<string, unknown>[]; expiresAt: nu
  * Lee una pestana completa del Sheet, parsea los headers de la fila 1
  * y devuelve un array de objetos tipados por columna.
  */
-export async function readSheet<T extends Record<string, unknown>>(
+export async function readSheet<T>(
   tab: SheetTab,
 ): Promise<T[]> {
   const now = Date.now();

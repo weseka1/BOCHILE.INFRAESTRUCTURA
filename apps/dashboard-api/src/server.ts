@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { config } from './config';
+import { requireAuth } from './middleware/requireAuth';
 
 // Routes
+import auth from './routes/auth';
 import leads from './routes/leads';
 import propiedades from './routes/propiedades';
 import visitas from './routes/visitas';
@@ -17,10 +20,16 @@ import tareas from './routes/tareas';
 
 const app = express();
 
-const allowedOrigins = String(config.allowOrigin || '')
+// Origins: union de los configurables en env + los fijos requeridos por la entrega
+const envOrigins = String(config.allowOrigin || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
+const requiredOrigins = [
+  'https://bochile-dashboard-ui.onrender.com',
+  'http://localhost:5173',
+];
+const allowedOrigins = Array.from(new Set([...envOrigins, ...requiredOrigins]));
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -33,22 +42,27 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', sheet: config.sheetId, timestamp: new Date().toISOString() });
 });
 
-app.use('/api/leads', leads);
-app.use('/api/propiedades', propiedades);
-app.use('/api/visitas', visitas);
-app.use('/api/contratos', contratos);
-app.use('/api/empleados', empleados);
-app.use('/api/matches', matches);
-app.use('/api/conversaciones', conversaciones);
-app.use('/api/acciones', acciones);
-app.use('/api/metrics', metrics);
-app.use('/api/calidad-ia', calidadIa);
-app.use('/api/tareas', tareas);
+// Auth routes — SIN requireAuth
+app.use('/api/auth', auth);
+
+// Todas las demas rutas protegidas con requireAuth
+app.use('/api/leads', requireAuth, leads);
+app.use('/api/propiedades', requireAuth, propiedades);
+app.use('/api/visitas', requireAuth, visitas);
+app.use('/api/contratos', requireAuth, contratos);
+app.use('/api/empleados', requireAuth, empleados);
+app.use('/api/matches', requireAuth, matches);
+app.use('/api/conversaciones', requireAuth, conversaciones);
+app.use('/api/acciones', requireAuth, acciones);
+app.use('/api/metrics', requireAuth, metrics);
+app.use('/api/calidad-ia', requireAuth, calidadIa);
+app.use('/api/tareas', requireAuth, tareas);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[ERROR]', err);
