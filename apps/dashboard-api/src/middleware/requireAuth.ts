@@ -26,9 +26,16 @@ declare module 'express-serve-static-core' {
  * el payload a req.user. Si falla, devuelve 401.
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  // cookie-parser pone las cookies en req.cookies
-  const token =
+  // Acepta token de cookie httpOnly O de header Authorization: Bearer XYZ.
+  // El header es el mecanismo principal en prod cross-origin (Chrome bloquea
+  // third-party cookies por default). La cookie queda como respaldo same-origin.
+  const cookieToken =
     (req as Request & { cookies?: Record<string, string> }).cookies?.[AUTH_COOKIE_NAME];
+  const authHeader = req.headers.authorization || '';
+  const bearerToken = authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length).trim()
+    : '';
+  const token = bearerToken || cookieToken;
   if (!token) {
     res.status(401).json({ error: 'No autenticado' });
     return;

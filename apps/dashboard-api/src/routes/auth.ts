@@ -50,7 +50,11 @@ router.post('/login', async (req: Request, res: Response) => {
       maxAge: COOKIE_MAX_AGE_MS,
       path: '/',
     });
-    return res.json({ user: payload });
+    // Devolver el token en el body para que el frontend lo guarde en
+    // localStorage y lo envie como Authorization: Bearer. Esto evita el
+    // bloqueo de third-party cookies de Chrome cuando UI y API son
+    // sub-dominios distintos en Render.
+    return res.json({ user: payload, token });
   } catch (err) {
     console.error('[auth/login] error:', err);
     return res.status(500).json({ error: 'Error interno' });

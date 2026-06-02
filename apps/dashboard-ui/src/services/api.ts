@@ -11,6 +11,26 @@
 const ENV_URL = (import.meta as any).env?.VITE_API_URL as string | undefined;
 const BASE = ENV_URL ? `${ENV_URL.replace(/\/$/, '')}/api` : '/api';
 
+// ====== AUTH TOKEN STORAGE (localStorage + Authorization header) ======
+// Chrome bloquea third-party cookies por default desde 2024, asi que la cookie
+// httpOnly que setea el backend cross-origin no se guarda en el browser.
+// Solucion: guardamos tambien el JWT en localStorage tras login, y lo enviamos
+// en cada request como Authorization: Bearer. La cookie queda como respaldo.
+const TOKEN_KEY = 'bochile_auth_token';
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try { return window.localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+function setAuthToken(token: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (token) window.localStorage.setItem(TOKEN_KEY, token);
+    else window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // localStorage no disponible (incognito + bloqueo extremo) - ignorar
+  }
+}
+
 /** Si la URL ya falla, no queremos un loop infinito de redirect cuando ya estamos en /login. */
 function shouldRedirectOn401(path: string): boolean {
   if (path.startsWith('/auth/')) return false;
@@ -28,11 +48,20 @@ function handle401(path: string) {
 }
 
 async function rawFetch(path: string, init: RequestInit): Promise<Response> {
+  // Inyectar Authorization: Bearer si hay token guardado.
+  const token = getAuthToken();
+  const baseHeaders = init.headers ? { ...(init.headers as Record<string, string>) } : {};
+  if (token && !baseHeaders['Authorization']) {
+    baseHeaders['Authorization'] = `Bearer ${token}`;
+  }
   const res = await fetch(`${BASE}${path}`, {
     credentials: 'include',
     ...init,
+    headers: baseHeaders,
   });
   if (res.status === 401) {
+    // 401 -> token invalido o expirado -> limpiar storage
+    setAuthToken(null);
     handle401(path);
   }
   return res;
@@ -98,9 +127,15 @@ export const api = {
   calidadIa: () => getJson<CalidadIaAudit>(`/calidad-ia/audit`),
   // ====== AUTH ======
   authMe: () => getJson<{ user: AuthUser }>(`/auth/me`),
-  authLogin: (email: string, password: string) =>
-    postJson<{ user: AuthUser }>(`/auth/login`, { email, password }),
-  authLogout: () => postJson<{ ok: boolean }>(`/auth/logout`, {}),
+  authLogin: async (email: string, password: string) => {
+    const res = await postJson<{ user: AuthUser; token?: string }>(`/auth/login`, { email, password });
+    if (res?.token) setAuthToken(res.token);
+    return res;
+  },
+  authLogout: async () => {
+    setAuthToken(null);
+    return postJson<{ ok: boolean }>(`/auth/logout`, {});
+  },
 };
 
 // ====== CALIDAD IA TYPES ======
