@@ -197,11 +197,10 @@ export function ConversacionesPage() {
     <>
       <PageHeader title="Mensajes" subtitle="Chats por WhatsApp" count={filteredChats.length} />
 
-      {/* Tabs por canal — Alquileres ocultado del dashboard a pedido del cliente.
-          Los mensajes siguen logueandose al Sheet (no se pierde data), solo
-          no se ven aca para no saturar la vista diaria. */}
+      {/* Tabs por canal */}
       <div className="flex gap-1.5 mb-3 flex-wrap">
         <TabButton k="ventas" tab={tab} setTab={setTab} count={tabCounts.ventas} setSelected={setSelectedKey} />
+        <TabButton k="alquileres" tab={tab} setTab={setTab} count={tabCounts.alquileres} setSelected={setSelectedKey} />
         {tabCounts.sin_clasificar > 0 && (
           <TabButton k="sin_clasificar" tab={tab} setTab={setTab} count={tabCounts.sin_clasificar} setSelected={setSelectedKey} />
         )}
