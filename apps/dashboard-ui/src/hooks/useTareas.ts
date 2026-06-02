@@ -18,34 +18,44 @@ export interface Tarea {
 }
 
 // ====== Resolucion del base URL (igual que api.ts) ======
+import { getAuthToken } from '@/services/api';
 const ENV_URL = (import.meta as any).env?.VITE_API_URL as string | undefined;
 const BASE = ENV_URL ? `${ENV_URL.replace(/\/$/, '')}/api` : '/api';
 
+// withAuth: inyecta credentials + Authorization Bearer. Sin esto /api/tareas
+// devolvia 401 cross-origin -> el dashboard mostraba 0 tareas con el sheet lleno.
+function withAuth(init: RequestInit = {}): RequestInit {
+  const token = getAuthToken();
+  const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
+  if (token && !headers['Authorization']) headers['Authorization'] = `Bearer ${token}`;
+  return { ...init, credentials: 'include', headers };
+}
+
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await fetch(`${BASE}${path}`, withAuth());
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return (await res.json()) as T;
 }
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${BASE}${path}`, withAuth({
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+  }));
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return (await res.json()) as T;
 }
 async function patchJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${BASE}${path}`, withAuth({
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+  }));
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return (await res.json()) as T;
 }
 async function delReq<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { method: 'DELETE' });
+  const res = await fetch(`${BASE}${path}`, withAuth({ method: 'DELETE' }));
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return (await res.json()) as T;
 }
