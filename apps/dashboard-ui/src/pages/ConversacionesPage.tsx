@@ -142,25 +142,17 @@ export function ConversacionesPage() {
     return Array.from(map.values()).sort((a, b) => tsToMs(b.ultimo.timestamp) - tsToMs(a.ultimo.timestamp));
   }, [data]);
 
-  // Contadores por channel — Alquileres oculto del dashboard a pedido del cliente.
-  // El conteo "todos" excluye alquileres para que no infle la vista diaria.
+  // Contadores por channel.
   const tabCounts = useMemo(() => ({
-    todos: chats.filter(c => c.channel !== 'alquileres').length,
+    todos: chats.length,
     ventas: chats.filter(c => c.channel === 'ventas').length,
     alquileres: chats.filter(c => c.channel === 'alquileres').length,
     sin_clasificar: chats.filter(c => c.channel === 'sin_clasificar').length,
   }), [chats]);
 
-  // Si el tab guardado en URL es 'alquileres' (tab oculto), forzar 'ventas'.
-  useEffect(() => {
-    if (tab === 'alquileres') setTab('ventas');
-  }, [tab]);
-
-  // Filtro: por tab + por busqueda. En "todos" excluimos alquileres tambien.
+  // Filtro: por tab + por busqueda
   const filteredChats = useMemo(() => {
-    let arr = tab === 'todos'
-      ? chats.filter(c => c.channel !== 'alquileres')
-      : chats.filter(c => c.channel === tab);
+    let arr = tab === 'todos' ? chats : chats.filter(c => c.channel === tab);
     if (q) {
       const ql = q.toLowerCase();
       arr = arr.filter(c =>
