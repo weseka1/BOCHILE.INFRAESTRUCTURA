@@ -36,13 +36,17 @@ export function PropiedadesPage() {
     if (estado === 'publicada') arr = arr.filter(p => p.publicada);
     if (estado === 'inactiva') arr = arr.filter(p => !p.publicada);
     if (q) {
-      const ql = q.toLowerCase();
+      // Normalize: lowercase + remove diacritics (tildes). Así "GALERIA"
+      // matchea "Galería Plaza", "Ramon" matchea "Ramón y Cajal", etc.
+      const norm = (s: any) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const ql = norm(q);
       arr = arr.filter(p =>
-        (p.titulo || '').toLowerCase().includes(ql) ||
-        (p.direccion || '').toLowerCase().includes(ql) ||
-        (p.zona || '').toLowerCase().includes(ql) ||
-        (p.tipo || '').toLowerCase().includes(ql) ||
-        (p.prop_id || '').toLowerCase().includes(ql),
+        norm(p.titulo).includes(ql) ||
+        norm(p.direccion).includes(ql) ||
+        norm(p.zona).includes(ql) ||
+        norm((p as any).barrio).includes(ql) ||
+        norm(p.tipo).includes(ql) ||
+        norm(p.prop_id).includes(ql),
       );
     }
     return arr;
