@@ -30,6 +30,10 @@ router.get('/', async (_req, res, next) => {
       (a) => !AGENTES_TECNICOS.has(String(a.agente ?? '')),
     );
 
+    // Mensajes 7d: contar mensajes reales del sheet conversaciones (no acciones_ia
+    // que ahora esta vacio). Cuenta TODO mensaje con timestamp en ultimos 7 dias.
+    const mensajes7d = convs.filter((c) => (c.timestamp ?? '') >= haceUnaSemana).length;
+
     const kpis = {
       leadsTotal: leads.length,
       leadsHoy: leads.filter((l) => (l.creado_en ?? '').startsWith(hoy)).length,
@@ -37,9 +41,9 @@ router.get('/', async (_req, res, next) => {
       visitasAgendadas: visitas.filter((v) => v.estado === 'agendada').length,
       propiedadesActivas: props.filter((p) => p.publicada === true).length,
       matchesPendientes: matches.filter((m) => m.estado === 'activo').length,
-      accionesIaUltimaSemana: accionesReales.filter(
-        (a) => (a.timestamp ?? '') >= haceUnaSemana,
-      ).length,
+      // accionesIaUltimaSemana ahora cuenta mensajes reales del sheet conversaciones,
+      // no acciones_ia (que dejo de loguearse cuando migramos a sheets directo).
+      accionesIaUltimaSemana: mensajes7d,
       tiempoAhorradoTotalMin: accionesReales.reduce(
         (acc, a) => acc + (Number(a.tiempo_ahorrado_min) || 0),
         0,
