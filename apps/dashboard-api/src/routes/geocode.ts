@@ -14,6 +14,7 @@
 import { Router, type Request, type Response } from 'express';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import https from 'https';
 
 const router = Router();
 
@@ -53,24 +54,70 @@ function findBarrio(lng: number, lat: number): string | null {
   return null;
 }
 
-async function geocodeNominatim(direccion: string): Promise<{ lat: number; lng: number } | null> {
-  const query = direccion.toLowerCase().includes('bahia blanca')
-    ? direccion
-    : `${direccion}, Bahia Blanca, Buenos Aires, Argentina`;
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=ar`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'BochileInmobiliaria/1.0 (geocode endpoint)',
+function nominatimGet(query: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolveP) => {
+    const url = new URL(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+    const req = https.request(
+      {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'BochileInmobiliaria/1.0 (https://www.bochile.com; contacto@bochile.com)',
+          'Accept': 'application/json',
+          'Accept-Language': 'es-AR,es;q=0.9',
+        },
+        timeout: 12000,
       },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () =>
+          resolveP({ status: res.statusCode || 0, body: Buffer.concat(chunks).toString('utf8') }),
+        );
+      },
+    );
+    req.on('error', () => resolveP({ status: 0, body: '' }));
+    req.on('timeout', () => {
+      req.destroy();
+      resolveP({ status: 0, body: '' });
     });
-    if (!res.ok) return null;
-    const arr = (await res.json()) as Array<{ lat: string; lon: string }>;
-    if (!arr.length) return null;
-    return { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) };
-  } catch {
-    return null;
+    req.end();
+  });
+}
+
+async function geocodeNominatim(
+  direccion: string,
+): Promise<{ lat: number; lng: number; debug?: string } | null> {
+  // 2 intentos: primero sin "Bahia Blanca" para casos que vienen completos;
+  // segundo enriquecido si el primero falla.
+  const queries = [
+    direccion.toLowerCase().includes('bahia blanca')
+      ? direccion
+      : `${direccion}, Bahia Blanca, Buenos Aires, Argentina`,
+    `${direccion}, Bahia Blanca`,
+  ];
+  for (const q of queries) {
+    const r = await nominatimGet(q);
+    if (r.status !== 200) {
+      console.log('[geocode] Nominatim status', r.status, 'query:', q);
+      continue;
+    }
+    try {
+      const arr = JSON.parse(r.body) as Array<{ lat: string; lon: string; display_name?: string }>;
+      if (arr.length > 0) {
+        const lat = parseFloat(arr[0].lat);
+        const lng = parseFloat(arr[0].lon);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng, debug: arr[0].display_name };
+        }
+      }
+      console.log('[geocode] Nominatim 0 results para:', q);
+    } catch (e) {
+      console.log('[geocode] Nominatim parse error:', (e as Error).message);
+    }
   }
+  return null;
 }
 
 router.post('/', async (req: Request, res: Response) => {
