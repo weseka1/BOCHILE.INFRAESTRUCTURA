@@ -54,16 +54,15 @@ function findBarrio(lng: number, lat: number): string | null {
   return null;
 }
 
-function nominatimGet(query: string): Promise<{ status: number; body: string }> {
+function httpGetJson(host: string, fullPath: string, ua: string): Promise<{ status: number; body: string }> {
   return new Promise((resolveP) => {
-    const url = new URL(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
     const req = https.request(
       {
-        hostname: url.hostname,
-        path: url.pathname + url.search,
+        hostname: host,
+        path: fullPath,
         method: 'GET',
         headers: {
-          'User-Agent': 'BochileInmobiliaria/1.0 (https://www.bochile.com; contacto@bochile.com)',
+          'User-Agent': ua,
           'Accept': 'application/json',
           'Accept-Language': 'es-AR,es;q=0.9',
         },
@@ -78,44 +77,76 @@ function nominatimGet(query: string): Promise<{ status: number; body: string }> 
       },
     );
     req.on('error', () => resolveP({ status: 0, body: '' }));
-    req.on('timeout', () => {
-      req.destroy();
-      resolveP({ status: 0, body: '' });
-    });
+    req.on('timeout', () => { req.destroy(); resolveP({ status: 0, body: '' }); });
     req.end();
   });
 }
 
-async function geocodeNominatim(
-  direccion: string,
-): Promise<{ lat: number; lng: number; debug?: string } | null> {
-  // 2 intentos: primero sin "Bahia Blanca" para casos que vienen completos;
-  // segundo enriquecido si el primero falla.
+// Photon (Komoot, OSM) - mas permisivo con IPs cloud que Nominatim
+async function geocodePhoton(query: string): Promise<{ lat: number; lng: number; debug?: string } | null> {
+  const path = `/api/?q=${encodeURIComponent(query)}&limit=1`;
+  const r = await httpGetJson('photon.komoot.io', path, 'BochileInmobiliaria/1.0');
+  if (r.status !== 200) {
+    console.log('[geocode] Photon status', r.status, 'query:', query);
+    return null;
+  }
+  try {
+    const j = JSON.parse(r.body) as { features?: Array<{ geometry: { coordinates: [number, number] }; properties: { name?: string; city?: string; country?: string } }> };
+    const f = j.features?.[0];
+    if (!f) return null;
+    const [lng, lat] = f.geometry.coordinates;
+    if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+    // Sanity check: que el resultado este en BB (lat ~-38.7, lng ~-62.27)
+    if (lat < -39.0 || lat > -38.4 || lng < -62.6 || lng > -61.9) {
+      console.log('[geocode] Photon devolvio coord FUERA de BB:', lat, lng, 'para:', query);
+      return null;
+    }
+    return { lat, lng, debug: `${f.properties.name} - ${f.properties.city} - ${f.properties.country}` };
+  } catch (e) {
+    console.log('[geocode] Photon parse error:', (e as Error).message);
+    return null;
+  }
+}
+
+async function geocodeNominatim(query: string): Promise<{ lat: number; lng: number; debug?: string } | null> {
+  const r = await httpGetJson(
+    'nominatim.openstreetmap.org',
+    `/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+    'BochileInmobiliaria/1.0 (https://www.bochile.com; contacto@bochile.com)',
+  );
+  if (r.status !== 200) {
+    console.log('[geocode] Nominatim status', r.status, 'query:', query);
+    return null;
+  }
+  try {
+    const arr = JSON.parse(r.body) as Array<{ lat: string; lon: string; display_name?: string }>;
+    if (arr.length === 0) return null;
+    const lat = parseFloat(arr[0].lat);
+    const lng = parseFloat(arr[0].lon);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    if (lat < -39.0 || lat > -38.4 || lng < -62.6 || lng > -61.9) return null;
+    return { lat, lng, debug: arr[0].display_name };
+  } catch (e) {
+    console.log('[geocode] Nominatim parse error:', (e as Error).message);
+    return null;
+  }
+}
+
+async function geocode(direccion: string): Promise<{ lat: number; lng: number; debug?: string } | null> {
   const queries = [
-    direccion.toLowerCase().includes('bahia blanca')
-      ? direccion
-      : `${direccion}, Bahia Blanca, Buenos Aires, Argentina`,
+    direccion.toLowerCase().includes('bahia blanca') ? direccion : `${direccion}, Bahia Blanca, Argentina`,
     `${direccion}, Bahia Blanca`,
+    direccion,
   ];
+  // Probar Photon primero (mas permisivo)
   for (const q of queries) {
-    const r = await nominatimGet(q);
-    if (r.status !== 200) {
-      console.log('[geocode] Nominatim status', r.status, 'query:', q);
-      continue;
-    }
-    try {
-      const arr = JSON.parse(r.body) as Array<{ lat: string; lon: string; display_name?: string }>;
-      if (arr.length > 0) {
-        const lat = parseFloat(arr[0].lat);
-        const lng = parseFloat(arr[0].lon);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          return { lat, lng, debug: arr[0].display_name };
-        }
-      }
-      console.log('[geocode] Nominatim 0 results para:', q);
-    } catch (e) {
-      console.log('[geocode] Nominatim parse error:', (e as Error).message);
-    }
+    const r = await geocodePhoton(q);
+    if (r) return r;
+  }
+  // Fallback Nominatim
+  for (const q of queries) {
+    const r = await geocodeNominatim(q);
+    if (r) return r;
   }
   return null;
 }
@@ -129,15 +160,15 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'barrios_polygons no cargado' });
   }
 
-  // 1. Geocodificar via Nominatim
-  const geo = await geocodeNominatim(direccion);
+  // 1. Geocodificar via Photon (primario) + Nominatim (fallback)
+  const geo = await geocode(direccion);
   if (!geo) {
     return res.json({
       barrio: null,
       lat: null,
       lng: null,
       confianza: 'baja',
-      source: 'nominatim_failed',
+      source: 'geocode_failed',
       notes: 'No pude geocodificar esa direccion. Pedile al cliente confirmacion del barrio.',
     });
   }
