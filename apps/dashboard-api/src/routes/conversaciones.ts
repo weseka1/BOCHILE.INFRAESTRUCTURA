@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { readSheet, appendRow } from '../services/sheets';
 import type { Conversacion } from '../types/domain';
+import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
 
-router.get('/', async (_req, res, next) => {
+// GET es solo para humanos autenticados (Camila desde el dashboard)
+router.get('/', requireAuth, async (_req, res, next) => {
   try {
     const data = await readSheet<Conversacion>('conversaciones');
     // Ordenar por timestamp desc para que las recientes esten primero

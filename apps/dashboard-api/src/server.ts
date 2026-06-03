@@ -58,7 +58,10 @@ app.use('/api/visitas', requireAuth, visitas);
 app.use('/api/contratos', requireAuth, contratos);
 app.use('/api/empleados', requireAuth, empleados);
 app.use('/api/matches', requireAuth, matches);
-app.use('/api/conversaciones', requireAuth, conversaciones);
+// /api/conversaciones: GET protegido por router interno con requireAuth,
+// POST publico (usado por workflow n8n para loguear canal Alquileres - el
+// workflow no tiene cookie/JWT). El POST solo escribe, no expone datos.
+app.use('/api/conversaciones', conversaciones);
 app.use('/api/acciones', requireAuth, acciones);
 app.use('/api/metrics', requireAuth, metrics);
 app.use('/api/calidad-ia', requireAuth, calidadIa);
