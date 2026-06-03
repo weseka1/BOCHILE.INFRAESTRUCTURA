@@ -74,10 +74,54 @@ export function VisitasPage() {
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
   const all = (visitas ?? []) as Visita[];
-  const pendientes = useMemo(
-    () => all.filter(esPendiente).sort((a, b) => String(b.creada_en || '').localeCompare(String(a.creada_en || ''))),
-    [all],
-  );
+
+  // Leads que la IA detecto con interes en visitar pero AUN no hay visita creada
+  // en el sheet (porque Cami no crea visitas - las confirma Camila desde aca).
+  // Los presentamos como "pendientes virtuales" para que Camila los vea y los
+  // confirme con fecha/hora exacta.
+  const pendientesDesdeLeads = useMemo(() => {
+    const visitasExistentesLeadIds = new Set(all.map(v => v.lead_id));
+    return (leads ?? [])
+      .filter(l => String(l.etapa || '').toLowerCase().replace(/[\s_]/g, '') === 'solicitovisita')
+      .filter(l => !visitasExistentesLeadIds.has(l.lead_id))
+      .map(l => {
+        // Intentar extraer la "VISITA SUGERIDA" de las notas (fecha/hora/propiedad)
+        const m = String(l.notas || '').match(/\[VISITA SUGERIDA:\s*([^\]]+)\]/i);
+        let fechaSugerida = '', horaSugerida = '', propSugerida = '';
+        if (m) {
+          const partes = m[1].trim().split(/\s+/);
+          // Formato esperado: "YYYY-MM-DD HH:MM Direccion..."
+          if (partes[0] && /^\d{4}-\d{2}-\d{2}$/.test(partes[0])) fechaSugerida = partes[0];
+          if (partes[1] && /^\d{1,2}:\d{2}$/.test(partes[1])) horaSugerida = partes[1];
+          propSugerida = partes.slice(fechaSugerida ? (horaSugerida ? 2 : 1) : 0).join(' ').trim();
+        }
+        return {
+          visita_id: 'sugerencia:' + l.lead_id,
+          lead_id: l.lead_id,
+          cliente_nombre: l.nombre || l.lead_id,
+          prop_id: '',
+          vendedor_id: '',
+          vendedor_nombre: '',
+          direccion: propSugerida,
+          fecha: fechaSugerida,
+          hora: horaSugerida,
+          estado: 'pendiente',
+          confirmada_cliente: false,
+          notificada_vendedor: false,
+          recordatorio_enviado: false,
+          observaciones: l.notas || '',
+          creada_en: l.creado_en || '',
+        } as Visita;
+      });
+  }, [leads, all]);
+
+  const pendientes = useMemo(() => {
+    const reales = all.filter(esPendiente);
+    return [...pendientesDesdeLeads, ...reales].sort((a, b) =>
+      String(b.creada_en || '').localeCompare(String(a.creada_en || '')),
+    );
+  }, [all, pendientesDesdeLeads]);
+
   const confirmadas = useMemo(
     () => all.filter(esConfirmada).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || ''))),
     [all],
