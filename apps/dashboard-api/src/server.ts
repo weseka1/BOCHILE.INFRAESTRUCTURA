@@ -17,6 +17,7 @@ import acciones from './routes/acciones';
 import metrics from './routes/metrics';
 import calidadIa from './routes/calidad_ia';
 import tareas from './routes/tareas';
+import geocode from './routes/geocode';
 
 const app = express();
 
@@ -62,6 +63,9 @@ app.use('/api/matches', requireAuth, matches);
 // POST publico (usado por workflow n8n para loguear canal Alquileres - el
 // workflow no tiene cookie/JWT). El POST solo escribe, no expone datos.
 app.use('/api/conversaciones', conversaciones);
+// /api/geocode-barrio: publico (usado por workflow n8n para resolver
+// direccion -> barrio oficial al 100% via Nominatim + point-in-polygon).
+app.use('/api/geocode-barrio', geocode);
 app.use('/api/acciones', requireAuth, acciones);
 app.use('/api/metrics', requireAuth, metrics);
 app.use('/api/calidad-ia', requireAuth, calidadIa);
