@@ -52,11 +52,13 @@ function formatHoraCorta(v: any): string {
   if (!ms) return '';
   const d = new Date(ms);
   const hoy = new Date();
+  const hora = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   const mismoDia = d.toDateString() === hoy.toDateString();
-  if (mismoDia) return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  if (mismoDia) return hora;
   const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1);
-  if (d.toDateString() === ayer.toDateString()) return 'Ayer';
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  if (d.toDateString() === ayer.toDateString()) return `Ayer ${hora}`;
+  const fecha = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  return `${fecha} ${hora}`;
 }
 
 function iniciales(nombre: string): string {
