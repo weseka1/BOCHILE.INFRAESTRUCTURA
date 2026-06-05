@@ -1,573 +1,583 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  CheckSquare, Square, Trash2, Plus, AlertTriangle, Flag, Clock, X,
-  ListTodo, CheckCircle2, Loader2, Calendar as CalendarIcon, User as UserIcon,
-  CircleDot, Megaphone,
+  Target, ListTodo, Lightbulb, Sparkles, Calendar, MessageSquare,
+  Plus, Trash2, AlertTriangle, CheckSquare, Square,
+  Trophy, Medal, Award,
+  Building2, Key, UserPlus, ArrowUpRight, ExternalLink,
 } from 'lucide-react';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { useTareas, type Tarea, type TareaPrioridad, type TareaEstado } from '@/hooks/useTareas';
+import { useTareas, type TareaPrioridad } from '@/hooks/useTareas';
 import { useEmpleados } from '@/hooks/useEmpleados';
-import { cn } from '@/lib/utils';
+import { useMetrics } from '@/hooks/useMetrics';
+import { useObjetivosMes, usePuntosMejora, type PuntoMejora, type ObjetivoCategoria } from '@/hooks/useMarketingLocal';
 import { MARKETING_ASIGNADO_ID } from '@/pages/DashboardPage';
+import type { Empleado } from '@/types/domain';
+import { cn } from '@/lib/utils';
 
-type Filtro = 'todas' | 'pendiente' | 'en_curso' | 'completada';
-
-const prioridadStyles: Record<TareaPrioridad, { dot: string; badge: string; label: string }> = {
-  alta:  { dot: 'bg-rose-400',    badge: 'bg-rose-500/15 text-rose-300 border border-rose-500/30',    label: 'Alta' },
-  media: { dot: 'bg-amber-400',   badge: 'bg-amber-500/15 text-amber-300 border border-amber-500/30', label: 'Media' },
-  baja:  { dot: 'bg-emerald-400', badge: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30', label: 'Baja' },
+const prioDot: Record<TareaPrioridad, string> = {
+  alta: 'bg-rose-400',
+  media: 'bg-amber-400',
+  baja: 'bg-emerald-400',
+};
+const prioStyles: Record<PuntoMejora['prioridad'], string> = {
+  alta: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+  media: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  baja: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+};
+const estadoStyles: Record<PuntoMejora['estado'], string> = {
+  abierto: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
+  en_progreso: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+  resuelto: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 };
 
-const estadoStyles: Record<TareaEstado, { badge: string; label: string }> = {
-  pendiente:  { badge: 'bg-zinc-500/15 text-zinc-300 border border-zinc-500/30', label: 'Pendiente' },
-  en_curso:   { badge: 'bg-blue-500/15 text-blue-300 border border-blue-500/30', label: 'En curso' },
-  completada: { badge: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30', label: 'Completada' },
-};
+const CATEGORIAS: { key: ObjetivoCategoria; label: string; icon: any; accent: string; ring: string; iconBg: string; bar: string }[] = [
+  { key: 'ventas',     label: 'Ventas',     icon: Building2, accent: 'text-emerald-300', ring: 'border-emerald-500/30 hover:border-emerald-500/60', iconBg: 'bg-emerald-500/10 text-emerald-300', bar: 'bg-emerald-400' },
+  { key: 'alquileres', label: 'Alquileres', icon: Key,       accent: 'text-blue-300',    ring: 'border-blue-500/30 hover:border-blue-500/60',       iconBg: 'bg-blue-500/10 text-blue-300',       bar: 'bg-blue-400' },
+  { key: 'captacion',  label: 'Captacion',  icon: UserPlus,  accent: 'text-fuchsia-300', ring: 'border-fuchsia-500/30 hover:border-fuchsia-500/60', iconBg: 'bg-fuchsia-500/10 text-fuchsia-300', bar: 'bg-fuchsia-400' },
+];
 
+function parseDateLocal(s: string | undefined): Date | null {
+  if (!s) return null;
+  if (s.includes('T')) return new Date(s);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return new Date(s);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+/**
+ * /tareas - Panel del equipo Bochile.
+ * Hero motivacional + Objetivos por area + Leaderboard + Tareas del dia + Puntos a mejorar.
+ * Las "tareas escritas" (la lista plana de administracion) viven en el panel WESEKA.IA.
+ */
 export function TareasPage() {
-  const { tareas: tareasAll, crear, actualizar, eliminar, eliminarVarios, actualizarVarios, limpiarCompletadas } = useTareas();
+  const { data: metrics } = useMetrics();
   const { data: empleados = [] } = useEmpleados();
-  // Excluyo las tareas DERIVADAS a Marketing (esas viven en /marketing).
-  const tareas = useMemo(
-    () => tareasAll.filter(t => t.asignado_a !== MARKETING_ASIGNADO_ID),
-    [tareasAll],
-  );
+  const { tareas, crear: crearTarea, actualizar: actualizarTarea } = useTareas();
+  const { objetivos, crear: crearObjetivo, actualizar: actualizarObjetivo, eliminar: eliminarObjetivo } = useObjetivosMes();
+  const { puntos, crear: crearPunto, actualizar: actualizarPunto, eliminar: eliminarPunto } = usePuntosMejora();
 
-  const [filtro, setFiltro] = useState<Filtro>('pendiente');
-  const [showForm, setShowForm] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const hoy = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
 
-  // form state (detalle)
-  const [titulo, setTitulo] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [prioridad, setPrioridad] = useState<TareaPrioridad>('media');
-  const [asignado, setAsignado] = useState('');
-  const [vencimiento, setVencimiento] = useState('');
-
-  // quick-add inline (siempre visible — pragmatico para uso diario)
-  const [quickTitulo, setQuickTitulo] = useState('');
-  const [quickPrioridad, setQuickPrioridad] = useState<TareaPrioridad>('media');
-
-  const counts = useMemo(() => ({
-    todas: tareas.length,
-    pendiente: tareas.filter(t => t.estado === 'pendiente').length,
-    en_curso: tareas.filter(t => t.estado === 'en_curso').length,
-    completada: tareas.filter(t => t.estado === 'completada').length,
-  }), [tareas]);
-
-  const filtradas = useMemo(() => {
-    const list = filtro === 'todas' ? tareas : tareas.filter(t => t.estado === filtro);
-    const orden: Record<TareaPrioridad, number> = { alta: 0, media: 1, baja: 2 };
-    return [...list].sort((a, b) => {
-      if (a.estado === 'completada' && b.estado !== 'completada') return 1;
-      if (a.estado !== 'completada' && b.estado === 'completada') return -1;
-      const p = orden[a.prioridad] - orden[b.prioridad];
-      if (p !== 0) return p;
-      return (b.creada_en || '').localeCompare(a.creada_en || '');
-    });
-  }, [tareas, filtro]);
-
-  const allFilteredIds = useMemo(() => filtradas.map(t => t.id), [filtradas]);
-  const allSelected = selected.size > 0 && allFilteredIds.every(id => selected.has(id));
-  const someSelected = selected.size > 0;
-
-  const toggleSelect = useCallback((id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleAll = useCallback(() => {
-    setSelected(prev => {
-      if (allFilteredIds.every(id => prev.has(id))) {
-        const next = new Set(prev);
-        allFilteredIds.forEach(id => next.delete(id));
-        return next;
-      }
-      const next = new Set(prev);
-      allFilteredIds.forEach(id => next.add(id));
-      return next;
-    });
-  }, [allFilteredIds]);
-
-  const clearSelection = useCallback(() => setSelected(new Set()), []);
-
-  function bulkEstado(estado: TareaEstado) {
-    actualizarVarios(Array.from(selected), { estado });
-    clearSelection();
-  }
-
-  function bulkDelete() {
-    if (selected.size === 0) return;
-    if (!window.confirm(`Eliminar ${selected.size} tarea${selected.size > 1 ? 's' : ''}? Esta accion no se puede deshacer.`)) return;
-    eliminarVarios(Array.from(selected));
-    clearSelection();
-  }
-
-  async function handleLimpiarCompletadas() {
-    if (counts.completada === 0) return;
-    if (!window.confirm(`Eliminar las ${counts.completada} tarea${counts.completada > 1 ? 's completadas' : ' completada'}? Esta accion no se puede deshacer.`)) return;
-    await limpiarCompletadas();
-  }
-
-  function resetForm() {
-    setTitulo(''); setDescripcion(''); setPrioridad('media'); setAsignado(''); setVencimiento('');
-  }
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!titulo.trim()) return;
-    crear({
-      titulo: titulo.trim(),
-      descripcion: descripcion.trim() || undefined,
-      prioridad,
-      asignado_a: asignado || undefined,
-      vencimiento: vencimiento || undefined,
-    });
-    resetForm();
-    setShowForm(false);
-  }
-
-  function quickSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const t = quickTitulo.trim();
-    if (!t) return;
-    crear({ titulo: t, prioridad: quickPrioridad });
-    setQuickTitulo('');
-  }
-
-  // Plantillas rapidas para tareas tipicas de inmobiliaria
-  const PLANTILLAS = [
-    'Llamar cliente para coordinar visita',
-    'Confirmar disponibilidad con propietario',
-    'Sacar fotos nuevas de la propiedad',
-    'Actualizar publicacion en portales',
-    'Pedir documentacion al cliente',
-    'Enviar recibo / contrato',
-  ];
-
-  // Opcion fija para asignar tareas internas a un proceso automatico.
-  const WESEKA_AGENT = { empleado_id: 'weseka_ia', nombre: 'Asistente', rol: 'automatico' } as const;
-
-  const nombrePorId = useMemo(() => {
-    const m = new Map<string, string>();
-    empleados.forEach(e => m.set(e.empleado_id, e.nombre));
-    m.set(WESEKA_AGENT.empleado_id, WESEKA_AGENT.nombre);
-    return m;
+  // Equipo activo + leaderboard
+  const topEquipo = useMemo(() => {
+    return [...empleados]
+      .filter((e: Empleado) => e.activo !== false)
+      .map((e: Empleado) => ({ e, score: (e.cierres_mes || 0) * 3 + (e.visitas_mes || 0) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
   }, [empleados]);
 
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  // Parsea "2026-05-30" como fecha LOCAL (no UTC) para evitar off-by-one por timezone.
-  // Sin esto, new Date("2026-05-30") es UTC midnight = ART 21:00 del dia anterior.
-  function parseDateLocal(s: string | undefined): Date | null {
-    if (!s) return null;
-    // Si viene full ISO con T, usar Date directo (es timestamp UTC, OK)
-    if (s.includes('T')) return new Date(s);
-    // Si viene solo "YYYY-MM-DD", parsear como local midnight
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return new Date(s);
-    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const totales = useMemo(() => {
+    const cierres = empleados.reduce((s, e) => s + (e.cierres_mes || 0), 0);
+    const visitas = empleados.reduce((s, e) => s + (e.visitas_mes || 0), 0);
+    return { cierres, visitas };
+  }, [empleados]);
+
+  // Tareas del equipo Bochile (excluyo derivadas a Weseka)
+  const tareasBochile = useMemo(
+    () => tareas.filter(t => t.asignado_a !== MARKETING_ASIGNADO_ID),
+    [tareas],
+  );
+
+  const tareasDelDia = useMemo(() => {
+    return tareasBochile.filter(t => {
+      if (t.estado === 'completada') return false;
+      if (!t.vencimiento) return false;
+      const d = parseDateLocal(t.vencimiento);
+      if (!d) return false;
+      return d.getTime() === hoy.getTime() || d < hoy;
+    }).sort((a, b) => {
+      const da = parseDateLocal(a.vencimiento)!.getTime();
+      const db = parseDateLocal(b.vencimiento)!.getTime();
+      return da - db;
+    });
+  }, [tareasBochile, hoy]);
+
+  const tareasSinFecha = useMemo(
+    () => tareasBochile.filter(t => t.estado !== 'completada' && !t.vencimiento),
+    [tareasBochile],
+  );
+
+  // Objetivos por categoria
+  const objetivosPorCat = useMemo(() => {
+    const map: Record<ObjetivoCategoria, typeof objetivos> = { ventas: [], alquileres: [], captacion: [], general: [] };
+    for (const o of objetivos) (map[o.categoria || 'general'] ||= []).push(o);
+    return map;
+  }, [objetivos]);
+
+  // Form objetivo
+  const [objCat, setObjCat] = useState<ObjetivoCategoria>('ventas');
+  const [objTitulo, setObjTitulo] = useState('');
+  const [objMeta, setObjMeta] = useState('');
+  const [objUnidad, setObjUnidad] = useState('ventas');
+  function submitObjetivo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!objTitulo.trim() || !objMeta) return;
+    crearObjetivo({ titulo: objTitulo.trim(), meta: Number(objMeta), unidad: objUnidad, categoria: objCat });
+    setObjTitulo(''); setObjMeta('');
   }
-  function esVencida(t: Tarea) {
-    if (!t.vencimiento || t.estado === 'completada') return false;
-    const d = parseDateLocal(t.vencimiento);
-    return d ? d < hoy : false;
+
+  // Form punto a mejorar
+  const [pmTitulo, setPmTitulo] = useState('');
+  const [pmPrio, setPmPrio] = useState<PuntoMejora['prioridad']>('media');
+  function submitPunto(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pmTitulo.trim()) return;
+    crearPunto({ titulo: pmTitulo.trim(), prioridad: pmPrio });
+    setPmTitulo(''); setPmPrio('media');
   }
+
+  // Quick add tarea HOY
+  const [qTarea, setQTarea] = useState('');
+  function submitQuickTarea(e: React.FormEvent) {
+    e.preventDefault();
+    if (!qTarea.trim()) return;
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    crearTarea({ titulo: qTarea.trim(), prioridad: 'media', vencimiento: `${yyyy}-${mm}-${dd}` });
+    setQTarea('');
+  }
+
+  const nombreMes = hoy.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const heroKpi = totales.cierres;
+  const heroSubKpi = totales.visitas;
+  const visitasAgendadas = metrics?.kpis.visitasAgendadas ?? 0;
 
   return (
     <>
-      <PageHeader title="Tareas" subtitle="Gestion interna del equipo · pendientes, en curso y completadas" count={counts.todas} />
-
-      {/* QUICK-ADD inline: super pragmatico - Enter crea tarea sin abrir form */}
-      <Card className="mb-4 border-accent/30 bg-gradient-to-r from-accent/5 via-surface-1 to-surface-1">
-        <form onSubmit={quickSubmit} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', prioridadStyles[quickPrioridad].dot)} />
-            <input
-              value={quickTitulo}
-              onChange={e => setQuickTitulo(e.target.value)}
-              placeholder="Anotar nueva tarea y presionar Enter..."
-              className="flex-1 min-w-0 bg-transparent border-none px-1 py-2 focus:outline-none text-sm sm:text-base text-text placeholder:text-text-muted"
-            />
+      {/* ========================== HERO MOTIVACIONAL ========================== */}
+      <section className="relative mb-6 overflow-hidden rounded-3xl border border-accent/40 bg-gradient-to-br from-surface-1 via-surface-0 to-surface-0">
+        <div className="absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-accent/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 w-[420px] h-[420px] rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+        <div className="relative p-6 sm:p-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+            <div className="lg:col-span-7">
+              <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-accent/10 border border-accent/30">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span className="text-[11px] uppercase tracking-[0.22em] text-accent font-semibold">Equipo Bochile · {nombreMes}</span>
+              </div>
+              <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text leading-tight mb-2">
+                Vamos por <span className="text-accent">cada visita</span>, <br className="hidden sm:block" />
+                cada llamado, <span className="text-accent">cada cierre</span>.
+              </h1>
+              <p className="text-sm sm:text-base text-text-muted max-w-xl">
+                Lo que se mide se mejora · Lo que se anota se cumple · Lo que se revisa se gana.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link to="/visitas" className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] transition-all">
+                  <Calendar className="w-3.5 h-3.5" /> Coordinar visitas pendientes
+                </Link>
+                <Link to="/conversaciones" className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-surface-2 border border-border text-text hover:border-accent/50 transition-all">
+                  <MessageSquare className="w-3.5 h-3.5" /> Ver mensajes en vivo
+                </Link>
+              </div>
+            </div>
+            <div className="lg:col-span-5 flex flex-col items-start lg:items-end gap-1">
+              <span className="text-[10px] uppercase tracking-[0.22em] text-text-muted">Cierres del mes</span>
+              <div className={cn(
+                'font-display font-black tracking-tight text-accent leading-none',
+                'text-6xl sm:text-7xl lg:text-8xl float-soft',
+                'drop-shadow-[0_0_30px_rgba(255,200,80,0.35)]',
+              )}>
+                {heroKpi}
+              </div>
+              <div className="text-xs text-text-muted">
+                <span className="text-emerald-300 font-semibold">{heroSubKpi}</span> visitas concretadas · <span className="text-accent font-semibold">{visitasAgendadas}</span> agendadas
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {(['alta', 'media', 'baja'] as TareaPrioridad[]).map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setQuickPrioridad(p)}
-                className={cn(
-                  'px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize transition-all border',
-                  quickPrioridad === p ? prioridadStyles[p].badge : 'bg-surface-2 border-border text-text-muted hover:text-text',
-                )}
-                aria-label={`Prioridad ${prioridadStyles[p].label}`}
-              >
-                {prioridadStyles[p].label}
-              </button>
-            ))}
+        </div>
+      </section>
+
+      {/* ========================== OBJETIVOS POR AREA ========================== */}
+      <section className="mb-6">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-accent/15 text-accent"><Target className="w-4 h-4" /></div>
+            <h2 className="font-display text-lg sm:text-xl font-semibold text-text">Objetivos de {nombreMes}</h2>
+          </div>
+          <span className="text-[11px] text-text-subtle">Editá la cifra <em>actual</em> a medida que cumplas</span>
+        </div>
+
+        {/* Form */}
+        <Card className="mb-3 border-accent/30">
+          <form onSubmit={submitObjetivo} className="grid grid-cols-12 gap-2">
+            <div className="col-span-12 sm:col-span-3 flex gap-1">
+              {CATEGORIAS.map(c => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setObjCat(c.key)}
+                  className={cn(
+                    'flex-1 px-2 py-2 rounded-lg text-[11px] font-semibold transition-all border inline-flex items-center justify-center gap-1',
+                    objCat === c.key ? `${c.iconBg} ${c.ring}` : 'bg-surface-2 border-border text-text-muted hover:text-text',
+                  )}
+                >
+                  <c.icon className="w-3 h-3" /> {c.label}
+                </button>
+              ))}
+            </div>
+            <input
+              value={objTitulo}
+              onChange={e => setObjTitulo(e.target.value)}
+              placeholder="Ej. Cerrar ventas en zona Patagonia"
+              className="col-span-12 sm:col-span-4 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
+            />
+            <input
+              type="number" min="1"
+              value={objMeta}
+              onChange={e => setObjMeta(e.target.value)}
+              placeholder="Meta"
+              className="col-span-4 sm:col-span-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
+            />
+            <select
+              value={objUnidad}
+              onChange={e => setObjUnidad(e.target.value)}
+              className="col-span-5 sm:col-span-2 bg-surface-2 border border-border rounded-lg px-2 py-2 text-sm focus:outline-none focus:border-accent text-text"
+            >
+              <option value="ventas">ventas</option>
+              <option value="alquileres">alquileres</option>
+              <option value="clientes">clientes</option>
+              <option value="visitas">visitas</option>
+              <option value="captaciones">captaciones</option>
+              <option value="llamadas">llamadas</option>
+            </select>
             <button
               type="submit"
-              disabled={!quickTitulo.trim()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              disabled={!objTitulo.trim() || !objMeta}
+              className="col-span-3 sm:col-span-2 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               <Plus className="w-3.5 h-3.5" /> Agregar
             </button>
-          </div>
-        </form>
-        <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] uppercase tracking-wider text-text-subtle mr-1">Plantillas:</span>
-          {PLANTILLAS.map(p => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => { setQuickTitulo(p); }}
-              className="text-[11px] px-2 py-0.5 rounded-md bg-surface-2 border border-border text-text-muted hover:text-accent hover:border-accent/40 transition-colors"
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Stats / filtros - layout estable mobile + desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-5">
-        <FilterChip label="Total" short="Total" value={counts.todas} icon={ListTodo} active={filtro === 'todas'} onClick={() => setFiltro('todas')} />
-        <FilterChip label="Pendientes" short="Pend." value={counts.pendiente} icon={Clock} accent="amber" active={filtro === 'pendiente'} onClick={() => setFiltro('pendiente')} />
-        <FilterChip label="En curso" short="Curso" value={counts.en_curso} icon={Loader2} accent="blue" active={filtro === 'en_curso'} onClick={() => setFiltro('en_curso')} />
-        <FilterChip label="Completadas" short="Compl." value={counts.completada} icon={CheckCircle2} accent="green" active={filtro === 'completada'} onClick={() => setFiltro('completada')} />
-      </div>
-
-      {/* Action bar superior */}
-      <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={toggleAll}
-          disabled={allFilteredIds.length === 0}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs bg-surface-2 border border-border text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          {allSelected
-            ? <CheckSquare className="w-3.5 h-3.5 text-accent" />
-            : someSelected
-              ? <CircleDot className="w-3.5 h-3.5 text-accent" />
-              : <Square className="w-3.5 h-3.5" />}
-          <span>{allSelected ? 'Deseleccionar todo' : someSelected ? `${selected.size} seleccionada${selected.size > 1 ? 's' : ''}` : 'Seleccionar todo'}</span>
-        </button>
-        <div className="flex items-center gap-2 flex-wrap">
-          {filtro === 'completada' && counts.completada > 0 && (
-            <button
-              type="button"
-              onClick={handleLimpiarCompletadas}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Limpiar {counts.completada} completada{counts.completada > 1 ? 's' : ''}</span>
-              <span className="sm:hidden">Limpiar</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setShowForm(v => !v)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] transition-all"
-          >
-            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            <span className="hidden xs:inline">{showForm ? 'Cancelar' : 'Nueva tarea'}</span>
-            <span className="xs:hidden">{showForm ? 'Cerrar' : 'Nueva'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Bulk actions sticky bar */}
-      {someSelected && (
-        <div className="sticky top-[60px] sm:top-[68px] z-20 mb-3 p-2.5 sm:p-3 rounded-xl bg-surface-1/95 backdrop-blur-md border border-accent/40 shadow-lg flex items-center gap-2 flex-wrap">
-          <span className="text-xs sm:text-sm font-semibold text-accent shrink-0">{selected.size}</span>
-          <span className="text-xs text-text-muted hidden sm:inline">seleccionada{selected.size > 1 ? 's' : ''}</span>
-          <div className="flex-1" />
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <BulkBtn icon={Clock} label="Pendiente" onClick={() => bulkEstado('pendiente')} color="zinc" />
-            <BulkBtn icon={Loader2} label="En curso" onClick={() => bulkEstado('en_curso')} color="blue" />
-            <BulkBtn icon={CheckCircle2} label="Completar" onClick={() => bulkEstado('completada')} color="emerald" />
-            <BulkBtn icon={Trash2} label="Eliminar" onClick={bulkDelete} color="rose" />
-            <button
-              type="button"
-              onClick={clearSelection}
-              className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-              aria-label="Cancelar seleccion"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Form crear */}
-      {showForm && (
-        <Card className="mb-4 sm:mb-5 border-accent/40">
-          <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="md:col-span-2">
-              <label className="text-[10px] uppercase tracking-widest text-text-muted">Titulo *</label>
-              <input
-                autoFocus
-                value={titulo}
-                onChange={e => setTitulo(e.target.value)}
-                placeholder="Ej. Llamar a Maria Celia para visita Patagonia"
-                className="mt-1 w-full bg-surface-2 border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent text-text"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-[10px] uppercase tracking-widest text-text-muted">Descripcion</label>
-              <textarea
-                value={descripcion}
-                onChange={e => setDescripcion(e.target.value)}
-                rows={2}
-                placeholder="Detalles opcionales..."
-                className="mt-1 w-full bg-surface-2 border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent text-text resize-none"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-text-muted">Prioridad</label>
-              <div className="mt-1 flex gap-1">
-                {(['alta', 'media', 'baja'] as TareaPrioridad[]).map(p => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPrioridad(p)}
-                    className={cn(
-                      'flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize transition-all border',
-                      prioridad === p ? prioridadStyles[p].badge + ' ring-2 ring-current/30' : 'bg-surface-2 border-border text-text-muted hover:text-text',
-                    )}
-                  >
-                    {prioridadStyles[p].label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-text-muted">Asignado a</label>
-              <select
-                value={asignado}
-                onChange={e => setAsignado(e.target.value)}
-                className="mt-1 w-full bg-surface-2 border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent text-text"
-              >
-                <option value="">Sin asignar</option>
-                {empleados.map(e => (
-                  <option key={e.empleado_id} value={e.empleado_id}>{e.nombre} · {e.rol}</option>
-                ))}
-                <option key={WESEKA_AGENT.empleado_id} value={WESEKA_AGENT.empleado_id}>
-                  {WESEKA_AGENT.nombre} · {WESEKA_AGENT.rol}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-text-muted">Vencimiento</label>
-              <input
-                type="date"
-                value={vencimiento}
-                onChange={e => setVencimiento(e.target.value)}
-                className="mt-1 w-full bg-surface-2 border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent text-text"
-              />
-            </div>
-            <div className="md:col-span-2 flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => { resetForm(); setShowForm(false); }}
-                className="px-4 py-2 rounded-lg text-sm bg-surface-2 border border-border text-text-muted hover:text-text">
-                Cancelar
-              </button>
-              <button type="submit"
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98]">
-                Crear tarea
-              </button>
-            </div>
           </form>
         </Card>
-      )}
 
-      {/* List */}
-      <Card>
-        {filtradas.length === 0 ? (
-          <div className="text-center py-10 text-text-muted">
-            <CheckSquare className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No hay tareas {filtro !== 'todas' ? `en estado "${estadoStyles[filtro as TareaEstado].label}"` : 'todavia'}.</p>
-            {!showForm && (
-              <button onClick={() => setShowForm(true)} className="mt-3 text-xs text-accent hover:underline">
-                Crear la primera →
-              </button>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {CATEGORIAS.map(c => (
+            <Card key={c.key} className={cn('transition-colors', c.ring)}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={cn('p-1.5 rounded-lg', c.iconBg)}><c.icon className="w-4 h-4" /></div>
+                  <h3 className={cn('font-display text-base font-semibold', c.accent)}>{c.label}</h3>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
+                  {objetivosPorCat[c.key].length}
+                </span>
+              </div>
+
+              {objetivosPorCat[c.key].length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => { setObjCat(c.key); }}
+                  className="w-full text-center py-6 text-text-muted hover:text-text border border-dashed border-border rounded-lg hover:border-accent/40 transition-colors"
+                >
+                  <Plus className="w-5 h-5 mx-auto mb-1 opacity-50" />
+                  <span className="text-xs">Sumá un objetivo de {c.label.toLowerCase()}</span>
+                </button>
+              ) : (
+                <ul className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                  {objetivosPorCat[c.key].map(o => {
+                    const pct = o.meta > 0 ? Math.min(100, Math.round((o.actual / o.meta) * 100)) : 0;
+                    const done = pct >= 100;
+                    const cerca = pct >= 70 && !done;
+                    return (
+                      <li key={o.id} className={cn(
+                        'p-3 rounded-lg border transition-colors',
+                        done ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border bg-surface-1 hover:border-current/40',
+                      )}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={cn(
+                            'shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-xs font-bold',
+                            done ? 'bg-emerald-500/20 text-emerald-300' : c.iconBg,
+                          )}>{pct}%</span>
+                          <span className="text-sm text-text flex-1 min-w-0 font-medium break-words leading-tight">{o.titulo}</span>
+                          <button
+                            type="button"
+                            onClick={() => { if (window.confirm('Eliminar objetivo?')) eliminarObjetivo(o.id); }}
+                            className="shrink-0 p-1 text-text-muted hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
+                            aria-label="Eliminar"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="relative w-full h-2.5 bg-surface-2 rounded-full overflow-hidden mb-2">
+                          <div
+                            className={cn('h-full rounded-full transition-all duration-700 ease-out', done ? 'bg-emerald-400' : c.bar)}
+                            style={{ width: `${pct}%` }}
+                          />
+                          {cerca && (
+                            <div
+                              className="absolute inset-y-0 left-0 shimmer-bar rounded-full pointer-events-none"
+                              style={{ width: `${pct}%` }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-text-muted">
+                          <input
+                            type="number" min="0"
+                            value={o.actual}
+                            onChange={e => actualizarObjetivo(o.id, { actual: Number(e.target.value) || 0 })}
+                            className="w-16 bg-surface-2 border border-border rounded px-1.5 py-0.5 text-xs focus:outline-none focus:border-accent text-text"
+                          />
+                          <span>de {o.meta} {o.unidad}</span>
+                          {done && <span className="ml-auto text-emerald-300 font-semibold uppercase tracking-wider text-[10px]">Cumplido</span>}
+                          {cerca && <span className="ml-auto text-accent font-semibold uppercase tracking-wider text-[10px]">A punto</span>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================== EQUIPO + TAREAS ========================== */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+        {/* Leaderboard */}
+        <Card className="lg:col-span-7 border-accent/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><Trophy className="w-4 h-4" /></div>
+              <h3 className="font-display text-base font-semibold text-text">Equipo destacado del mes</h3>
+            </div>
+            <Link to="/empleados" className="text-xs text-accent hover:underline flex items-center gap-1">
+              Ver equipo <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {topEquipo.length === 0 ? (
+            <div className="text-center py-8 text-text-muted">
+              <Trophy className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-xs">Sin actividad cargada este mes.</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {topEquipo.map(({ e, score }, idx) => {
+                const podio = idx === 0;
+                const segundo = idx === 1;
+                const tercero = idx === 2;
+                const MedallaIcon = podio ? Trophy : segundo ? Medal : tercero ? Award : null;
+                return (
+                  <li
+                    key={e.empleado_id}
+                    className={cn(
+                      'flex items-center gap-3 p-3 rounded-xl border transition-all',
+                      podio
+                        ? 'border-accent/40 bg-gradient-to-r from-accent/8 to-transparent halo-gold'
+                        : segundo
+                          ? 'border-zinc-400/30 bg-zinc-400/5'
+                          : tercero
+                            ? 'border-orange-400/30 bg-orange-400/5'
+                            : 'border-border bg-surface-1 hover:border-accent/30',
+                    )}
+                  >
+                    <span className={cn(
+                      'shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-display text-sm font-bold',
+                      podio ? 'bg-accent text-accent-fg shadow-gold' :
+                      segundo ? 'bg-zinc-400/20 text-zinc-200' :
+                      tercero ? 'bg-orange-400/20 text-orange-300' :
+                      'bg-surface-2 text-text-muted',
+                    )}>
+                      {MedallaIcon ? <MedallaIcon className="w-4 h-4" /> : `#${idx + 1}`}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="font-medium text-text truncate">{e.nombre}</span>
+                        {e.rol && <span className="text-[10px] uppercase tracking-wider text-text-subtle">{e.rol}</span>}
+                      </div>
+                      <div className="text-[11px] text-text-muted">
+                        <span className="text-emerald-300 font-semibold">{e.cierres_mes || 0}</span> cierres ·
+                        <span className="text-blue-300 font-semibold"> {e.visitas_mes || 0}</span> visitas
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className={cn('font-display text-xl font-bold leading-none', podio ? 'text-accent' : 'text-text')}>
+                        {score}
+                      </div>
+                      <div className="text-[10px] uppercase tracking-wider text-text-subtle">pts</div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-text-subtle">
+            Score = <span className="text-emerald-300 font-semibold">cierres × 3</span> + <span className="text-blue-300 font-semibold">visitas × 1</span>
+          </div>
+        </Card>
+
+        {/* Tareas del dia */}
+        <Card className="lg:col-span-5 border-accent/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><ListTodo className="w-4 h-4" /></div>
+              <h3 className="font-display text-base font-semibold text-text">Tareas de hoy</h3>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
+                {tareasDelDia.length}
+              </span>
+            </div>
+            <Link to="/marketing" className="text-xs text-accent hover:underline flex items-center gap-1" title="Administrar todas las tareas en el panel WESEKA.IA">
+              Administrar <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <form onSubmit={submitQuickTarea} className="flex gap-2 mb-3">
+            <input
+              value={qTarea}
+              onChange={e => setQTarea(e.target.value)}
+              placeholder="Tarea para HOY (Enter)..."
+              className="flex-1 min-w-0 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
+            />
+            <button
+              type="submit" disabled={!qTarea.trim()}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              aria-label="Agregar"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </form>
+
+          {tareasDelDia.length === 0 ? (
+            <div className="text-center py-6 text-text-muted">
+              <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-xs">Sin tareas con vencimiento para hoy.</p>
+              {tareasSinFecha.length > 0 && (
+                <p className="text-[10px] mt-1 text-text-subtle">
+                  Hay {tareasSinFecha.length} sin fecha. <Link to="/marketing" className="underline">Administrar en WESEKA.IA</Link>
+                </p>
+              )}
+            </div>
+          ) : (
+            <ul className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1">
+              {tareasDelDia.map(t => {
+                const d = parseDateLocal(t.vencimiento);
+                const vencida = d ? d < hoy : false;
+                return (
+                  <li key={t.id} className={cn(
+                    'flex items-center gap-2 p-2 rounded-md border transition-colors group',
+                    vencida ? 'border-rose-500/30 bg-rose-500/5' : 'border-border bg-surface-1 hover:border-accent/40',
+                  )}>
+                    <button
+                      type="button"
+                      onClick={() => actualizarTarea(t.id, { estado: 'completada', completada_en: new Date().toISOString() })}
+                      className="shrink-0 text-text-muted hover:text-accent transition-colors"
+                      aria-label="Completar"
+                    >
+                      <Square className="w-4 h-4" />
+                    </button>
+                    <span className={cn('w-2 h-2 rounded-full shrink-0', prioDot[t.prioridad])} />
+                    <span className="text-sm text-text flex-1 min-w-0 break-words">{t.titulo}</span>
+                    {vencida && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-rose-300 font-semibold shrink-0">
+                        <AlertTriangle className="w-3 h-3" /> VENC
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID })}
+                      className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/30 hover:bg-fuchsia-500/20 transition-colors opacity-0 group-hover:opacity-100 inline-flex items-center gap-1"
+                      title="Derivar al equipo WESEKA.IA"
+                    >
+                      WSK
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      </section>
+
+      {/* ========================== PUNTOS A MEJORAR ========================== */}
+      <Card className="mb-6 border-accent/30">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><Lightbulb className="w-4 h-4" /></div>
+            <h3 className="font-display text-base font-semibold text-text">Puntos a mejorar del equipo</h3>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
+              {puntos.filter(p => p.estado !== 'resuelto').length} abiertos
+            </span>
+          </div>
+          <span className="text-[11px] text-text-subtle hidden sm:inline">Hablen entre ustedes lo que cuesta · anótenlo · resuélvanlo juntos</span>
+        </div>
+
+        <form onSubmit={submitPunto} className="grid grid-cols-12 gap-2 mb-3">
+          <input
+            value={pmTitulo}
+            onChange={e => setPmTitulo(e.target.value)}
+            placeholder="Ej. Mejorar tiempo de respuesta en alquileres"
+            className="col-span-12 sm:col-span-8 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
+          />
+          <select
+            value={pmPrio}
+            onChange={e => setPmPrio(e.target.value as PuntoMejora['prioridad'])}
+            className="col-span-7 sm:col-span-2 bg-surface-2 border border-border rounded-lg px-2 py-2 text-sm focus:outline-none focus:border-accent text-text"
+          >
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+          </select>
+          <button
+            type="submit" disabled={!pmTitulo.trim()}
+            className="col-span-5 sm:col-span-2 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" /> Agregar
+          </button>
+        </form>
+
+        {puntos.length === 0 ? (
+          <div className="text-center py-6 text-text-muted">
+            <Lightbulb className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-xs">Anotá puntos a mejorar del equipo o del proceso.</p>
           </div>
         ) : (
           <ul className="space-y-2">
-            {filtradas.map(t => {
-              const vencida = esVencida(t);
-              const completed = t.estado === 'completada';
-              const isSelected = selected.has(t.id);
-              return (
-                <li
-                  key={t.id}
-                  className={cn(
-                    'group flex items-start gap-2.5 sm:gap-3 p-3 rounded-lg border transition-all',
-                    isSelected ? 'border-accent/60 bg-accent/5'
-                    : completed ? 'border-border/40 bg-surface-1/40 opacity-70'
-                    : vencida ? 'border-rose-500/40 bg-rose-500/5'
-                    : 'border-border bg-surface-1 hover:border-accent/40',
-                  )}
-                >
-                  {/* CHECKBOX = SELECCION (no marca completada) */}
-                  <button
-                    type="button"
-                    onClick={() => toggleSelect(t.id)}
-                    className="mt-0.5 shrink-0 p-0.5 -m-0.5 text-text-muted hover:text-accent transition-colors"
-                    aria-label={isSelected ? 'Deseleccionar' : 'Seleccionar'}
-                  >
-                    {isSelected
-                      ? <CheckSquare className="w-5 h-5 text-accent" />
-                      : <Square className="w-5 h-5" />}
-                  </button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={cn('inline-block w-2 h-2 rounded-full shrink-0', prioridadStyles[t.prioridad].dot)} />
-                      <h4 className={cn('font-medium text-sm break-words', completed && 'line-through text-text-muted')}>
-                        {t.titulo}
-                      </h4>
-                      {vencida && (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-rose-300 font-semibold">
-                          <AlertTriangle className="w-3 h-3" /> VENCIDA
-                        </span>
-                      )}
-                    </div>
-                    {t.descripcion && (
-                      <p className={cn('text-xs mt-1 break-words', completed ? 'text-text-subtle' : 'text-text-muted')}>
-                        {t.descripcion}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-2 flex-wrap text-[11px]">
-                      <Badge className={prioridadStyles[t.prioridad].badge}>
-                        <Flag className="w-3 h-3 inline mr-1" />{prioridadStyles[t.prioridad].label}
-                      </Badge>
-                      <select
-                        value={t.estado}
-                        onChange={e => actualizar(t.id, { estado: e.target.value as TareaEstado, completada_en: e.target.value === 'completada' ? new Date().toISOString() : undefined })}
-                        className={cn('text-[11px] rounded-md px-1.5 py-0.5 border outline-none cursor-pointer', estadoStyles[t.estado].badge)}
-                      >
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en_curso">En curso</option>
-                        <option value="completada">Completada</option>
-                      </select>
-                      {t.asignado_a && (
-                        <span className="inline-flex items-center gap-1 text-text-muted truncate max-w-[180px]">
-                          <UserIcon className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{nombrePorId.get(t.asignado_a) || t.asignado_a}</span>
-                        </span>
-                      )}
-                      {t.vencimiento && (
-                        <span className={cn('inline-flex items-center gap-1', vencida ? 'text-rose-300' : 'text-text-muted')}>
-                          <CalendarIcon className="w-3 h-3" />
-                          {(parseDateLocal(t.vencimiento) || new Date()).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                        </span>
-                      )}
-                    </div>
+            {puntos.map(p => (
+              <li key={p.id} className={cn(
+                'flex items-start gap-2 p-3 rounded-lg border transition-colors',
+                p.estado === 'resuelto' ? 'border-emerald-500/30 bg-emerald-500/5 opacity-70' : 'border-border bg-surface-1 hover:border-accent/40',
+              )}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={cn('text-sm font-medium break-words', p.estado === 'resuelto' && 'line-through text-text-muted')}>
+                      {p.titulo}
+                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => actualizar(t.id, { asignado_a: MARKETING_ASIGNADO_ID })}
-                    className="shrink-0 px-2 py-1 rounded-md text-[11px] font-semibold border border-fuchsia-500/30 text-fuchsia-300 bg-fuchsia-500/5 hover:bg-fuchsia-500/15 sm:opacity-0 group-hover:opacity-100 transition-all inline-flex items-center gap-1"
-                    title="Derivar al equipo de Marketing"
-                  >
-                    <Megaphone className="w-3 h-3" />
-                    <span className="hidden sm:inline">Marketing</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('Eliminar esta tarea?')) eliminar(t.id);
-                    }}
-                    className="shrink-0 p-1.5 rounded-md text-text-muted hover:text-rose-300 hover:bg-rose-500/10 sm:opacity-0 group-hover:opacity-100 transition-all"
-                    aria-label="Eliminar tarea"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </li>
-              );
-            })}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Badge className={cn('border', prioStyles[p.prioridad])}>{p.prioridad}</Badge>
+                    <select
+                      value={p.estado}
+                      onChange={e => actualizarPunto(p.id, { estado: e.target.value as PuntoMejora['estado'] })}
+                      className={cn('text-[11px] rounded-md px-1.5 py-0.5 border outline-none cursor-pointer', estadoStyles[p.estado])}
+                    >
+                      <option value="abierto">Abierto</option>
+                      <option value="en_progreso">En progreso</option>
+                      <option value="resuelto">Resuelto</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { if (window.confirm('Eliminar este punto?')) eliminarPunto(p.id); }}
+                  className="shrink-0 p-1.5 text-text-muted hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
+                  aria-label="Eliminar"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </li>
+            ))}
           </ul>
         )}
       </Card>
 
-      <div className="mt-4 text-[11px] text-text-subtle text-center">
-        Tareas sincronizadas con Google Sheets · las completadas se mantienen hasta que las elimines
+      <div className="mt-6 text-[11px] text-text-subtle text-center">
+        Tareas y datos del equipo · administración tabular en el panel <Link to="/marketing" className="text-accent hover:underline">WESEKA.IA</Link>
       </div>
     </>
-  );
-}
-
-/** Tarjeta filtro estable a cualquier ancho: label en una linea + numero grande + icono fijo. */
-function FilterChip({
-  label, short, value, icon: Icon, accent = 'default', active, onClick,
-}: {
-  label: string;
-  short?: string;
-  value: number;
-  icon: any;
-  accent?: 'default' | 'amber' | 'blue' | 'green';
-  active: boolean;
-  onClick: () => void;
-}) {
-  const accentMap = {
-    default: 'text-text-muted bg-surface-2',
-    amber:   'text-amber-300 bg-amber-500/10',
-    blue:    'text-blue-300 bg-blue-500/10',
-    green:   'text-emerald-300 bg-emerald-500/10',
-  };
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'card text-left transition-all group cursor-pointer p-2.5 sm:p-4',
-        'flex items-center gap-2.5 sm:gap-3 min-w-0',
-        active
-          ? 'border-accent/60 shadow-[0_10px_30px_-15px_rgba(255,200,80,0.45)]'
-          : 'hover:border-accent/30',
-      )}
-    >
-      {/* icono fijo a la izquierda - no se mueve */}
-      <div className={cn('p-2 rounded-lg shrink-0', accentMap[accent])}>
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-      </div>
-      {/* texto flexible que NUNCA se rompe */}
-      <div className="flex-1 min-w-0">
-        <p className="text-[9px] sm:text-[10px] uppercase tracking-[0.12em] sm:tracking-[0.15em] text-text-muted font-medium leading-tight whitespace-nowrap truncate">
-          <span className="sm:hidden">{short || label}</span>
-          <span className="hidden sm:inline">{label}</span>
-        </p>
-        <p className="font-display text-xl sm:text-2xl md:text-3xl font-semibold mt-0.5 text-text leading-none">{value}</p>
-      </div>
-    </button>
-  );
-}
-
-function BulkBtn({ icon: Icon, label, onClick, color }: { icon: any; label: string; onClick: () => void; color: 'zinc' | 'blue' | 'emerald' | 'rose' }) {
-  const map = {
-    zinc:    'text-zinc-300 hover:bg-zinc-500/10 hover:text-zinc-100 border-zinc-500/30',
-    blue:    'text-blue-300 hover:bg-blue-500/10 hover:text-blue-200 border-blue-500/30',
-    emerald: 'text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200 border-emerald-500/30',
-    rose:    'text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 border-rose-500/30',
-  };
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold border bg-surface-2/60 transition-all',
-        map[color],
-      )}
-    >
-      <Icon className="w-3.5 h-3.5" />
-      <span className="hidden xs:inline">{label}</span>
-    </button>
   );
 }

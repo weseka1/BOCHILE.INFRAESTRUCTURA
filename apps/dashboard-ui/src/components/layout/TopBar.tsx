@@ -19,9 +19,8 @@ const routeTitles: Record<string, string> = {
   '/visitas': 'Visitas',
   '/conversaciones': 'Mensajes',
   '/empleados': 'Equipo',
-  '/marketing': 'Panel Marketing',
-  '/marketing/tareas': 'Tareas internas',
-  '/tareas': 'Tareas internas',
+  '/marketing': 'WESEKA.IA',
+  '/tareas': 'Tareas del equipo',
 };
 
 interface SearchResult {

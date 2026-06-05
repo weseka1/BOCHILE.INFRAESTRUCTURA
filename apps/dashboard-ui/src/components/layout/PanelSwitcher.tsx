@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Building2, Megaphone } from 'lucide-react';
+import { Building2, Cpu } from 'lucide-react';
 import { usePanel, type PanelKey } from '@/panel/PanelContext';
 import { cn } from '@/lib/utils';
 
@@ -38,9 +38,10 @@ export function PanelSwitcher({ className }: { className?: string }) {
             : 'text-text-muted hover:text-text hover:bg-surface-1',
         )}
         aria-pressed={panel === 'marketing'}
+        title="Panel interno WESEKA.IA"
       >
-        <Megaphone className="w-3.5 h-3.5" />
-        <span>Marketing</span>
+        <Cpu className="w-3.5 h-3.5" />
+        <span>WESEKA.IA</span>
       </button>
     </div>
   );

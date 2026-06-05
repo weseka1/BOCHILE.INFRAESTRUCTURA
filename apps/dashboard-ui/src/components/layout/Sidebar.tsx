@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Home, Calendar, MessageSquare, UserCog, X,
-  ShoppingCart, CheckSquare, Megaphone,
+  ShoppingCart, CheckSquare, Cpu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTareasCount } from '@/hooks/useTareas';
@@ -41,7 +41,7 @@ const sectionsMarketing: Section[] = [
   {
     title: null,
     links: [
-      { to: '/marketing', label: 'Bandeja Marketing', icon: Megaphone, end: true },
+      { to: '/marketing', label: 'Tareas WESEKA.IA', icon: Cpu, end: true },
     ],
   },
 ];
@@ -55,7 +55,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const tareasPendientes = useTareasCount();
   const { panel } = usePanel();
   const sections = panel === 'marketing' ? sectionsMarketing : sectionsBochile;
-  const panelLabel = panel === 'marketing' ? 'Marketing' : 'Inmobiliaria';
+  const panelLabel = panel === 'marketing' ? 'WESEKA.IA' : 'Inmobiliaria';
   return (
     <>
       <div
