@@ -1,39 +1,48 @@
-import { useEmpleados, useUpdateEmpleado } from '@/hooks/useEmpleados';
+import { useEmpleados, useUpdateEmpleado, useCreateEmpleado } from '@/hooks/useEmpleados';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Toolbar, ChipFilter } from '@/components/ui/Toolbar';
-import { Drawer, DrawerField } from '@/components/ui/Drawer';
-import { formatMoney } from '@/lib/utils';
+import { Drawer } from '@/components/ui/Drawer';
+import { formatMoney, cn } from '@/lib/utils';
 import type { Empleado } from '@/types/domain';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Phone, Mail, MapPin, Award, Calendar, Plus, Minus, Loader2 } from 'lucide-react';
+import {
+  Phone, Mail, MapPin, Award, Calendar, Plus, Minus, Loader2, UserPlus, X, Power, Pencil, Check,
+} from 'lucide-react';
 
 export function EmpleadosPage() {
   const { data, isLoading, error } = useEmpleados();
   const updateEmp = useUpdateEmpleado();
+  const createEmp = useCreateEmpleado();
   const [filtro, setFiltro] = useState<'todos' | 'activo' | 'inactivo'>('activo');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Empleado | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const rows = data ?? [];
 
-  // Si llega ?focus=ID desde el leaderboard, abre directo el drawer de ese empleado
   useEffect(() => {
     const focusId = searchParams.get('focus');
     if (!focusId || !rows.length) return;
     const found = rows.find(r => r.empleado_id === focusId);
     if (found) {
       setSelected(found);
-      // Limpio el param para que no quede en la URL al cerrar el drawer
       const next = new URLSearchParams(searchParams);
       next.delete('focus');
       setSearchParams(next, { replace: true });
     }
   }, [searchParams, rows, setSearchParams]);
+
+  // mantener `selected` sincronizado con el data fresco cuando hay updates
+  useEffect(() => {
+    if (!selected) return;
+    const fresh = rows.find(r => r.empleado_id === selected.empleado_id);
+    if (fresh && fresh !== selected) setSelected(fresh);
+  }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const counts = useMemo(() => ({
     todos: rows.length,
@@ -58,6 +67,12 @@ export function EmpleadosPage() {
     return arr;
   }, [rows, filtro, q]);
 
+  function toggleActivo(e: Empleado) {
+    const next = !e.activo;
+    setSelected({ ...e, activo: next });
+    updateEmp.mutate({ empleado_id: e.empleado_id, patch: { activo: next } });
+  }
+
   if (isLoading) return <div className="text-text-muted">Cargando...</div>;
   if (error) return <div className="text-rose-400">Error: {(error as Error).message}</div>;
 
@@ -70,6 +85,13 @@ export function EmpleadosPage() {
           <ChipFilter label="Todos" active={filtro === 'todos'} onClick={() => setFiltro('todos')} count={counts.todos} />
           <ChipFilter label="Activos" active={filtro === 'activo'} onClick={() => setFiltro('activo')} count={counts.activo} />
           <ChipFilter label="Inactivos" active={filtro === 'inactivo'} onClick={() => setFiltro('inactivo')} count={counts.inactivo} />
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="ml-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] transition-all"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> Agregar persona
+          </button>
         </div>
       </Toolbar>
 
@@ -101,6 +123,7 @@ export function EmpleadosPage() {
         />
       </Card>
 
+      {/* DRAWER del empleado */}
       <Drawer
         open={!!selected}
         onClose={() => setSelected(null)}
@@ -120,6 +143,21 @@ export function EmpleadosPage() {
                 <Mail className="w-4 h-4" /> Email
               </a>
             )}
+            <button
+              type="button"
+              onClick={() => toggleActivo(selected)}
+              disabled={updateEmp.isPending}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all',
+                selected.activo
+                  ? 'bg-zinc-500/15 border border-zinc-500/40 text-zinc-300 hover:bg-zinc-500/25'
+                  : 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25',
+              )}
+              title={selected.activo ? 'Marcar como inactivo' : 'Marcar como activo'}
+            >
+              <Power className="w-4 h-4" />
+              {selected.activo ? 'Inactivar' : 'Activar'}
+            </button>
           </div>
         )}
       >
@@ -131,10 +169,40 @@ export function EmpleadosPage() {
                 {selected.activo ? 'activo' : 'inactivo'}
               </Badge>
             </div>
-            <DrawerField label="Email" value={selected.email && <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" /> {selected.email}</span>} />
-            <DrawerField label="Teléfono" value={selected.telefono} />
-            <DrawerField label="Zona especialidad" value={selected.zona_especialidad && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {selected.zona_especialidad}</span>} />
-            <DrawerField label="Calendar ID" value={selected.calendar_id && <span className="font-mono text-xs">{selected.calendar_id}</span>} />
+
+            <EditableField
+              label="Email" icon={Mail}
+              value={selected.email || ''} placeholder="email@bochile.com"
+              onSave={v => updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { email: v } })}
+              saving={updateEmp.isPending}
+            />
+            <EditableField
+              label="Teléfono" icon={Phone}
+              value={selected.telefono || ''} placeholder="5492914..."
+              mono
+              onSave={v => updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { telefono: v } })}
+              saving={updateEmp.isPending}
+            />
+            <EditableField
+              label="Zona especialidad" icon={MapPin}
+              value={selected.zona_especialidad || ''} placeholder="Ej. Patagonia, Centro"
+              onSave={v => updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { zona_especialidad: v } })}
+              saving={updateEmp.isPending}
+            />
+            <EditableField
+              label="Rol"
+              value={selected.rol || ''} placeholder="vendedor"
+              options={['vendedor', 'vendedora', 'admin', 'alquileres', 'captacion']}
+              onSave={v => updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { rol: v } })}
+              saving={updateEmp.isPending}
+            />
+            <EditableField
+              label="Calendar ID"
+              value={selected.calendar_id || ''} placeholder="opcional"
+              mono
+              onSave={v => updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { calendar_id: v } })}
+              saving={updateEmp.isPending}
+            />
             <div className="grid grid-cols-2 gap-2 mt-4">
               <Counter
                 label="Visitas mes"
@@ -142,8 +210,7 @@ export function EmpleadosPage() {
                 icon={Calendar}
                 color="blue"
                 onChange={(next) => {
-                  const updated = { ...selected, visitas_mes: next };
-                  setSelected(updated);
+                  setSelected({ ...selected, visitas_mes: next });
                   updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { visitas_mes: next } });
                 }}
                 saving={updateEmp.isPending}
@@ -154,8 +221,7 @@ export function EmpleadosPage() {
                 icon={Award}
                 color="emerald"
                 onChange={(next) => {
-                  const updated = { ...selected, cierres_mes: next };
-                  setSelected(updated);
+                  setSelected({ ...selected, cierres_mes: next });
                   updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { cierres_mes: next } });
                 }}
                 saving={updateEmp.isPending}
@@ -167,7 +233,123 @@ export function EmpleadosPage() {
           </div>
         )}
       </Drawer>
+
+      {/* MODAL CREAR EMPLEADO */}
+      {showCreate && (
+        <CrearEmpleadoModal
+          onClose={() => setShowCreate(false)}
+          onCreate={async (data) => {
+            await createEmp.mutateAsync(data);
+            setShowCreate(false);
+          }}
+          saving={createEmp.isPending}
+        />
+      )}
     </>
+  );
+}
+
+/**
+ * Campo editable inline. Click sobre el valor (o sobre el lapiz) -> input.
+ * Enter o blur guarda. Esc cancela.
+ * Si se le pasan `options`, renderiza como <select>.
+ */
+function EditableField({
+  label, icon: Icon, value, placeholder, mono, options, onSave, saving,
+}: {
+  label: string;
+  icon?: any;
+  value: string;
+  placeholder?: string;
+  mono?: boolean;
+  options?: string[];
+  onSave: (next: string) => void;
+  saving?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const ref = useRef<HTMLInputElement | HTMLSelectElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  function commit() {
+    const next = String(draft || '').trim();
+    if (next !== String(value || '').trim()) onSave(next);
+    setEditing(false);
+  }
+  function cancel() {
+    setDraft(value);
+    setEditing(false);
+  }
+
+  return (
+    <div className="py-2 border-b border-border-subtle group">
+      <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1 flex items-center gap-1">
+        {label}
+        {saving && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+      </div>
+      {editing ? (
+        options ? (
+          <div className="flex items-center gap-1.5">
+            <select
+              ref={ref as React.RefObject<HTMLSelectElement>}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={e => { if (e.key === 'Escape') cancel(); }}
+              className="flex-1 input"
+            >
+              {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={commit}
+              className="p-1.5 rounded-md text-emerald-300 hover:bg-emerald-500/15">
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={cancel}
+              className="p-1.5 rounded-md text-text-muted hover:bg-surface-2">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <input
+              ref={ref as React.RefObject<HTMLInputElement>}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commit(); }
+                if (e.key === 'Escape') cancel();
+              }}
+              placeholder={placeholder}
+              className={cn('flex-1 input', mono && 'font-mono')}
+            />
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={commit}
+              className="p-1.5 rounded-md text-emerald-300 hover:bg-emerald-500/15">
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={cancel}
+              className="p-1.5 rounded-md text-text-muted hover:bg-surface-2">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="w-full text-left text-sm text-text bg-transparent border-b border-dashed border-transparent hover:border-accent/40 hover:text-accent transition-colors py-1 flex items-center gap-2 group/edit"
+          title="Click para editar"
+        >
+          {Icon && value && <Icon className="w-3 h-3 text-text-muted shrink-0" />}
+          <span className={cn('flex-1 truncate', mono && 'font-mono text-xs', !value && 'italic text-text-subtle')}>
+            {value || placeholder || 'Sin definir'}
+          </span>
+          <Pencil className="w-3 h-3 text-text-subtle opacity-0 group-hover/edit:opacity-100 transition-opacity shrink-0" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -222,6 +404,126 @@ function Counter({
       <div className="text-[10px] text-text-muted uppercase tracking-wider flex items-center justify-center gap-1">
         {label}
         {saving && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+      </div>
+    </div>
+  );
+}
+
+function CrearEmpleadoModal({
+  onClose, onCreate, saving,
+}: {
+  onClose: () => void;
+  onCreate: (data: Partial<Empleado>) => Promise<void>;
+  saving: boolean;
+}) {
+  const [nombre, setNombre] = useState('');
+  const [rol, setRol] = useState('vendedor');
+  const [telefono, setTelefono] = useState('');
+  const [email, setEmail] = useState('');
+  const [zona, setZona] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!nombre.trim()) { setError('Nombre obligatorio'); return; }
+    try {
+      await onCreate({
+        nombre: nombre.trim(),
+        rol: rol.trim() || 'vendedor',
+        telefono: telefono.trim(),
+        email: email.trim(),
+        zona_especialidad: zona.trim(),
+        activo: true,
+      });
+    } catch (e: any) {
+      setError(e?.message || 'No se pudo crear');
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadein"
+      onClick={onClose}
+      role="dialog" aria-modal="true"
+    >
+      <div
+        className="relative w-full max-w-md rounded-2xl bg-surface-1 border-2 border-accent/40 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-accent/15 text-accent"><UserPlus className="w-5 h-5" /></div>
+            <h3 className="font-display text-lg font-bold text-text">Agregar persona al equipo</h3>
+          </div>
+          <button type="button" onClick={onClose}
+            className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
+            aria-label="Cerrar">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="p-5 space-y-3">
+          {error && (
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-text-muted">Nombre *</label>
+            <input
+              autoFocus
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              placeholder="Ej. Juan Perez"
+              className="mt-1 input"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-text-muted">Rol</label>
+              <select value={rol} onChange={e => setRol(e.target.value)} className="mt-1 input">
+                <option value="vendedor">vendedor</option>
+                <option value="vendedora">vendedora</option>
+                <option value="admin">admin</option>
+                <option value="alquileres">alquileres</option>
+                <option value="captacion">captacion</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-text-muted">Teléfono</label>
+              <input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="5492914..." className="mt-1 input font-mono" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-text-muted">Email</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@bochile.com" className="mt-1 input" />
+          </div>
+
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-text-muted">Zona especialidad</label>
+            <input value={zona} onChange={e => setZona(e.target.value)} placeholder="Ej. Patagonia, Centro" className="mt-1 input" />
+          </div>
+
+          <p className="text-[11px] text-text-subtle italic">
+            El empleado se crea como <strong className="text-emerald-300">activo</strong>.
+          </p>
+
+          <div className="flex gap-2 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 px-3 py-2 rounded-lg text-sm bg-surface-2 border border-border text-text-muted hover:text-text">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving || !nombre.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {saving ? 'Creando...' : 'Crear'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

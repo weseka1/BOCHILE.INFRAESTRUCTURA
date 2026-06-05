@@ -16,8 +16,22 @@ export function useUpdateLead() {
     mutationFn: async ({ lead_id, patch }: { lead_id: string; patch: Partial<Lead> }) => {
       return api.updateLead(lead_id, patch);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['leads'] });
+    onMutate: async ({ lead_id, patch }) => {
+      await qc.cancelQueries({ queryKey: ['leads'] });
+      const prev = qc.getQueryData<Lead[]>(['leads']) ?? [];
+      qc.setQueryData<Lead[]>(['leads'], prev.map(l =>
+        l.lead_id === lead_id ? { ...l, ...patch } : l,
+      ));
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['leads'], ctx.prev);
+    },
+    onSuccess: (saved, { lead_id }) => {
+      qc.setQueryData<Lead[]>(['leads'], (old = []) =>
+        old.map(l => l.lead_id === lead_id ? { ...l, ...saved } : l),
+      );
+      // Las visitas virtuales dependen de la etapa del lead, las metricas tambien
       qc.invalidateQueries({ queryKey: ['visitas'] });
       qc.invalidateQueries({ queryKey: ['metrics'] });
     },

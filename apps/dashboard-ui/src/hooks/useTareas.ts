@@ -119,6 +119,15 @@ export function useTareas() {
 
   const tareas = query.data ?? [];
 
+  // Helper: aplica un cambio al cache local de react-query SIN refetch.
+  // Esto evita el race condition: si despues de POST/PATCH hacemos refetch
+  // inmediato, Google Sheets a veces tarda ~500ms en propagar la escritura
+  // y devuelve la lista vieja => la tarea recien creada "desaparece" de la UI.
+  // setQueryData garantiza que la UI ya tiene el dato sin esperar el round-trip.
+  function setCache(updater: (old: Tarea[]) => Tarea[]) {
+    qc.setQueryData<Tarea[]>(['tareas'], (old) => updater(old ?? []));
+  }
+
   const crear = useCallback(async (input: Omit<Tarea, 'id' | 'creada_en' | 'estado'> & { estado?: TareaEstado }) => {
     const ahora = new Date().toISOString();
     const payload: Partial<TareaApi> = {
@@ -131,19 +140,35 @@ export function useTareas() {
       creada_en: ahora,
     };
     const saved = await postJson<TareaApi>('/tareas', payload);
-    qc.invalidateQueries({ queryKey: ['tareas'] });
-    return fromApi(saved);
-  }, [qc]);
+    const nueva = fromApi(saved);
+    setCache((old) => [nueva, ...old.filter(t => t.id !== nueva.id)]);
+    return nueva;
+  }, [qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const actualizar = useCallback(async (id: string, patch: Partial<Tarea>) => {
-    await patchJson(`/tareas/${encodeURIComponent(id)}`, toApi(patch));
-    qc.invalidateQueries({ queryKey: ['tareas'] });
-  }, [qc]);
+    // Optimistic: actualizo cache ANTES del round-trip para feedback inmediato.
+    setCache((old) => old.map(t => t.id === id ? { ...t, ...patch } : t));
+    try {
+      const updated = await patchJson<TareaApi>(`/tareas/${encodeURIComponent(id)}`, toApi(patch));
+      setCache((old) => old.map(t => t.id === id ? fromApi(updated) : t));
+    } catch (e) {
+      // Si falla, fuerzo refetch para volver al estado real del sheet
+      qc.invalidateQueries({ queryKey: ['tareas'] });
+      throw e;
+    }
+  }, [qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const eliminar = useCallback(async (id: string) => {
-    await delReq(`/tareas/${encodeURIComponent(id)}`);
-    qc.invalidateQueries({ queryKey: ['tareas'] });
-  }, [qc]);
+    // Optimistic: saco la tarea de la UI ya
+    const prev = qc.getQueryData<Tarea[]>(['tareas']) ?? [];
+    setCache((old) => old.filter(t => t.id !== id));
+    try {
+      await delReq(`/tareas/${encodeURIComponent(id)}`);
+    } catch (e) {
+      qc.setQueryData(['tareas'], prev); // rollback
+      throw e;
+    }
+  }, [qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleCompletada = useCallback(async (id: string) => {
     const cur = tareas.find(t => t.id === id);
@@ -156,23 +181,43 @@ export function useTareas() {
   }, [tareas, actualizar]);
 
   const eliminarVarios = useCallback(async (ids: string[]) => {
-    await Promise.all(ids.map(id => delReq(`/tareas/${encodeURIComponent(id)}`)));
-    qc.invalidateQueries({ queryKey: ['tareas'] });
-  }, [qc]);
+    const idSet = new Set(ids);
+    const prev = qc.getQueryData<Tarea[]>(['tareas']) ?? [];
+    setCache((old) => old.filter(t => !idSet.has(t.id)));
+    try {
+      await Promise.all(ids.map(id => delReq(`/tareas/${encodeURIComponent(id)}`)));
+    } catch (e) {
+      qc.setQueryData(['tareas'], prev);
+      throw e;
+    }
+  }, [qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const actualizarVarios = useCallback(async (ids: string[], patch: Partial<Tarea>) => {
-    await Promise.all(ids.map(id => patchJson(`/tareas/${encodeURIComponent(id)}`, toApi(patch))));
-    qc.invalidateQueries({ queryKey: ['tareas'] });
-  }, [qc]);
+    const idSet = new Set(ids);
+    setCache((old) => old.map(t => idSet.has(t.id) ? { ...t, ...patch } : t));
+    try {
+      await Promise.all(ids.map(id => patchJson(`/tareas/${encodeURIComponent(id)}`, toApi(patch))));
+    } catch (e) {
+      qc.invalidateQueries({ queryKey: ['tareas'] });
+      throw e;
+    }
+  }, [qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Atajo: borrar todas las tareas en estado completada del Sheet
   const limpiarCompletadas = useCallback(async () => {
     const ids = tareas.filter(t => t.estado === 'completada').map(t => t.id);
     if (ids.length === 0) return 0;
-    await Promise.all(ids.map(id => delReq(`/tareas/${encodeURIComponent(id)}`)));
-    qc.invalidateQueries({ queryKey: ['tareas'] });
+    const idSet = new Set(ids);
+    const prev = qc.getQueryData<Tarea[]>(['tareas']) ?? [];
+    setCache((old) => old.filter(t => !idSet.has(t.id)));
+    try {
+      await Promise.all(ids.map(id => delReq(`/tareas/${encodeURIComponent(id)}`)));
+    } catch (e) {
+      qc.setQueryData(['tareas'], prev);
+      throw e;
+    }
     return ids.length;
-  }, [tareas, qc]);
+  }, [tareas, qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     tareas,

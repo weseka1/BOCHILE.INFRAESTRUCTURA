@@ -136,11 +136,16 @@ export function MarketingDashboardPage() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!titulo.trim()) return;
+    // CRITICO: TODA tarea creada desde el panel WESEKA.IA debe quedar con
+    // asignado_a = MARKETING_ASIGNADO_ID. Si el usuario quiere apuntar a un
+    // empleado especifico, lo escribe en la descripcion. Esto evita el bug
+    // de tareas WSK que "se mezclan" en la admin de Bochile.
+    const empleadoTag = asignado ? `[Para: ${asignado}] ` : '';
     crear({
       titulo: titulo.trim(),
-      descripcion: descripcion.trim() || undefined,
+      descripcion: (empleadoTag + (descripcion.trim() || '')).trim() || undefined,
       prioridad,
-      asignado_a: asignado || MARKETING_ASIGNADO_ID,
+      asignado_a: MARKETING_ASIGNADO_ID,
       vencimiento: vencimiento || undefined,
     });
     resetForm();
@@ -313,14 +318,17 @@ export function MarketingDashboardPage() {
               </div>
             </div>
             <div>
-              <label className="text-[10px] uppercase tracking-widest text-text-muted">Asignado a</label>
+              <label className="text-[10px] uppercase tracking-widest text-text-muted">Para (opcional · solo nota)</label>
               <select value={asignado} onChange={e => setAsignado(e.target.value)}
                 className="mt-1 w-full bg-surface-2 border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-fuchsia-400 text-text">
-                <option value="">WESEKA.IA (default)</option>
+                <option value="">— Sin nota —</option>
                 {empleados.map(e => (
-                  <option key={e.empleado_id} value={e.empleado_id}>{e.nombre} · {e.rol}</option>
+                  <option key={e.empleado_id} value={e.empleado_id}>Para {e.nombre}</option>
                 ))}
               </select>
+              <p className="text-[9px] text-text-subtle mt-0.5 italic">
+                La tarea queda en WESEKA.IA — esto solo agrega una nota.
+              </p>
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-widest text-text-muted">Vencimiento</label>

@@ -88,6 +88,8 @@ export interface Contrato {
   dias_atraso: number;
 }
 
+export type Disponibilidad = 'libre' | 'ocupado' | 'fuera';
+
 export interface Empleado {
   empleado_id: string;
   nombre: string;
@@ -100,6 +102,7 @@ export interface Empleado {
   visitas_mes: number;
   cierres_mes: number;
   comisiones_mes: number;
+  disponibilidad?: Disponibilidad;
 }
 
 export interface MatchPendiente {

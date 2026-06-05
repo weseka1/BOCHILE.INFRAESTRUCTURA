@@ -122,6 +122,8 @@ export const api = {
     patchJson<import('@/types/domain').Visita>(`/visitas/${encodeURIComponent(visita_id)}`, patch),
   contratos: () => getJson<import('@/types/domain').Contrato[]>(`/contratos`),
   empleados: () => getJson<import('@/types/domain').Empleado[]>(`/empleados`),
+  createEmpleado: (data: Partial<import('@/types/domain').Empleado>) =>
+    postJson<import('@/types/domain').Empleado>(`/empleados`, data),
   updateEmpleado: (empleado_id: string, patch: Partial<import('@/types/domain').Empleado>) =>
     patchJson<import('@/types/domain').Empleado>(`/empleados/${encodeURIComponent(empleado_id)}`, patch),
   matches: () => getJson<import('@/types/domain').MatchPendiente[]>(`/matches`),
