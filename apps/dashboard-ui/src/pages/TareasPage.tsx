@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from 'react';
 import {
   CheckSquare, Square, Trash2, Plus, AlertTriangle, Flag, Clock, X,
   ListTodo, CheckCircle2, Loader2, Calendar as CalendarIcon, User as UserIcon,
-  CircleDot, MoreHorizontal,
+  CircleDot, Megaphone,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useTareas, type Tarea, type TareaPrioridad, type TareaEstado } from '@/hooks/useTareas';
 import { useEmpleados } from '@/hooks/useEmpleados';
 import { cn } from '@/lib/utils';
+import { MARKETING_ASIGNADO_ID } from '@/pages/DashboardPage';
 
 type Filtro = 'todas' | 'pendiente' | 'en_curso' | 'completada';
 
@@ -26,8 +27,13 @@ const estadoStyles: Record<TareaEstado, { badge: string; label: string }> = {
 };
 
 export function TareasPage() {
-  const { tareas, crear, actualizar, eliminar, eliminarVarios, actualizarVarios, limpiarCompletadas } = useTareas();
+  const { tareas: tareasAll, crear, actualizar, eliminar, eliminarVarios, actualizarVarios, limpiarCompletadas } = useTareas();
   const { data: empleados = [] } = useEmpleados();
+  // Excluyo las tareas DERIVADAS a Marketing (esas viven en /marketing).
+  const tareas = useMemo(
+    () => tareasAll.filter(t => t.asignado_a !== MARKETING_ASIGNADO_ID),
+    [tareasAll],
+  );
 
   const [filtro, setFiltro] = useState<Filtro>('pendiente');
   const [showForm, setShowForm] = useState(false);
@@ -465,6 +471,15 @@ export function TareasPage() {
                     </div>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => actualizar(t.id, { asignado_a: MARKETING_ASIGNADO_ID })}
+                    className="shrink-0 px-2 py-1 rounded-md text-[11px] font-semibold border border-fuchsia-500/30 text-fuchsia-300 bg-fuchsia-500/5 hover:bg-fuchsia-500/15 sm:opacity-0 group-hover:opacity-100 transition-all inline-flex items-center gap-1"
+                    title="Derivar al equipo de Marketing"
+                  >
+                    <Megaphone className="w-3 h-3" />
+                    <span className="hidden sm:inline">Marketing</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {

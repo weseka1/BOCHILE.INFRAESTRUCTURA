@@ -47,8 +47,9 @@ function ProtectedShell() {
         <TopBar onMenu={() => setDrawerOpen(true)} />
         <div className="p-3 sm:p-6">
           <Routes>
-            {/* PANEL BOCHILE (operativo) */}
+            {/* PANEL BOCHILE (operativo, completo, para el equipo de la inmobiliaria) */}
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/tareas" element={<TareasPage />} />
             <Route path="/ventas" element={<VentasPage />} />
             <Route path="/leads" element={<LeadsPage />} />
             <Route path="/propiedades" element={<PropiedadesPage />} />
@@ -58,12 +59,9 @@ function ProtectedShell() {
             <Route path="/empleados" element={<EmpleadosPage />} />
             <Route path="/calidad-ia" element={<CalidadIaPage />} />
 
-            {/* PANEL MARKETING */}
+            {/* PANEL MARKETING (interno WSK — bandeja de tareas derivadas) */}
             <Route path="/marketing" element={<MarketingDashboardPage />} />
-            <Route path="/marketing/tareas" element={<TareasPage />} />
-
-            {/* COMPAT: /tareas seguia siendo el link historico → redirige a la version Marketing */}
-            <Route path="/tareas" element={<Navigate to="/marketing/tareas" replace />} />
+            <Route path="/marketing/tareas" element={<Navigate to="/marketing" replace />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

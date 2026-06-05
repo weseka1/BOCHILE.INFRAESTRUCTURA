@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Home, Calendar, MessageSquare, UserCog, X,
-  ShoppingCart, CheckSquare, Target, Megaphone, Lightbulb,
+  ShoppingCart, CheckSquare, Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTareasCount } from '@/hooks/useTareas';
@@ -16,6 +16,7 @@ const sectionsBochile: Section[] = [
     title: null,
     links: [
       { to: '/', label: 'Inicio', icon: LayoutDashboard, end: true },
+      { to: '/tareas', label: 'Tareas internas', icon: CheckSquare, badgeKey: 'tareas' },
     ],
   },
   {
@@ -40,15 +41,7 @@ const sectionsMarketing: Section[] = [
   {
     title: null,
     links: [
-      { to: '/marketing', label: 'Resumen', icon: Megaphone, end: true },
-      { to: '/marketing/tareas', label: 'Tareas internas', icon: CheckSquare, badgeKey: 'tareas' },
-    ],
-  },
-  {
-    title: 'Planeamiento',
-    links: [
-      { to: '/marketing#objetivos', label: 'Objetivos del mes', icon: Target },
-      { to: '/marketing#puntos', label: 'Puntos a mejorar', icon: Lightbulb },
+      { to: '/marketing', label: 'Bandeja Marketing', icon: Megaphone, end: true },
     ],
   },
 ];
