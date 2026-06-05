@@ -7,7 +7,6 @@ import { LineChartCard } from '@/components/charts/LineChartCard';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { HeroVideo } from '@/components/layout/HeroVideo';
-import { TareasWidget } from '@/components/TareasWidget';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -63,8 +62,8 @@ export function DashboardPage() {
         <StatCard label="Mensajes (7d)" value={kpis.accionesIaUltimaSemana} icon={MessageSquare} accent="amber" to="/conversaciones" />
       </div>
 
-      {/* SPLIT: paneles de negocio + tareas internas (super pragmatico para el equipo) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      {/* SPLIT 2 paneles de negocio */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <PanelLink to="/ventas" color="emerald" icon={ShoppingCart} title="Ventas" badge="Activo">
           <Row label="Clientes en venta" value={stats.lv} />
           <Row label="Propiedades en venta" value={stats.pv} />
@@ -76,8 +75,6 @@ export function DashboardPage() {
           <Row label="Quieren visitar" value={stats.solicVisita} />
           <Row label="Clientes nuevos hoy" value={kpis.leadsHoy} />
         </PanelLink>
-
-        <TareasWidget limit={5} />
       </div>
 
       {/* CHARTS en idioma claro */}

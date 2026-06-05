@@ -13,13 +13,15 @@ interface TopBarProps {
 
 const routeTitles: Record<string, string> = {
   '/': 'Inicio',
-  '/tareas': 'Tareas',
   '/ventas': 'Ventas',
   '/leads': 'Clientes',
   '/propiedades': 'Propiedades',
   '/visitas': 'Visitas',
   '/conversaciones': 'Mensajes',
   '/empleados': 'Equipo',
+  '/marketing': 'Panel Marketing',
+  '/marketing/tareas': 'Tareas internas',
+  '/tareas': 'Tareas internas',
 };
 
 interface SearchResult {
