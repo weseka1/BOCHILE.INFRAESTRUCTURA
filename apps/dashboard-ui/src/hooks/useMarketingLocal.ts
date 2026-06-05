@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 
 /**
- * Hooks para datos del PANEL MARKETING que se persisten en el navegador.
+ * Hooks para datos del PANEL BOCHILE/MARKETING que se persisten en el navegador.
  * Intencionalmente NO tocan el backend para no arriesgar el sheet en la entrega.
  * Si despues queres multi-dispositivo, se puede migrar a /api/marketing/*.
  */
 
+export type ObjetivoCategoria = 'ventas' | 'alquileres' | 'captacion' | 'general';
+
 export interface Objetivo {
   id: string;
   titulo: string;
-  meta: number;       // ej. 30 (clientes nuevos)
-  unidad: string;     // ej. "clientes", "visitas", "ventas"
-  actual: number;     // progreso manual o auto
+  meta: number;
+  unidad: string;
+  actual: number;
+  categoria: ObjetivoCategoria;
   creado_en: string;
 }
 
@@ -45,18 +48,19 @@ function useLocalState<T>(key: string, fallback: T): [T, (next: T | ((prev: T) =
 
 // ---------------- OBJETIVOS DEL MES ----------------
 
-const OBJ_KEY = 'bochile_marketing_objetivos_v1';
+const OBJ_KEY = 'bochile_marketing_objetivos_v2';
 
 export function useObjetivosMes() {
   const [items, setItems] = useLocalState<Objetivo[]>(OBJ_KEY, []);
 
-  const crear = useCallback((data: Omit<Objetivo, 'id' | 'creado_en' | 'actual'> & { actual?: number }) => {
+  const crear = useCallback((data: Omit<Objetivo, 'id' | 'creado_en' | 'actual' | 'categoria'> & { actual?: number; categoria?: ObjetivoCategoria }) => {
     const nuevo: Objetivo = {
       id: uid(),
       titulo: data.titulo,
       meta: Number(data.meta) || 0,
       unidad: data.unidad || '',
       actual: Number(data.actual ?? 0),
+      categoria: data.categoria || 'general',
       creado_en: new Date().toISOString(),
     };
     setItems(prev => [nuevo, ...prev]);

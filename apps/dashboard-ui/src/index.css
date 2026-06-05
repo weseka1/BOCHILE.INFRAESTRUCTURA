@@ -56,7 +56,36 @@
   }
   /* Respeta usuarios con motion reducido (accesibilidad iOS / Android) */
   @media (prefers-reduced-motion: reduce) {
-    .hero-kenburns, .hero-pulse { animation: none !important; }
+    .hero-kenburns, .hero-pulse, .shimmer-bar, .float-soft { animation: none !important; }
+  }
+
+  /* Shimmer en barra de progreso (objetivos cercanos a cumplirse) */
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .shimmer-bar {
+    background: linear-gradient(110deg, transparent 20%, rgba(255,200,80,0.45) 50%, transparent 80%);
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
+  }
+
+  /* Flotacion sutil (cifras hero, badges destacados) */
+  @keyframes float-soft {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  .float-soft {
+    animation: float-soft 4s ease-in-out infinite;
+  }
+
+  /* Halo dorado pulsante (top 1 leaderboard) */
+  @keyframes halo-gold {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,200,80,0.25), 0 0 30px -8px rgba(255,200,80,0.45); }
+    50%      { box-shadow: 0 0 0 6px rgba(255,200,80,0.08), 0 0 50px -10px rgba(255,200,80,0.65); }
+  }
+  .halo-gold {
+    animation: halo-gold 3.5s ease-in-out infinite;
   }
 }
 
