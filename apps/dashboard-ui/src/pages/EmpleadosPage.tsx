@@ -7,7 +7,8 @@ import { Toolbar, ChipFilter } from '@/components/ui/Toolbar';
 import { Drawer, DrawerField } from '@/components/ui/Drawer';
 import { formatMoney } from '@/lib/utils';
 import type { Empleado } from '@/types/domain';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Phone, Mail, MapPin, Award, Calendar } from 'lucide-react';
 
 export function EmpleadosPage() {
@@ -15,8 +16,23 @@ export function EmpleadosPage() {
   const [filtro, setFiltro] = useState<'todos' | 'activo' | 'inactivo'>('activo');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Empleado | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const rows = data ?? [];
+
+  // Si llega ?focus=ID desde el leaderboard, abre directo el drawer de ese empleado
+  useEffect(() => {
+    const focusId = searchParams.get('focus');
+    if (!focusId || !rows.length) return;
+    const found = rows.find(r => r.empleado_id === focusId);
+    if (found) {
+      setSelected(found);
+      // Limpio el param para que no quede en la URL al cerrar el drawer
+      const next = new URLSearchParams(searchParams);
+      next.delete('focus');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, rows, setSearchParams]);
 
   const counts = useMemo(() => ({
     todos: rows.length,

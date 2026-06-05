@@ -26,6 +26,17 @@
   @media (min-width: 640px) {
     input, select, textarea { font-size: inherit; }
   }
+  /* Quitar las flechitas nativas de input[type=number] (estetica Windows 98)
+     Las flechas del teclado siguen funcionando para accesibilidad. */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
   /* Mejor scroll mobile */
   body { overscroll-behavior: contain; }
   /* Scrollbar */
@@ -86,6 +97,15 @@
   }
   .halo-gold {
     animation: halo-gold 3.5s ease-in-out infinite;
+  }
+
+  /* Fadein para modales */
+  @keyframes fadein {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadein {
+    animation: fadein 0.15s ease-out;
   }
 }
 
