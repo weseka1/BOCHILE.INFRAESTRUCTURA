@@ -4,7 +4,7 @@ import { useVisitas } from '@/hooks/useVisitas';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/charts/StatCard';
-import { Users, Home, Calendar, TrendingUp, DollarSign, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Users, Home, Calendar, Sparkles, ArrowUpRight } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Lead, Propiedad } from '@/types/domain';
@@ -25,10 +25,7 @@ export function VentasPage() {
     const pv = (props ?? []).filter((p: Propiedad) => isVenta(p.operacion));
     const calif = lv.filter(l => Number(l.score || 0) >= 70).length;
     const solicitudes = lv.filter(l => String(l.etapa||'').toLowerCase().replace(/[\s_]/g,'') === 'solicitovisita').length;
-    const presupProm = lv.length > 0 ? Math.round(lv.reduce((s,l)=>s+Number(l.presupuesto_max||0),0)/lv.length) : 0;
-    const precios = pv.map(p => Number(p.precio||0)).filter(n => n>0);
-    const precioProm = precios.length ? Math.round(precios.reduce((s,p)=>s+p,0)/precios.length) : 0;
-    return { leadsTotal: lv.length, leadsCalif: calif, solicitudes, propsTotal: pv.length, presupProm, precioProm };
+    return { leadsTotal: lv.length, leadsCalif: calif, solicitudes, propsTotal: pv.length };
   }, [leads, props]);
 
   if (l1 || l2 || l3) return <div className="text-text-muted">Cargando ventas...</div>;
@@ -39,13 +36,11 @@ export function VentasPage() {
     <>
       <PageHeader title="Dashboard Ventas" subtitle="KPIs e indicadores del área de venta de propiedades" />
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard label="Leads de venta" value={stats.leadsTotal} icon={Users} accent="blue" to="/leads?op=venta" />
         <StatCard label="Calificados ≥70" value={stats.leadsCalif} icon={Sparkles} accent="pink" to="/leads?op=venta&score=70" />
         <StatCard label="Solicitan visita/llamado" value={stats.solicitudes} icon={Calendar} accent="amber" to="/visitas" />
         <StatCard label="Propiedades en venta" value={stats.propsTotal} icon={Home} accent="gold" to="/propiedades?op=venta" />
-        <StatCard label="Presup. promedio leads" value={stats.presupProm ? 'USD ' + stats.presupProm.toLocaleString('es-AR') : '-'} icon={DollarSign} accent="green" />
-        <StatCard label="Precio promedio props" value={stats.precioProm ? 'USD ' + stats.precioProm.toLocaleString('es-AR') : '-'} icon={TrendingUp} accent="green" />
       </div>
 
       <Card>
@@ -65,7 +60,7 @@ export function VentasPage() {
             >
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-text truncate">{l.nombre || l.lead_id}</div>
-                <div className="text-xs text-text-muted truncate">{l.tipo_propiedad || '?'} · {l.zona_pref || '?'} · {l.ambientes ? l.ambientes + ' dorm' : '?'} · {l.presupuesto_max ? l.presupuesto_max + ' ' + (l.moneda || '') : '?'}</div>
+                <div className="text-xs text-text-muted truncate">{l.tipo_propiedad || '?'} · {l.zona_pref || '?'} · {l.ambientes ? l.ambientes + ' dorm' : '?'}</div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-amber-400">{l.etapa || 'Nuevo'} · {l.score || 0}</span>

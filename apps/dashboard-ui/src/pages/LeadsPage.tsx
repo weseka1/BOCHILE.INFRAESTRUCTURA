@@ -5,7 +5,7 @@ import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Toolbar, ChipFilter } from '@/components/ui/Toolbar';
 import { Drawer, DrawerField } from '@/components/ui/Drawer';
-import { etapaColor, scoreColor, formatMoney, formatDate } from '@/lib/utils';
+import { etapaColor, scoreColor, formatDate } from '@/lib/utils';
 import type { Lead } from '@/types/domain';
 import { useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -93,7 +93,6 @@ export function LeadsPage() {
             { key: 'score', header: 'Score', cell: (r) => <Badge className={scoreColor(r.score)}>{r.score}</Badge> },
             { key: 'zona', header: 'Zona', cell: (r) => r.zona_pref || '-' },
             { key: 'tipo', header: 'Busca', cell: (r) => `${r.tipo_propiedad || '-'} ${r.ambientes ? `· ${r.ambientes} amb` : ''}` },
-            { key: 'presup', header: 'Presupuesto', cell: (r) => formatMoney(r.presupuesto_max, r.moneda) },
             { key: 'creado', header: 'Creado', cell: (r) => <span className="text-text-muted text-xs">{formatDate(r.creado_en)}</span> },
           ]}
         />
@@ -135,7 +134,6 @@ export function LeadsPage() {
             <DrawerField label="Tipo de propiedad" value={selected.tipo_propiedad} />
             <DrawerField label="Zona preferida" value={selected.zona_pref && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {selected.zona_pref}</span>} />
             <DrawerField label="Ambientes" value={selected.ambientes || '-'} />
-            <DrawerField label="Presupuesto" value={`${formatMoney(selected.presupuesto_min, selected.moneda)} — ${formatMoney(selected.presupuesto_max, selected.moneda)}`} />
             <DrawerField label="Forma de pago" value={selected.forma_pago} />
             <DrawerField label="Urgencia" value={selected.urgencia} />
             <DrawerField label="Última intención" value={selected.ultima_intencion && <span className="italic">"{selected.ultima_intencion}"</span>} />

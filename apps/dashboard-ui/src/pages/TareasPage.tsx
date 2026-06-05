@@ -33,12 +33,16 @@ export function TareasPage() {
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // form state
+  // form state (detalle)
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [prioridad, setPrioridad] = useState<TareaPrioridad>('media');
   const [asignado, setAsignado] = useState('');
   const [vencimiento, setVencimiento] = useState('');
+
+  // quick-add inline (siempre visible — pragmatico para uso diario)
+  const [quickTitulo, setQuickTitulo] = useState('');
+  const [quickPrioridad, setQuickPrioridad] = useState<TareaPrioridad>('media');
 
   const counts = useMemo(() => ({
     todas: tareas.length,
@@ -123,6 +127,24 @@ export function TareasPage() {
     setShowForm(false);
   }
 
+  function quickSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const t = quickTitulo.trim();
+    if (!t) return;
+    crear({ titulo: t, prioridad: quickPrioridad });
+    setQuickTitulo('');
+  }
+
+  // Plantillas rapidas para tareas tipicas de inmobiliaria
+  const PLANTILLAS = [
+    'Llamar cliente para coordinar visita',
+    'Confirmar disponibilidad con propietario',
+    'Sacar fotos nuevas de la propiedad',
+    'Actualizar publicacion en portales',
+    'Pedir documentacion al cliente',
+    'Enviar recibo / contrato',
+  ];
+
   // Opcion fija para asignar tareas internas a un proceso automatico.
   const WESEKA_AGENT = { empleado_id: 'weseka_ia', nombre: 'Asistente', rol: 'automatico' } as const;
 
@@ -154,6 +176,57 @@ export function TareasPage() {
   return (
     <>
       <PageHeader title="Tareas" subtitle="Gestion interna del equipo · pendientes, en curso y completadas" count={counts.todas} />
+
+      {/* QUICK-ADD inline: super pragmatico - Enter crea tarea sin abrir form */}
+      <Card className="mb-4 border-accent/30 bg-gradient-to-r from-accent/5 via-surface-1 to-surface-1">
+        <form onSubmit={quickSubmit} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', prioridadStyles[quickPrioridad].dot)} />
+            <input
+              value={quickTitulo}
+              onChange={e => setQuickTitulo(e.target.value)}
+              placeholder="Anotar nueva tarea y presionar Enter..."
+              className="flex-1 min-w-0 bg-transparent border-none px-1 py-2 focus:outline-none text-sm sm:text-base text-text placeholder:text-text-muted"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {(['alta', 'media', 'baja'] as TareaPrioridad[]).map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setQuickPrioridad(p)}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize transition-all border',
+                  quickPrioridad === p ? prioridadStyles[p].badge : 'bg-surface-2 border-border text-text-muted hover:text-text',
+                )}
+                aria-label={`Prioridad ${prioridadStyles[p].label}`}
+              >
+                {prioridadStyles[p].label}
+              </button>
+            ))}
+            <button
+              type="submit"
+              disabled={!quickTitulo.trim()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" /> Agregar
+            </button>
+          </div>
+        </form>
+        <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-text-subtle mr-1">Plantillas:</span>
+          {PLANTILLAS.map(p => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => { setQuickTitulo(p); }}
+              className="text-[11px] px-2 py-0.5 rounded-md bg-surface-2 border border-border text-text-muted hover:text-accent hover:border-accent/40 transition-colors"
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       {/* Stats / filtros - layout estable mobile + desktop */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-5">
