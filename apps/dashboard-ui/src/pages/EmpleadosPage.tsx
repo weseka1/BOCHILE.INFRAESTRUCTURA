@@ -1,4 +1,4 @@
-import { useEmpleados } from '@/hooks/useEmpleados';
+import { useEmpleados, useUpdateEmpleado } from '@/hooks/useEmpleados';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
@@ -9,10 +9,11 @@ import { formatMoney } from '@/lib/utils';
 import type { Empleado } from '@/types/domain';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Phone, Mail, MapPin, Award, Calendar } from 'lucide-react';
+import { Phone, Mail, MapPin, Award, Calendar, Plus, Minus, Loader2 } from 'lucide-react';
 
 export function EmpleadosPage() {
   const { data, isLoading, error } = useEmpleados();
+  const updateEmp = useUpdateEmpleado();
   const [filtro, setFiltro] = useState<'todos' | 'activo' | 'inactivo'>('activo');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Empleado | null>(null);
@@ -134,26 +135,94 @@ export function EmpleadosPage() {
             <DrawerField label="Teléfono" value={selected.telefono} />
             <DrawerField label="Zona especialidad" value={selected.zona_especialidad && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {selected.zona_especialidad}</span>} />
             <DrawerField label="Calendar ID" value={selected.calendar_id && <span className="font-mono text-xs">{selected.calendar_id}</span>} />
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="card p-3 text-center">
-                <Calendar className="w-4 h-4 mx-auto text-blue-400 mb-1" />
-                <div className="font-display text-xl font-bold text-text">{selected.visitas_mes}</div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider">Visitas mes</div>
-              </div>
-              <div className="card p-3 text-center">
-                <Award className="w-4 h-4 mx-auto text-emerald-400 mb-1" />
-                <div className="font-display text-xl font-bold text-emerald-300">{selected.cierres_mes}</div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider">Cierres mes</div>
-              </div>
-              <div className="card p-3 text-center">
-                <div className="text-accent text-xl mb-1">$</div>
-                <div className="font-display text-sm font-bold text-accent">{formatMoney(selected.comisiones_mes, 'ARS')}</div>
-                <div className="text-[10px] text-text-muted uppercase tracking-wider">Comisiones</div>
-              </div>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <Counter
+                label="Visitas mes"
+                value={selected.visitas_mes || 0}
+                icon={Calendar}
+                color="blue"
+                onChange={(next) => {
+                  const updated = { ...selected, visitas_mes: next };
+                  setSelected(updated);
+                  updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { visitas_mes: next } });
+                }}
+                saving={updateEmp.isPending}
+              />
+              <Counter
+                label="Cierres mes"
+                value={selected.cierres_mes || 0}
+                icon={Award}
+                color="emerald"
+                onChange={(next) => {
+                  const updated = { ...selected, cierres_mes: next };
+                  setSelected(updated);
+                  updateEmp.mutate({ empleado_id: selected.empleado_id, patch: { cierres_mes: next } });
+                }}
+                saving={updateEmp.isPending}
+              />
             </div>
+            <p className="mt-2 text-[10px] text-text-subtle text-center">
+              Sumá o restá con ± a medida que ocurran las visitas y cierres del mes.
+            </p>
           </div>
         )}
       </Drawer>
     </>
+  );
+}
+
+function Counter({
+  label, value, icon: Icon, color, onChange, saving,
+}: {
+  label: string;
+  value: number;
+  icon: any;
+  color: 'blue' | 'emerald';
+  onChange: (next: number) => void;
+  saving: boolean;
+}) {
+  const colorMap = {
+    blue:    { dot: 'text-blue-400',    num: 'text-text',         btn: 'hover:bg-blue-500/15 hover:text-blue-300' },
+    emerald: { dot: 'text-emerald-400', num: 'text-emerald-300',  btn: 'hover:bg-emerald-500/15 hover:text-emerald-300' },
+  } as const;
+  const c = colorMap[color];
+  return (
+    <div className="card p-3 text-center">
+      <Icon className={`w-4 h-4 mx-auto ${c.dot} mb-1`} />
+      <div className="flex items-center justify-center gap-1.5 mb-1">
+        <button
+          type="button"
+          onClick={() => value > 0 && onChange(value - 1)}
+          disabled={value <= 0 || saving}
+          className={`p-1 rounded-md text-text-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${c.btn}`}
+          aria-label={`Restar 1 a ${label}`}
+        >
+          <Minus className="w-3.5 h-3.5" />
+        </button>
+        <input
+          type="number" min="0"
+          value={value}
+          onChange={e => {
+            const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+            onChange(n);
+          }}
+          className={`w-16 bg-transparent border-none text-center font-display text-2xl font-bold ${c.num} focus:outline-none focus:ring-1 focus:ring-accent rounded`}
+          aria-label={label}
+        />
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          disabled={saving}
+          className={`p-1 rounded-md text-text-muted transition-colors disabled:opacity-30 ${c.btn}`}
+          aria-label={`Sumar 1 a ${label}`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="text-[10px] text-text-muted uppercase tracking-wider flex items-center justify-center gap-1">
+        {label}
+        {saving && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+      </div>
+    </div>
   );
 }

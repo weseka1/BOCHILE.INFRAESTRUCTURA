@@ -521,30 +521,33 @@ export function TareasPage() {
 
         {/* Tareas del dia */}
         <Card className="lg:col-span-5 border-accent/30">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><ListTodo className="w-4 h-4" /></div>
-              <h3 className="font-display text-base font-semibold text-text">Tareas de hoy</h3>
+              <h3 className="font-display text-base font-semibold text-text">Tareas internas del equipo</h3>
               <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
                 {tareasDelDia.length}
               </span>
             </div>
-            <Link to="/marketing" className="text-xs text-accent hover:underline flex items-center gap-1" title="Administrar todas las tareas en el panel WESEKA.IA">
-              Administrar <ExternalLink className="w-3 h-3" />
+            <Link to="/tareas" className="text-xs text-accent hover:underline flex items-center gap-1" title="Ver todas las tareas internas">
+              Todas <ExternalLink className="w-3 h-3" />
             </Link>
           </div>
+          <p className="text-[10px] text-text-subtle mb-2">
+            Visitas, llamados, recordatorios, lo que sea del día — quedan para el equipo Bochile.
+          </p>
 
           <form onSubmit={submitQuickTarea} className="flex gap-2 mb-3">
             <input
               value={qTarea}
               onChange={e => setQTarea(e.target.value)}
-              placeholder="Tarea para HOY (Enter)..."
+              placeholder="Tarea interna del equipo (Enter)..."
               className="flex-1 min-w-0 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
             />
             <button
               type="submit" disabled={!qTarea.trim()}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              aria-label="Agregar"
+              aria-label="Agregar tarea interna"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -587,11 +590,15 @@ export function TareasPage() {
                     )}
                     <button
                       type="button"
-                      onClick={() => actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID })}
+                      onClick={() => {
+                        if (window.confirm(`Derivar esta tarea al equipo WESEKA.IA?\n\n"${t.titulo}"\n\nLa tarea sale de tu panel y aparece en /marketing para que la atienda WSK.`)) {
+                          actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID });
+                        }
+                      }}
                       className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/30 hover:bg-fuchsia-500/20 transition-colors opacity-0 group-hover:opacity-100 inline-flex items-center gap-1"
-                      title="Derivar al equipo WESEKA.IA"
+                      title="Derivar al equipo WESEKA.IA (opcional)"
                     >
-                      WSK
+                      → WSK
                     </button>
                   </li>
                 );

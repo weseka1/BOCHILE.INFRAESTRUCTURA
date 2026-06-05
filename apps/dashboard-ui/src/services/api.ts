@@ -112,6 +112,8 @@ export interface AuthUser {
 export const api = {
   health: () => getJson<{ status: string }>(`/health`),
   leads: () => getJson<import('@/types/domain').Lead[]>(`/leads`),
+  updateLead: (lead_id: string, patch: Partial<import('@/types/domain').Lead>) =>
+    patchJson<import('@/types/domain').Lead>(`/leads/${encodeURIComponent(lead_id)}`, patch),
   propiedades: () => getJson<import('@/types/domain').Propiedad[]>(`/propiedades`),
   visitas: () => getJson<import('@/types/domain').Visita[]>(`/visitas`),
   createVisita: (v: Partial<import('@/types/domain').Visita>) =>
@@ -120,6 +122,8 @@ export const api = {
     patchJson<import('@/types/domain').Visita>(`/visitas/${encodeURIComponent(visita_id)}`, patch),
   contratos: () => getJson<import('@/types/domain').Contrato[]>(`/contratos`),
   empleados: () => getJson<import('@/types/domain').Empleado[]>(`/empleados`),
+  updateEmpleado: (empleado_id: string, patch: Partial<import('@/types/domain').Empleado>) =>
+    patchJson<import('@/types/domain').Empleado>(`/empleados/${encodeURIComponent(empleado_id)}`, patch),
   matches: () => getJson<import('@/types/domain').MatchPendiente[]>(`/matches`),
   conversaciones: () => getJson<import('@/types/domain').Conversacion[]>(`/conversaciones`),
   acciones: () => getJson<import('@/types/domain').AccionIA[]>(`/acciones`),

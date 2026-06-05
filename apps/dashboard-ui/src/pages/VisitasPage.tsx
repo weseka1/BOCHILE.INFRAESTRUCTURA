@@ -1,7 +1,7 @@
 import { useVisitas, useCreateVisita, useUpdateVisita } from '@/hooks/useVisitas';
 import { useEmpleados } from '@/hooks/useEmpleados';
 import { usePropiedades } from '@/hooks/usePropiedades';
-import { useLeads } from '@/hooks/useLeads';
+import { useLeads, useUpdateLead } from '@/hooks/useLeads';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Table } from '@/components/ui/Table';
@@ -65,6 +65,7 @@ export function VisitasPage() {
   const { data: props = [] } = usePropiedades();
   const create = useCreateVisita();
   const update = useUpdateVisita();
+  const updateLead = useUpdateLead();
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -222,8 +223,23 @@ export function VisitasPage() {
 
   async function cancelarPendiente(v: Visita) {
     if (!confirm(`Cancelar la solicitud de visita de ${v.cliente_nombre || v.lead_id}?`)) return;
+    // Las "pendientes" pueden ser virtuales (sintetizadas desde un lead con
+    // etapa "Solicito Visita") o reales (registros del sheet visitas).
+    // - Virtual: visita_id arranca con "sugerencia:" - hay que cambiar la
+    //   etapa del LEAD para que deje de aparecer en pendientes (no existe
+    //   tal visita en el sheet, por eso antes daba 404).
+    // - Real: PATCH /api/visitas/:id con estado=cancelada.
+    const esVirtual = String(v.visita_id || '').startsWith('sugerencia:');
     try {
-      await update.mutateAsync({ visita_id: v.visita_id, patch: { estado: 'cancelada' } });
+      if (esVirtual) {
+        if (!v.lead_id) throw new Error('lead_id ausente, no se puede cancelar');
+        await updateLead.mutateAsync({
+          lead_id: v.lead_id,
+          patch: { etapa: 'Sin Visita', notas: (v.observaciones || '') + '\n[Visita cancelada manualmente desde dashboard]' },
+        });
+      } else {
+        await update.mutateAsync({ visita_id: v.visita_id, patch: { estado: 'cancelada' } });
+      }
     } catch (e: any) {
       alert('Error: ' + (e?.message || 'no se pudo cancelar'));
     }
