@@ -1,20 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Target, ListTodo, Lightbulb, Sparkles, Calendar, MessageSquare,
+  ListTodo, Lightbulb,
   Plus, Trash2, AlertTriangle, CheckSquare, Square,
-  Trophy, Medal, Award,
-  Building2, Key, UserPlus, ArrowUpRight,
   X, ChevronRight, Clock, Loader2, Megaphone, Filter,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useTareas, type TareaPrioridad, type TareaEstado } from '@/hooks/useTareas';
-import { useEmpleados, useUpdateEmpleado } from '@/hooks/useEmpleados';
-import { useMetrics } from '@/hooks/useMetrics';
-import { useObjetivosMes, usePuntosMejora, type PuntoMejora, type ObjetivoCategoria } from '@/hooks/useMarketingLocal';
+import { usePuntosMejora, type PuntoMejora } from '@/hooks/useMarketingLocal';
 import { MARKETING_ASIGNADO_ID } from '@/pages/DashboardPage';
-import type { Empleado } from '@/types/domain';
 import { cn } from '@/lib/utils';
 
 const prioDot: Record<TareaPrioridad, string> = {
@@ -33,12 +28,6 @@ const estadoStyles: Record<PuntoMejora['estado'], string> = {
   resuelto: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 };
 
-const CATEGORIAS: { key: ObjetivoCategoria; label: string; icon: any; accent: string; ring: string; iconBg: string; bar: string }[] = [
-  { key: 'ventas',     label: 'Ventas',     icon: Building2, accent: 'text-emerald-300', ring: 'border-emerald-500/30 hover:border-emerald-500/60', iconBg: 'bg-emerald-500/10 text-emerald-300', bar: 'bg-emerald-400' },
-  { key: 'alquileres', label: 'Alquileres', icon: Key,       accent: 'text-blue-300',    ring: 'border-blue-500/30 hover:border-blue-500/60',       iconBg: 'bg-blue-500/10 text-blue-300',       bar: 'bg-blue-400' },
-  { key: 'captacion',  label: 'Captacion',  icon: UserPlus,  accent: 'text-fuchsia-300', ring: 'border-fuchsia-500/30 hover:border-fuchsia-500/60', iconBg: 'bg-fuchsia-500/10 text-fuchsia-300', bar: 'bg-fuchsia-400' },
-];
-
 function parseDateLocal(s: string | undefined): Date | null {
   if (!s) return null;
   if (s.includes('T')) return new Date(s);
@@ -48,39 +37,17 @@ function parseDateLocal(s: string | undefined): Date | null {
 }
 
 /**
- * /tareas - Panel del equipo Bochile.
- * Hero motivacional + Objetivos por area + Leaderboard + Tareas del dia + Puntos a mejorar.
- * Las "tareas escritas" (la lista plana de administracion) viven en el panel WESEKA.IA.
- *
- * Accesibilidad:
- * - Cards de categoria son <button> con focus-visible para teclado.
- * - Filas del leaderboard son <Link> al perfil del empleado.
- * - Modal de objetivo por categoria al hacer click en la card.
+ * /tareas — Panel pragmatico del equipo Bochile.
+ * Solo gestion de tareas internas + puntos a mejorar.
+ * (Removidos: hero con cierres, objetivos por area, leaderboard. Las metricas
+ * comerciales no se mostraban en el flujo diario de la operadora y agregaban
+ * ruido. Quedan en /empleados y /inicio si hace falta.)
  */
 export function TareasPage() {
-  const { data: metrics } = useMetrics();
-  const { data: empleados = [] } = useEmpleados();
-  const updateEmp = useUpdateEmpleado();
   const { tareas, crear: crearTarea, actualizar: actualizarTarea, eliminar: eliminarTarea } = useTareas();
-  const { objetivos, crear: crearObjetivo, actualizar: actualizarObjetivo, eliminar: eliminarObjetivo } = useObjetivosMes();
   const { puntos, crear: crearPunto, actualizar: actualizarPunto, eliminar: eliminarPunto } = usePuntosMejora();
 
   const hoy = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
-
-  // Equipo activo + leaderboard
-  const topEquipo = useMemo(() => {
-    return [...empleados]
-      .filter((e: Empleado) => e.activo !== false)
-      .map((e: Empleado) => ({ e, score: (e.cierres_mes || 0) * 3 + (e.visitas_mes || 0) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-  }, [empleados]);
-
-  const totales = useMemo(() => {
-    const cierres = empleados.reduce((s, e) => s + (e.cierres_mes || 0), 0);
-    const visitas = empleados.reduce((s, e) => s + (e.visitas_mes || 0), 0);
-    return { cierres, visitas };
-  }, [empleados]);
 
   // Tareas del equipo Bochile (excluyo derivadas a Weseka)
   const tareasBochile = useMemo(
@@ -88,22 +55,17 @@ export function TareasPage() {
     [tareas],
   );
 
-  // Tareas con vencimiento HOY o vencidas, separadas en 2 grupos para que las
-  // completadas no "desaparezcan" cuando el usuario les hace tick. Pendientes
-  // arriba (accionables); completadas-hoy abajo (con linea cruzada) hasta fin
-  // del dia. Asi el equipo VE lo que cumplio hoy y no siente que se borro.
+  // Tareas con vencimiento HOY o vencidas. Pendientes arriba (accionables);
+  // completadas-hoy abajo (con linea cruzada) hasta fin del dia.
   const tareasDelDiaTodas = useMemo(() => {
     return tareasBochile.filter(t => {
       if (!t.vencimiento) return false;
       const d = parseDateLocal(t.vencimiento);
       if (!d) return false;
-      // Pendiente/en_curso cuya fecha de venc es hoy o pasada
       if (t.estado !== 'completada') return d.getTime() === hoy.getTime() || d < hoy;
-      // Completada que vencía HOY (o vencía y se completó hoy)
       const completadaHoy = !!t.completada_en && parseDateLocal(t.completada_en.slice(0, 10))?.getTime() === hoy.getTime();
       return completadaHoy;
     }).sort((a, b) => {
-      // Pendientes primero
       const aDone = a.estado === 'completada' ? 1 : 0;
       const bDone = b.estado === 'completada' ? 1 : 0;
       if (aDone !== bDone) return aDone - bDone;
@@ -121,32 +83,6 @@ export function TareasPage() {
     [tareasBochile],
   );
 
-  // Objetivos por categoria
-  const objetivosPorCat = useMemo(() => {
-    const map: Record<ObjetivoCategoria, typeof objetivos> = { ventas: [], alquileres: [], captacion: [], general: [] };
-    for (const o of objetivos) (map[o.categoria || 'general'] ||= []).push(o);
-    return map;
-  }, [objetivos]);
-
-  // Form objetivo (en modal por categoria)
-  const [modalCat, setModalCat] = useState<ObjetivoCategoria | null>(null);
-  const [objTitulo, setObjTitulo] = useState('');
-  const [objMeta, setObjMeta] = useState('');
-  const [objUnidad, setObjUnidad] = useState('ventas');
-  function submitObjetivo(e: React.FormEvent) {
-    e.preventDefault();
-    if (!objTitulo.trim() || !objMeta || !modalCat) return;
-    crearObjetivo({ titulo: objTitulo.trim(), meta: Number(objMeta), unidad: objUnidad, categoria: modalCat });
-    setObjTitulo(''); setObjMeta('');
-    // Cierra el modal? Mejor lo dejo abierto para seguir agregando varios.
-  }
-  function openCat(cat: ObjetivoCategoria) {
-    setModalCat(cat);
-    // Pre-set unidad segun categoria para que sea pragmatico
-    setObjUnidad(cat === 'ventas' ? 'ventas' : cat === 'alquileres' ? 'alquileres' : 'clientes');
-  }
-  function closeModal() { setModalCat(null); setObjTitulo(''); setObjMeta(''); }
-
   // Form punto a mejorar
   const [pmTitulo, setPmTitulo] = useState('');
   const [pmPrio, setPmPrio] = useState<PuntoMejora['prioridad']>('media');
@@ -159,8 +95,17 @@ export function TareasPage() {
 
   // Quick add tarea HOY
   const [qTarea, setQTarea] = useState('');
+  function submitQuickTarea(e: React.FormEvent) {
+    e.preventDefault();
+    if (!qTarea.trim()) return;
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    crearTarea({ titulo: qTarea.trim(), prioridad: 'media', vencimiento: `${yyyy}-${mm}-${dd}` });
+    setQTarea('');
+  }
 
-  // Filtro de la seccion "Administrar todas las tareas" (al final de la pagina)
+  // Filtro y bulk admin
   type FiltroAdmin = 'todas' | 'pendiente' | 'en_curso' | 'completada';
   const [filtroAdmin, setFiltroAdmin] = useState<FiltroAdmin>('todas');
   const [seleccionAdmin, setSeleccionAdmin] = useState<Set<string>>(new Set());
@@ -202,20 +147,16 @@ export function TareasPage() {
   }
 
   const tareasAdmin = useMemo(() => {
-    // Solo tareas Bochile (sin las derivadas a WESEKA.IA - esas viven en /marketing)
     const baseBochile = tareasBochile.filter(t => t.asignado_a !== MARKETING_ASIGNADO_ID);
     const list = filtroAdmin === 'todas'
       ? baseBochile
       : baseBochile.filter(t => t.estado === filtroAdmin);
     const ordenPrio: Record<TareaPrioridad, number> = { alta: 0, media: 1, baja: 2 };
     return [...list].sort((a, b) => {
-      // Completadas al final
       if (a.estado === 'completada' && b.estado !== 'completada') return 1;
       if (a.estado !== 'completada' && b.estado === 'completada') return -1;
-      // Por prioridad
       const p = ordenPrio[a.prioridad] - ordenPrio[b.prioridad];
       if (p !== 0) return p;
-      // Por fecha de creacion (mas reciente primero)
       return (b.creada_en || '').localeCompare(a.creada_en || '');
     });
   }, [tareasBochile, filtroAdmin]);
@@ -229,570 +170,178 @@ export function TareasPage() {
       completada: bb.filter(t => t.estado === 'completada').length,
     };
   }, [tareasBochile]);
-  function submitQuickTarea(e: React.FormEvent) {
-    e.preventDefault();
-    if (!qTarea.trim()) return;
-    const yyyy = hoy.getFullYear();
-    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
-    const dd = String(hoy.getDate()).padStart(2, '0');
-    crearTarea({ titulo: qTarea.trim(), prioridad: 'media', vencimiento: `${yyyy}-${mm}-${dd}` });
-    setQTarea('');
-  }
-
-  const nombreMes = hoy.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-  const heroKpi = totales.cierres;
-  const heroSubKpi = totales.visitas;
-  const visitasAgendadas = metrics?.kpis.visitasAgendadas ?? 0;
 
   return (
     <>
-      {/* ========================== HERO MOTIVACIONAL ========================== */}
-      <section className="relative mb-6 overflow-hidden rounded-3xl border border-accent/40 bg-gradient-to-br from-surface-1 via-surface-0 to-surface-0">
-        <div className="absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-accent/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -left-32 w-[420px] h-[420px] rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-        <div className="relative p-6 sm:p-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
-            <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-accent/10 border border-accent/30">
-                <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span className="text-[11px] uppercase tracking-[0.22em] text-accent font-semibold">Equipo Bochile · {nombreMes}</span>
-              </div>
-              <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-text leading-tight mb-2">
-                Vamos por <span className="text-accent">cada visita</span>, <br className="hidden sm:block" />
-                cada llamado, <span className="text-accent">cada cierre</span>.
-              </h1>
-              <p className="text-sm sm:text-base text-text-muted max-w-xl">
-                Lo que se mide se mejora · Lo que se anota se cumple · Lo que se revisa se gana.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Link to="/visitas" className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] transition-all">
-                  <Calendar className="w-3.5 h-3.5" /> Coordinar visitas pendientes
-                </Link>
-                <Link to="/conversaciones" className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-surface-2 border border-border text-text hover:border-accent/50 transition-all">
-                  <MessageSquare className="w-3.5 h-3.5" /> Ver mensajes en vivo
-                </Link>
-              </div>
-            </div>
-            <div className="lg:col-span-5 flex flex-col items-start lg:items-end gap-1">
-              <span className="text-[10px] uppercase tracking-[0.22em] text-text-muted">Cierres del mes</span>
-              <div className={cn(
-                'font-display font-black tracking-tight text-accent leading-none',
-                'text-6xl sm:text-7xl lg:text-8xl float-soft',
-                'drop-shadow-[0_0_30px_rgba(255,200,80,0.35)]',
-              )}>
-                {heroKpi}
-              </div>
-              <div className="text-xs text-text-muted">
-                <span className="text-emerald-300 font-semibold">{heroSubKpi}</span> visitas concretadas · <span className="text-accent font-semibold">{visitasAgendadas}</span> agendadas
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================== OBJETIVOS POR AREA ========================== */}
-      <section className="mb-6">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+      {/* ========================== TAREAS DEL DIA ========================== */}
+      <Card className="mb-6 border-accent/30">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-accent/15 text-accent"><Target className="w-4 h-4" /></div>
-            <h2 className="font-display text-lg sm:text-xl font-semibold text-text">Objetivos de {nombreMes}</h2>
+            <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><ListTodo className="w-4 h-4" /></div>
+            <h3 className="font-display text-base font-semibold text-text">Tareas internas del equipo</h3>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
+              {tareasDelDia.length}
+            </span>
           </div>
-          <span className="text-[11px] text-text-subtle">Click en una tarjeta para agregar o editar objetivos del área</span>
+          <a href="#todas" className="text-xs text-accent hover:underline flex items-center gap-1" title="Ver y administrar todas las tareas internas">
+            Todas <ChevronRight className="w-3 h-3" />
+          </a>
         </div>
+        <p className="text-[10px] text-text-subtle mb-2">
+          Visitas, llamados, recordatorios — lo que sea del dia para el equipo Bochile.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {CATEGORIAS.map(c => (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => openCat(c.key)}
-              aria-label={`Abrir objetivos de ${c.label}`}
-              className={cn(
-                'group relative w-full text-left rounded-xl border bg-surface-1/80 backdrop-blur-sm p-4 sm:p-5 transition-all duration-200',
-                c.ring,
-                'hover:-translate-y-0.5 hover:shadow-lg',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface-0',
-                'active:translate-y-0 active:scale-[0.99]',
-              )}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className={cn('p-1.5 rounded-lg transition-transform group-hover:scale-110', c.iconBg)}><c.icon className="w-4 h-4" /></div>
-                  <h3 className={cn('font-display text-base font-semibold', c.accent)}>{c.label}</h3>
-                </div>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
-                  {objetivosPorCat[c.key].length}
-                </span>
-              </div>
-
-              {objetivosPorCat[c.key].length === 0 ? (
-                <div className="text-center py-6 text-text-muted border border-dashed border-border rounded-lg group-hover:border-current/40 transition-colors">
-                  <Plus className="w-5 h-5 mx-auto mb-1 opacity-50" />
-                  <span className="text-xs">Sumá un objetivo de {c.label.toLowerCase()}</span>
-                </div>
-              ) : (
-                <ul className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                  {objetivosPorCat[c.key].map(o => {
-                    const pct = o.meta > 0 ? Math.min(100, Math.round((o.actual / o.meta) * 100)) : 0;
-                    const done = pct >= 100;
-                    const cerca = pct >= 70 && !done;
-                    return (
-                      <li key={o.id} className={cn(
-                        'p-2.5 rounded-lg border',
-                        done ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border bg-surface-2/40',
-                      )}>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className={cn(
-                            'shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-xs font-bold',
-                            done ? 'bg-emerald-500/20 text-emerald-300' : c.iconBg,
-                          )}>{pct}%</span>
-                          <span className="text-sm text-text flex-1 min-w-0 font-medium break-words leading-tight">{o.titulo}</span>
-                        </div>
-                        <div className="relative w-full h-2.5 bg-surface-2 rounded-full overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full transition-all duration-700 ease-out', done ? 'bg-emerald-400' : c.bar)}
-                            style={{ width: `${pct}%` }}
-                          />
-                          {cerca && (
-                            <div
-                              className="absolute inset-y-0 left-0 shimmer-bar rounded-full pointer-events-none"
-                              style={{ width: `${pct}%` }}
-                            />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-text-muted mt-1.5">
-                          <span>{o.actual} de {o.meta} {o.unidad}</span>
-                          {done && <span className="ml-auto text-emerald-300 font-semibold uppercase tracking-wider text-[10px]">Cumplido</span>}
-                          {cerca && <span className="ml-auto text-accent font-semibold uppercase tracking-wider text-[10px]">A punto</span>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              <div className={cn(
-                'mt-3 pt-3 border-t border-border/40 text-[11px] font-semibold flex items-center justify-between',
-                c.accent,
-              )}>
-                <span>Administrar objetivos</span>
-                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ========================== MODAL OBJETIVOS POR CATEGORIA ========================== */}
-      {modalCat && (() => {
-        const cat = CATEGORIAS.find(x => x.key === modalCat)!;
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadein"
-            onClick={closeModal}
-            role="dialog" aria-modal="true" aria-label={`Objetivos de ${cat.label}`}
+        <form onSubmit={submitQuickTarea} className="flex gap-2 mb-3">
+          <input
+            value={qTarea}
+            onChange={e => setQTarea(e.target.value)}
+            placeholder="Tarea interna del equipo (Enter)..."
+            className="flex-1 min-w-0 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
+          />
+          <button
+            type="submit" disabled={!qTarea.trim()}
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            aria-label="Agregar tarea interna"
           >
-            <div
-              className={cn('relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-surface-1 border-2 shadow-2xl', cat.ring)}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="sticky top-0 z-10 bg-surface-1/95 backdrop-blur border-b border-border px-5 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={cn('p-2 rounded-lg', cat.iconBg)}><cat.icon className="w-5 h-5" /></div>
-                  <div>
-                    <h3 className={cn('font-display text-xl font-bold', cat.accent)}>Objetivos · {cat.label}</h3>
-                    <p className="text-[11px] text-text-muted">
-                      {objetivosPorCat[modalCat].length} objetivo{objetivosPorCat[modalCat].length === 1 ? '' : 's'} · {nombreMes}
-                      <span className="text-emerald-400"> · cambios autoguardados</span>
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button" onClick={closeModal}
-                  className="p-1.5 rounded-lg text-text-muted hover:text-text hover:bg-surface-2 transition-colors"
-                  aria-label="Cerrar"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </form>
 
-              <div className="p-5">
-                {/* Form */}
-                <form onSubmit={submitObjetivo} className="grid grid-cols-12 gap-2 mb-4">
-                  <input
-                    autoFocus
-                    value={objTitulo}
-                    onChange={e => setObjTitulo(e.target.value)}
-                    placeholder={`Ej. Cerrar ${cat.label.toLowerCase()} en zona Patagonia`}
-                    className="col-span-12 sm:col-span-7 bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-current text-text placeholder:text-text-muted"
-                  />
-                  <input
-                    type="number" min="1"
-                    value={objMeta}
-                    onChange={e => setObjMeta(e.target.value)}
-                    placeholder="Meta"
-                    className="col-span-4 sm:col-span-2 bg-surface-2 border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-current text-text placeholder:text-text-muted"
-                  />
-                  <select
-                    value={objUnidad}
-                    onChange={e => setObjUnidad(e.target.value)}
-                    className="col-span-5 sm:col-span-2 bg-surface-2 border border-border rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:border-current text-text"
-                  >
-                    <option value="ventas">ventas</option>
-                    <option value="alquileres">alquileres</option>
-                    <option value="clientes">clientes</option>
-                    <option value="visitas">visitas</option>
-                    <option value="captaciones">captaciones</option>
-                    <option value="llamadas">llamadas</option>
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={!objTitulo.trim() || !objMeta}
-                    className={cn(
-                      'col-span-3 sm:col-span-1 inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all',
-                      cat.iconBg,
-                    )}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-
-                {objetivosPorCat[modalCat].length === 0 ? (
-                  <div className="text-center py-10 text-text-muted">
-                    <cat.icon className="w-10 h-10 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">Sin objetivos de {cat.label.toLowerCase()} este mes.</p>
-                    <p className="text-[11px] mt-1">Escribí uno arriba y presioná +</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {objetivosPorCat[modalCat].map(o => {
-                      const pct = o.meta > 0 ? Math.min(100, Math.round((o.actual / o.meta) * 100)) : 0;
-                      const done = pct >= 100;
-                      const cerca = pct >= 70 && !done;
-                      return (
-                        <li key={o.id} className={cn(
-                          'p-3 rounded-lg border',
-                          done ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border bg-surface-2/50',
-                        )}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className={cn(
-                              'shrink-0 w-10 h-10 rounded-md flex items-center justify-center text-sm font-bold',
-                              done ? 'bg-emerald-500/20 text-emerald-300' : cat.iconBg,
-                            )}>{pct}%</span>
-                            <span className="text-sm text-text flex-1 min-w-0 font-medium break-words leading-tight">{o.titulo}</span>
-                            <button
-                              type="button"
-                              onClick={() => { if (window.confirm('Eliminar objetivo?')) eliminarObjetivo(o.id); }}
-                              className="shrink-0 p-1.5 text-text-muted hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
-                              aria-label="Eliminar"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <div className="relative w-full h-2.5 bg-surface-2 rounded-full overflow-hidden mb-2">
-                            <div
-                              className={cn('h-full rounded-full transition-all duration-700 ease-out', done ? 'bg-emerald-400' : cat.bar)}
-                              style={{ width: `${pct}%` }}
-                            />
-                            {cerca && (
-                              <div
-                                className="absolute inset-y-0 left-0 shimmer-bar rounded-full pointer-events-none"
-                                style={{ width: `${pct}%` }}
-                              />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-text-muted">
-                            <label className="text-[11px]">Actual:</label>
-                            <input
-                              type="number" min="0"
-                              value={o.actual}
-                              onChange={e => actualizarObjetivo(o.id, { actual: Number(e.target.value) || 0 })}
-                              className="w-20 bg-surface-2 border border-border rounded px-2 py-1 text-sm focus:outline-none focus:border-current text-text"
-                              aria-label="Cantidad actual"
-                            />
-                            <span>/ {o.meta} {o.unidad}</span>
-                            {done && <span className="ml-auto text-emerald-300 font-semibold uppercase tracking-wider text-[10px]">Cumplido</span>}
-                            {cerca && <span className="ml-auto text-accent font-semibold uppercase tracking-wider text-[10px]">A punto</span>}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </div>
+        {tareasDelDia.length === 0 && tareasDelDiaCompletadas.length === 0 ? (
+          <div className="text-center py-6 text-text-muted">
+            <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <p className="text-xs">Sin tareas con vencimiento para hoy.</p>
+            {tareasSinFecha.length > 0 && (
+              <p className="text-[10px] mt-1 text-text-subtle">
+                Hay {tareasSinFecha.length} sin fecha. <a href="#todas" className="underline">Vér todas abajo</a>
+              </p>
+            )}
           </div>
-        );
-      })()}
-
-      {/* ========================== EQUIPO + TAREAS ========================== */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
-        {/* Leaderboard */}
-        <Card className="lg:col-span-7 border-accent/30">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><Trophy className="w-4 h-4" /></div>
-              <h3 className="font-display text-base font-semibold text-text">Equipo destacado del mes</h3>
-            </div>
-            <Link to="/empleados" className="text-xs text-accent hover:underline flex items-center gap-1">
-              Ver equipo <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {topEquipo.length === 0 ? (
-            <div className="text-center py-8 text-text-muted">
-              <Trophy className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-xs">Sin actividad cargada este mes.</p>
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {topEquipo.map(({ e }, idx) => {
-                const podio = idx === 0;
-                const segundo = idx === 1;
-                const tercero = idx === 2;
-                const MedallaIcon = podio ? Trophy : segundo ? Medal : tercero ? Award : null;
-                const cierres = e.cierres_mes || 0;
-                const visitas = e.visitas_mes || 0;
-                const setCierres = (n: number) => updateEmp.mutate({ empleado_id: e.empleado_id, patch: { cierres_mes: Math.max(0, n) } });
-                const setVisitas = (n: number) => updateEmp.mutate({ empleado_id: e.empleado_id, patch: { visitas_mes: Math.max(0, n) } });
-                return (
-                  <li key={e.empleado_id} className={cn(
-                    'flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border transition-all',
-                    podio
-                      ? 'border-accent/40 bg-gradient-to-r from-accent/8 to-transparent halo-gold'
-                      : segundo
-                        ? 'border-zinc-400/30 bg-zinc-400/5'
-                        : tercero
-                          ? 'border-orange-400/30 bg-orange-400/5'
-                          : 'border-border bg-surface-1',
-                  )}>
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className={cn(
-                        'shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-display text-sm font-bold',
-                        podio ? 'bg-accent text-accent-fg shadow-gold' :
-                        segundo ? 'bg-zinc-400/20 text-zinc-200' :
-                        tercero ? 'bg-orange-400/20 text-orange-300' :
-                        'bg-surface-2 text-text-muted',
-                      )}>
-                        {MedallaIcon ? <MedallaIcon className="w-4 h-4" /> : `#${idx + 1}`}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="font-medium text-text truncate">{e.nombre}</span>
-                          {e.rol && <span className="text-[10px] uppercase tracking-wider text-text-subtle">{e.rol}</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-                      <Stepper label="cierres" value={cierres} onChange={setCierres} color="emerald" />
-                      <Stepper label="visitas" value={visitas} onChange={setVisitas} color="blue" />
-                      <Link
-                        to={`/empleados?focus=${encodeURIComponent(e.empleado_id)}`}
-                        className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-semibold text-text-muted hover:text-accent border border-border hover:border-accent/40 transition-colors"
-                        aria-label={`Ver perfil de ${e.nombre}`}
-                        title="Ver perfil completo"
+        ) : (
+          <div className="max-h-[420px] overflow-y-auto pr-1">
+            {/* Pendientes + En curso (en una sola lista, con select inline) */}
+            {tareasDelDia.length > 0 && (
+              <ul className="space-y-1.5">
+                {tareasDelDia.map(t => {
+                  const d = parseDateLocal(t.vencimiento);
+                  const vencida = d ? d < hoy : false;
+                  return (
+                    <li key={t.id} className={cn(
+                      'flex items-center gap-2 p-2 rounded-md border transition-colors group',
+                      vencida ? 'border-rose-500/30 bg-rose-500/5'
+                      : t.estado === 'en_curso' ? 'border-blue-500/40 bg-blue-500/5'
+                      : 'border-border bg-surface-1 hover:border-accent/40',
+                    )}>
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', prioDot[t.prioridad])} title={`prioridad ${t.prioridad}`} />
+                      <span className="text-sm text-text flex-1 min-w-0 break-words">{t.titulo}</span>
+                      {vencida && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] text-rose-300 font-semibold shrink-0">
+                          <AlertTriangle className="w-3 h-3" /> VENC
+                        </span>
+                      )}
+                      {/* Select inline de estado - click directo, sin window.confirm */}
+                      <select
+                        value={t.estado}
+                        onChange={e => {
+                          const next = e.target.value as TareaEstado;
+                          actualizarTarea(t.id, {
+                            estado: next,
+                            completada_en: next === 'completada' ? new Date().toISOString() : '',
+                          });
+                        }}
+                        className={cn(
+                          'shrink-0 text-[11px] rounded-md px-1.5 py-0.5 border outline-none cursor-pointer font-semibold',
+                          t.estado === 'pendiente' && 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30',
+                          t.estado === 'en_curso' && 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+                          t.estado === 'completada' && 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+                        )}
+                        aria-label="Cambiar estado"
+                        title="Cambiar estado"
                       >
-                        Ver <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <div className="mt-3 pt-3 border-t border-border/40 text-[11px] text-text-subtle text-center">
-            Ranking por cierres y visitas del mes · usá los <span className="font-mono">− +</span> para ajustar
-          </div>
-        </Card>
-
-        {/* Tareas del dia */}
-        <Card className="lg:col-span-5 border-accent/30">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-accent/15 text-accent"><ListTodo className="w-4 h-4" /></div>
-              <h3 className="font-display text-base font-semibold text-text">Tareas internas del equipo</h3>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-surface-2 text-text-subtle font-mono">
-                {tareasDelDia.length}
-              </span>
-            </div>
-            <a href="#todas" className="text-xs text-accent hover:underline flex items-center gap-1" title="Ver y administrar todas las tareas internas">
-              Todas <ChevronRight className="w-3 h-3" />
-            </a>
-          </div>
-          <p className="text-[10px] text-text-subtle mb-2">
-            Visitas, llamados, recordatorios, lo que sea del día — quedan para el equipo Bochile.
-          </p>
-
-          <form onSubmit={submitQuickTarea} className="flex gap-2 mb-3">
-            <input
-              value={qTarea}
-              onChange={e => setQTarea(e.target.value)}
-              placeholder="Tarea interna del equipo (Enter)..."
-              className="flex-1 min-w-0 bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent text-text placeholder:text-text-muted"
-            />
-            <button
-              type="submit" disabled={!qTarea.trim()}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-accent text-accent-fg shadow-gold hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              aria-label="Agregar tarea interna"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </form>
-
-          {tareasDelDia.length === 0 && tareasDelDiaCompletadas.length === 0 ? (
-            <div className="text-center py-6 text-text-muted">
-              <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-xs">Sin tareas con vencimiento para hoy.</p>
-              {tareasSinFecha.length > 0 && (
-                <p className="text-[10px] mt-1 text-text-subtle">
-                  Hay {tareasSinFecha.length} sin fecha. <Link to="/marketing" className="underline">Administrar en WESEKA.IA</Link>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_curso">En curso</option>
+                        <option value="completada">Realizado</option>
+                      </select>
+                      {/* Derivar a WSK - 1 click sin confirmacion */}
+                      <button
+                        type="button"
+                        onClick={() => actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID })}
+                        className="shrink-0 p-1 rounded text-fuchsia-300 hover:bg-fuchsia-500/15 sm:opacity-0 group-hover:opacity-100 transition-all"
+                        title="Derivar a WESEKA.IA"
+                        aria-label="Derivar a WSK"
+                      >
+                        <Megaphone className="w-3.5 h-3.5" />
+                      </button>
+                      {/* Eliminar - SI lleva confirmacion (destructivo) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Eliminar esta tarea?\n\n"${t.titulo}"\n\nNo se puede deshacer.`)) {
+                            eliminarTarea(t.id);
+                          }
+                        }}
+                        className="shrink-0 p-1 rounded text-text-muted hover:text-rose-300 hover:bg-rose-500/10 sm:opacity-0 group-hover:opacity-100 transition-all"
+                        title="Eliminar"
+                        aria-label="Eliminar tarea"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {/* Realizadas hoy (separadas abajo con linea cruzada) */}
+            {tareasDelDiaCompletadas.length > 0 && (
+              <>
+                <p className="text-[10px] uppercase tracking-wider text-text-subtle mt-4 mb-2 flex items-center gap-1.5">
+                  <CheckSquare className="w-3 h-3 text-emerald-400" /> Realizadas hoy · {tareasDelDiaCompletadas.length}
                 </p>
-              )}
-            </div>
-          ) : (
-            <div className="max-h-[360px] overflow-y-auto pr-1">
-              {/* Pendientes */}
-              {tareasDelDia.length > 0 && (
-                <ul className="space-y-1.5">
-                  {tareasDelDia.map(t => {
-                    const d = parseDateLocal(t.vencimiento);
-                    const vencida = d ? d < hoy : false;
-                    return (
-                      <li key={t.id} className={cn(
-                        'flex items-center gap-2 p-2 rounded-md border transition-colors group',
-                        vencida ? 'border-rose-500/30 bg-rose-500/5'
-                        : t.estado === 'en_curso' ? 'border-blue-500/40 bg-blue-500/5'
-                        : 'border-border bg-surface-1 hover:border-accent/40',
-                      )}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm(`Marcar como completada?\n\n"${t.titulo}"`)) {
-                              actualizarTarea(t.id, { estado: 'completada', completada_en: new Date().toISOString() });
-                            }
-                          }}
-                          className="shrink-0 text-text-muted hover:text-emerald-300 transition-colors"
-                          aria-label="Marcar completada"
-                          title="Marcar como completada"
-                        >
-                          {t.estado === 'en_curso'
-                            ? <Loader2 className="w-4 h-4 text-blue-300 animate-spin" />
-                            : <Square className="w-4 h-4" />}
-                        </button>
-                        <span className={cn('w-2 h-2 rounded-full shrink-0', prioDot[t.prioridad])} />
-                        <span className="text-sm text-text flex-1 min-w-0 break-words">{t.titulo}</span>
-                        {t.estado === 'en_curso' && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-300 font-semibold shrink-0 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded">
-                            EN CURSO
-                          </span>
+                <ul className="space-y-1">
+                  {tareasDelDiaCompletadas.map(t => (
+                    <li key={t.id} className="flex items-center gap-2 p-1.5 rounded-md opacity-60 hover:opacity-90 transition-opacity group">
+                      <span className="text-sm flex-1 min-w-0 break-words line-through text-text-muted">{t.titulo}</span>
+                      {/* Select inline tambien aqui — permite reabrir 1-click */}
+                      <select
+                        value={t.estado}
+                        onChange={e => {
+                          const next = e.target.value as TareaEstado;
+                          actualizarTarea(t.id, {
+                            estado: next,
+                            completada_en: next === 'completada' ? new Date().toISOString() : '',
+                          });
+                        }}
+                        className={cn(
+                          'shrink-0 text-[11px] rounded-md px-1.5 py-0.5 border outline-none cursor-pointer font-semibold',
+                          'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
                         )}
-                        {vencida && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] text-rose-300 font-semibold shrink-0">
-                            <AlertTriangle className="w-3 h-3" /> VENC
-                          </span>
-                        )}
-                        {t.estado === 'en_curso' ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (window.confirm(`Volver a pendiente?\n\n"${t.titulo}"`)) {
-                                actualizarTarea(t.id, { estado: 'pendiente' });
-                              }
-                            }}
-                            className="shrink-0 p-1 rounded text-zinc-300 hover:bg-zinc-500/15 sm:opacity-0 group-hover:opacity-100 transition-all"
-                            title="Volver a pendiente"
-                            aria-label="Volver a pendiente"
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (window.confirm(`Pasar a "En curso"?\n\n"${t.titulo}"`)) {
-                                actualizarTarea(t.id, { estado: 'en_curso' });
-                              }
-                            }}
-                            className="shrink-0 p-1 rounded text-blue-300 hover:bg-blue-500/15 sm:opacity-0 group-hover:opacity-100 transition-all"
-                            title="Pasar a En curso"
-                            aria-label="Pasar a en curso"
-                          >
-                            <Loader2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm(`Derivar al equipo WESEKA.IA?\n\n"${t.titulo}"\n\nLa tarea sale de tu panel y aparece en /marketing.`)) {
-                              actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID });
-                            }
-                          }}
-                          className="shrink-0 p-1 rounded text-fuchsia-300 hover:bg-fuchsia-500/15 sm:opacity-0 group-hover:opacity-100 transition-all"
-                          title="Derivar a WESEKA.IA"
-                          aria-label="Derivar a WSK"
-                        >
-                          <Megaphone className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm(`Eliminar esta tarea?\n\n"${t.titulo}"\n\nNo se puede deshacer.`)) {
-                              eliminarTarea(t.id);
-                            }
-                          }}
-                          className="shrink-0 p-1 rounded text-text-muted hover:text-rose-300 hover:bg-rose-500/10 sm:opacity-0 group-hover:opacity-100 transition-all"
-                          title="Eliminar"
-                          aria-label="Eliminar tarea"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </li>
-                    );
-                  })}
+                        aria-label="Cambiar estado"
+                      >
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_curso">En curso</option>
+                        <option value="completada">Realizado</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm(`Eliminar esta tarea?\n\n"${t.titulo}"\n\nNo se puede deshacer.`)) {
+                            eliminarTarea(t.id);
+                          }
+                        }}
+                        className="shrink-0 p-1 rounded text-text-muted hover:text-rose-300 hover:bg-rose-500/10 sm:opacity-0 group-hover:opacity-100 transition-all"
+                        title="Eliminar tarea"
+                        aria-label="Eliminar"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
                 </ul>
-              )}
-              {/* Completadas hoy */}
-              {tareasDelDiaCompletadas.length > 0 && (
-                <>
-                  <p className="text-[10px] uppercase tracking-wider text-text-subtle mt-4 mb-2 flex items-center gap-1.5">
-                    <CheckSquare className="w-3 h-3 text-emerald-400" /> Completadas hoy · {tareasDelDiaCompletadas.length}
-                  </p>
-                  <ul className="space-y-1">
-                    {tareasDelDiaCompletadas.map(t => (
-                      <li key={t.id} className="flex items-center gap-2 p-1.5 rounded-md opacity-60 hover:opacity-90 transition-opacity group">
-                        <button
-                          type="button"
-                          onClick={() => actualizarTarea(t.id, { estado: 'pendiente', completada_en: '' })}
-                          className="shrink-0 text-emerald-400 hover:text-amber-300 transition-colors"
-                          aria-label="Volver a pendiente"
-                          title="Click: volver a pendiente"
-                        >
-                          <CheckSquare className="w-4 h-4" />
-                        </button>
-                        <span className="text-sm flex-1 min-w-0 break-words line-through text-text-muted">{t.titulo}</span>
-                        <span className="text-[10px] text-emerald-300 font-semibold shrink-0">HECHA</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm(`Eliminar esta tarea?\n\n"${t.titulo}"\n\nNo se puede deshacer.`)) {
-                              eliminarTarea(t.id);
-                            }
-                          }}
-                          className="shrink-0 p-1 rounded text-text-muted hover:text-rose-300 hover:bg-rose-500/10 sm:opacity-0 group-hover:opacity-100 transition-all"
-                          title="Eliminar tarea"
-                          aria-label="Eliminar"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          )}
-        </Card>
-      </section>
+              </>
+            )}
+          </div>
+        )}
+      </Card>
 
       {/* ========================== PUNTOS A MEJORAR ========================== */}
       <Card className="mb-6 border-accent/30">
@@ -903,14 +452,15 @@ export function TareasPage() {
                 {f === 'pendiente' && <Clock className="w-3 h-3" />}
                 {f === 'en_curso' && <Loader2 className="w-3 h-3" />}
                 {f === 'completada' && <CheckSquare className="w-3 h-3" />}
-                <span className="capitalize">{f === 'en_curso' ? 'En curso' : f}</span>
+                <span className="capitalize">
+                  {f === 'en_curso' ? 'En curso' : f === 'completada' ? 'Realizado' : f}
+                </span>
                 <span className="font-mono opacity-60">{countsAdmin[f]}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Bulk actions bar — visible cuando hay seleccion */}
         {seleccionAdmin.size > 0 && (
           <div className="mb-2 p-2.5 rounded-lg bg-accent/8 border border-accent/40 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-accent">{seleccionAdmin.size} seleccionada{seleccionAdmin.size > 1 ? 's' : ''}</span>
@@ -952,7 +502,6 @@ export function TareasPage() {
             </div>
           ) : (
             <>
-              {/* Header: seleccionar todas las visibles */}
               <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/40 px-1">
                 <button
                   type="button"
@@ -1008,7 +557,6 @@ export function TareasPage() {
                         {(d || new Date()).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
                       </span>
                     )}
-                    {/* Selector de estado inline (cambia entre pendiente/en_curso/completada) */}
                     <select
                       value={t.estado}
                       onChange={e => {
@@ -1028,15 +576,11 @@ export function TareasPage() {
                     >
                       <option value="pendiente">Pendiente</option>
                       <option value="en_curso">En curso</option>
-                      <option value="completada">Completada</option>
+                      <option value="completada">Realizado</option>
                     </select>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm(`Derivar al equipo WESEKA.IA?\n\n"${t.titulo}"`)) {
-                          actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID });
-                        }
-                      }}
+                      onClick={() => actualizarTarea(t.id, { asignado_a: MARKETING_ASIGNADO_ID })}
                       className="shrink-0 p-1 rounded text-fuchsia-300 hover:bg-fuchsia-500/15 sm:opacity-0 group-hover:opacity-100 transition-all"
                       title="Derivar al equipo WESEKA.IA"
                     >
@@ -1065,48 +609,8 @@ export function TareasPage() {
       </section>
 
       <div className="mt-6 text-[11px] text-text-subtle text-center">
-        Tareas del equipo Bochile · si querés derivar algo al equipo WSK usá el botón <Megaphone className="w-3 h-3 inline text-fuchsia-300" /> y aparecerá en el panel <Link to="/marketing" className="text-accent hover:underline">WESEKA.IA</Link>
+        Tareas del equipo Bochile · derivá lo que sea WSK con el botón <Megaphone className="w-3 h-3 inline text-fuchsia-300" /> y aparecerá en <Link to="/marketing" className="text-accent hover:underline">WESEKA.IA</Link>
       </div>
     </>
-  );
-}
-
-/**
- * Stepper compacto inline para sumar/restar visitas o cierres en el leaderboard
- * sin abrir el drawer del empleado. Autosave optimista (useUpdateEmpleado).
- */
-function Stepper({
-  label, value, onChange, color,
-}: {
-  label: string;
-  value: number;
-  onChange: (next: number) => void;
-  color: 'emerald' | 'blue';
-}) {
-  const c = color === 'emerald'
-    ? { num: 'text-emerald-300', plus: 'text-emerald-300 hover:bg-emerald-500/15' }
-    : { num: 'text-blue-300',    plus: 'text-blue-300 hover:bg-blue-500/15' };
-  return (
-    <div className="flex items-center gap-1 bg-surface-2 rounded-md px-1.5 py-0.5 border border-border">
-      <button
-        type="button"
-        onClick={() => value > 0 && onChange(value - 1)}
-        disabled={value <= 0}
-        className="w-5 h-5 rounded text-text-muted hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
-        aria-label={`Restar 1 a ${label}`}
-      >
-        −
-      </button>
-      <span className={cn('tabular-nums min-w-[20px] text-center text-sm font-semibold', c.num)}>{value}</span>
-      <button
-        type="button"
-        onClick={() => onChange(value + 1)}
-        className={cn('w-5 h-5 rounded flex items-center justify-center font-bold', c.plus)}
-        aria-label={`Sumar 1 a ${label}`}
-      >
-        +
-      </button>
-      <span className="text-[10px] text-text-subtle ml-0.5 uppercase tracking-wider">{label}</span>
-    </div>
   );
 }
